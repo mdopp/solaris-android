@@ -1,0 +1,27 @@
+{
+  "packageId": "cloud.dopp.solaris",
+  "host": "chat.dopp.cloud",
+  "name": "Solaris",
+  "launcherName": "Solaris",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#0c0c0e",
+  "themeColorDark": "#0c0c0e",
+  "navigationColor": "#070709",
+  "navigationColorDark": "#070709",
+  "backgroundColor": "#070709",
+  "startUrl": "/",
+  "iconUrl": "https://chat.dopp.cloud/static/icon-512.png",
+  "maskableIconUrl": "https://chat.dopp.cloud/static/icon-512-maskable.png",
+  "webManifestUrl": "https://chat.dopp.cloud/static/manifest.json",
+  "fallbackType": "customtabs",
+  "enableNotifications": true,
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "solaris"
+  },
+  "features": {}
+}

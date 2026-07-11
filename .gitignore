@@ -1,0 +1,26 @@
+# --- Android / Gradle ---
+.gradle/
+build/
+/app/build/
+/local.properties
+captures/
+*.iml
+
+# --- Signing / secrets (NEVER commit) ---
+*.keystore
+*.jks
+*.keystore.base64
+keystore-backup*
+android.keystore
+
+# --- Bubblewrap ---
+.bubblewrap/
+node_modules/
+twa-manifest.json.bak
+
+# --- JetBrains / Android Studio ---
+/.idea/
+
+# --- misc ---
+*.log
+.DS_Store
