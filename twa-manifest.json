@@ -15,6 +15,7 @@
   "maskableIconUrl": "https://chat.dopp.cloud/static/icon-512-maskable.png",
   "webManifestUrl": "https://chat.dopp.cloud/static/manifest.json",
   "fallbackType": "customtabs",
+  "splashScreenFadeOutDuration": 300,
   "enableNotifications": true,
   "appVersion": "1.0.0",
   "appVersionCode": 1,

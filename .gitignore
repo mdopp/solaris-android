@@ -6,6 +6,13 @@ build/
 captures/
 *.iml
 
+# --- Bubblewrap build outputs (land in repo root; not a release) ---
+/app-release-signed.apk
+/app-release-bundle.aab
+/app-release-signed.apk.idsig
+/app-release-unsigned-aligned.apk
+/*-unsigned*.apk
+
 # --- Signing / secrets (NEVER commit) ---
 *.keystore
 *.jks
