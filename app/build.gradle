@@ -18,6 +18,7 @@ import groovy.xml.MarkupBuilder
 
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 def twaManifest = [
@@ -55,7 +56,9 @@ android {
     namespace "cloud.dopp.solaris"
     defaultConfig {
         applicationId "cloud.dopp.solaris"
-        minSdkVersion 21
+        // Phase 3 raised 21 → 23: EncryptedSharedPreferences (Jetpack Security)
+        // needs the AndroidKeyStore-backed master key from API 23.
+        minSdkVersion 23
         targetSdkVersion 35
         versionCode 1
         versionName "1.0.0"
@@ -149,12 +152,18 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled true
+            // Disabled during Phase-3 native development so R8 doesn't strip
+            // reflection-referenced classes. Re-enable with proper keep rules
+            // before a Play release.
+            minifyEnabled false
         }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
     }
     lintOptions {
         checkReleaseBuilds false
@@ -204,7 +213,12 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
+
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
-    
+
+    // --- Phase 3: native surfaces (widgets / tiles / device-token pairing) ---
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Encrypted-at-rest storage for the sol_device_… bearer token.
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 }

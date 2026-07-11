@@ -195,6 +195,26 @@
             <activity android:name="com.google.androidbrowserhelper.trusted.NotificationPermissionRequestActivity" />
         
 
-        
+        <!-- Phase 3: device-token pairing. Receives the redirect from the
+             solarisbay /pair-device page (cloud.dopp.solaris://pair?token=…).
+             The MAIN/LAUNCHER filter is a temporary entry point for testing
+             until the card widget's "tap to pair" exists. -->
+        <activity
+            android:name=".pair.PairingActivity"
+            android:exported="true"
+            android:label="@string/pairing_launcher"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cloud.dopp.solaris" android:host="pair" />
+            </intent-filter>
+        </activity>
+
     </application>
 </manifest>
