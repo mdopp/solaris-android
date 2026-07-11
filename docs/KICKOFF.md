@@ -30,6 +30,14 @@ committed).
 
 ## Environment
 
+> **On the Solaris dev box this toolchain is ALREADY provisioned** (2026-07-11):
+> `bubblewrap` is on `PATH` (npm user-global `~/.npm-global/bin`, via `~/.bashrc`),
+> and JDK 17 + the Android SDK live in `~/.bubblewrap` (`bubblewrap doctor` → green).
+> The repo is cloned at `/workspace/solaris-android`. **Skip the install** — run
+> `bubblewrap doctor` to confirm, then go straight to Step 1 (`bubblewrap init`).
+>
+> On any OTHER machine, set it up first:
+
 - Node is available. Bubblewrap (`@bubblewrap/cli`) is Node-based and can
   auto-download its own JDK + Android SDK (or use Android Studio). `npm i -g
   @bubblewrap/cli`.
