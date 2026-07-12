@@ -57,6 +57,7 @@ class EnergyStatsWidgetProvider : AppWidgetProvider() {
     private fun scaffold(context: Context, id: Int, range: EnergyRange, hint: String): RemoteViews {
         val v = RemoteViews(context.packageName, R.layout.widget_energy_stats)
         v.setOnClickPendingIntent(R.id.es_root, tapPending(context, id))
+        v.setOnClickPendingIntent(R.id.es_refresh, refreshPending(context, id))
         v.setOnClickPendingIntent(R.id.es_toggle, togglePending(context, id))
         v.setTextViewText(R.id.es_title, context.getString(R.string.stats_title))
         v.setTextViewText(R.id.es_toggle, range.label)
@@ -108,17 +109,17 @@ class EnergyStatsWidgetProvider : AppWidgetProvider() {
         return out
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent {
-        val paired = ServerStore.isConfigured(context) && TokenStore.isPaired(context)
-        val intent = if (paired) {
-            context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?: Intent(context, OnboardingHomeActivity::class.java)
-        } else {
-            Intent(context, OnboardingHomeActivity::class.java)
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return PendingIntent.getActivity(
-            context, appWidgetId, intent,
+    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent =
+        // Body tap opens the PWA energy view (#27).
+        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ENERGY)
+
+    /** Broadcast our own [ACTION_REFRESH] to re-fetch this instance (#26). */
+    private fun refreshPending(context: Context, appWidgetId: Int): PendingIntent {
+        val intent = Intent(context, EnergyStatsWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        return PendingIntent.getBroadcast(
+            context, appWidgetId + 730_000, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

@@ -22,19 +22,21 @@ object EnergyRender {
         energy: Energy?,
         paired: Boolean,
         onTap: PendingIntent,
+        onRefresh: PendingIntent,
     ): RemoteViews {
         val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
         val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
         val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
         val large = minW >= 180 && minH >= 110
 
-        return if (large) buildGrid(ctx, energy, paired, onTap)
-        else buildSmall(ctx, energy, paired, onTap)
+        return if (large) buildGrid(ctx, energy, paired, onTap, onRefresh)
+        else buildSmall(ctx, energy, paired, onTap, onRefresh)
     }
 
-    private fun buildSmall(ctx: Context, e: Energy?, paired: Boolean, onTap: PendingIntent): RemoteViews {
+    private fun buildSmall(ctx: Context, e: Energy?, paired: Boolean, onTap: PendingIntent, onRefresh: PendingIntent): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_energy_small)
         v.setOnClickPendingIntent(R.id.e_root, onTap)
+        v.setOnClickPendingIntent(R.id.e_refresh, onRefresh)
         if (!paired) {
             v.setTextViewText(R.id.e_title, "Energie")
             v.setTextViewText(R.id.e_main, "koppeln")
@@ -60,9 +62,10 @@ object EnergyRender {
         return v
     }
 
-    private fun buildGrid(ctx: Context, e: Energy?, paired: Boolean, onTap: PendingIntent): RemoteViews {
+    private fun buildGrid(ctx: Context, e: Energy?, paired: Boolean, onTap: PendingIntent, onRefresh: PendingIntent): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_energy_grid)
         v.setOnClickPendingIntent(R.id.e_root, onTap)
+        v.setOnClickPendingIntent(R.id.e_refresh, onRefresh)
         v.setTextViewText(R.id.e_head, "Energie · jetzt")
 
         val legs = EnergyStyle.orderedLegs(e?.pv, e?.house, e?.grid, e?.battery)

@@ -42,6 +42,7 @@ class EnergyTotalsWidgetProvider : AppWidgetProvider() {
     private fun scaffold(context: Context, id: Int, note: String?): RemoteViews {
         val v = RemoteViews(context.packageName, R.layout.widget_energy_totals)
         v.setOnClickPendingIntent(R.id.t_root, tapPending(context, id))
+        v.setOnClickPendingIntent(R.id.t_refresh, refreshPending(context, id))
         for (i in 0..3) {
             v.setTextViewText(LABEL_IDS[i], EnergyStyle.TOTAL_LABELS[i])
             v.setTextViewText(VALUE_IDS[i], note ?: "—")
@@ -88,17 +89,17 @@ class EnergyTotalsWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent {
-        val paired = ServerStore.isConfigured(context) && TokenStore.isPaired(context)
-        val intent = if (paired) {
-            context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?: Intent(context, OnboardingHomeActivity::class.java)
-        } else {
-            Intent(context, OnboardingHomeActivity::class.java)
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return PendingIntent.getActivity(
-            context, appWidgetId, intent,
+    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent =
+        // Body tap opens the PWA energy view (#27).
+        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ENERGY)
+
+    /** Broadcast our own [ACTION_REFRESH] to re-fetch this instance (#26). */
+    private fun refreshPending(context: Context, appWidgetId: Int): PendingIntent {
+        val intent = Intent(context, EnergyTotalsWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        return PendingIntent.getBroadcast(
+            context, appWidgetId + 730_000, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

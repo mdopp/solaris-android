@@ -29,12 +29,25 @@
 
         <TextView
             android:id="@+id/e_head"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:text="Energie · jetzt"
             android:textColor="#FFF2F2F5"
             android:textStyle="bold"
             android:textSize="14sp" />
+
+        <ImageView
+            android:id="@+id/e_refresh"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="8dp"
+            android:padding="3dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FFB0BEC5"
+            android:contentDescription="@string/widget_refresh" />
     </LinearLayout>
 
     <!-- Row 1: cell 0 | cell 1 -->

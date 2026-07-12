@@ -8,14 +8,36 @@
     android:background="@drawable/widget_bg"
     android:padding="12dp">
 
-    <ImageView
-        android:id="@+id/e_icon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"
-        android:src="@drawable/ic_bolt"
-        android:tint="#FF66BB6A"
-        android:contentDescription="@null" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <ImageView
+            android:id="@+id/e_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_bolt"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/e_refresh"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="3dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FFB0BEC5"
+            android:contentDescription="@string/widget_refresh" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/e_title"
