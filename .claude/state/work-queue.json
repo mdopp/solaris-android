@@ -164,6 +164,10 @@
             "pr": 18,
             "note": "Staged crash-reporter dialog + prefilled GitHub-issue report. Sealed in batch/design-pass; device_test owed.",
             "since": "2026-07-12"
+        },
+        {
+            "note": "Builder: #27 + #28 + #25 built on batch/design-pass (PR #18), bumped to 2.9.0/versionCode 26. #27 (confirmed PWA deep-links, solarisbay#769): PwaLauncher.Routes.ENERGY = /#/p/energy; new Routes.device(entityId) = /#/p/device/<id>. DeviceWidgetProvider name/body onBodyTap now opens Routes.device(boundEntityId); ActiveDevicesRemoteViewsService per-row fill-in opens Routes.device(entity_id) (ROOT fallback if blank). Energy widgets keep Routes.ENERGY. PwaLauncherUrlTest updated + 2 device-route cases. #28 (collective endpoint, solarisbay#773): ApiClient.listActive() replaced N+1 threadpool fan-out with ONE GET /napi/portal/active, parsed via internal parseActive() (tolerant id|entity_id, wrapped/bare array, name/room/domain/state -> Card), sorted domain->name, capped 40; ActiveCache stale-then-fresh unchanged; empty/error -> empty list. New ApiClientActiveTest (Robolectric). Removed the ACTIVE_POOL/FANOUT constants + Executors/Callable imports. #25 (small energy polish): reworked widget_energy_small.xml (horizontal: left accent rail widget_pill.xml + tinted bolt icon, all-caps label, 26sp colored value, muted direction subtitle e_sub); EnergyRender.buildSmall via new small() helper sets value/sub/accent/icon tint (Bezug/Einspeisung/Verbrauch, koppeln/laden/keine-Daten states). RemoteViews-safe, larger grid unchanged. Gate GREEN: testDebugUnitTest + assembleDebug. device_test owed (#27 tap lands on exact PWA view; #28 faster single-request active list; #25 small 'Jetzt' fills its space). Not resealed/merged; pushed to PR #18.",
+            "since": "2026-07-12"
         }
     ],
     "release_warnings": [
