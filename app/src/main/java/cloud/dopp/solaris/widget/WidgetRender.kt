@@ -19,6 +19,21 @@ import java.util.Locale
 object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
 
+    /** The three widget size tiers. Selected by [sizeTier] from the host's min size. */
+    enum class Tier { SMALL, WIDE, MEDIUM }
+
+    /**
+     * Pick the layout tier from the host-reported min size (dp). A tall-enough
+     * box gets the stacked [MEDIUM] controls; an otherwise wide-but-flat box
+     * (e.g. 4×1) still gets an inline control row via [WIDE]; anything smaller
+     * falls back to [SMALL] (name + state only). Pure so it can be JVM-tested.
+     */
+    fun sizeTier(minW: Int, minH: Int): Tier = when {
+        minW >= 180 && minH >= 110 -> Tier.MEDIUM
+        minW >= 250 -> Tier.WIDE
+        else -> Tier.SMALL
+    }
+
     fun build(
         ctx: Context,
         appWidgetId: Int,
@@ -30,8 +45,13 @@ object WidgetRender {
         val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
         val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
         val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-        val medium = minW >= 180 && minH >= 110
-        val v = RemoteViews(ctx.packageName, if (medium) R.layout.widget_device_medium else R.layout.widget_device_small)
+        val tier = sizeTier(minW, minH)
+        val layout = when (tier) {
+            Tier.MEDIUM -> R.layout.widget_device_medium
+            Tier.WIDE -> R.layout.widget_device_wide
+            Tier.SMALL -> R.layout.widget_device_small
+        }
+        val v = RemoteViews(ctx.packageName, layout)
 
         val dom = card?.domain?.ifBlank { null } ?: domain
         val on = card?.isOn == true
@@ -51,7 +71,7 @@ object WidgetRender {
             v.setViewVisibility(R.id.w_bar, View.GONE)
         }
 
-        if (medium) {
+        if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
             v.setOnClickPendingIntent(R.id.w_header, onToggle) // tap header = on/off
             wireControls(ctx, v, appWidgetId, dom)
         } else {
