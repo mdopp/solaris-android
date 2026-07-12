@@ -34,12 +34,13 @@ class ApiClient(private val ctx: Context) {
             .url(SolarisConfig.BASE_URL + path)
             .header("Authorization", "Bearer ${token()}")
 
-    /** One entity's live card via `/api/concept/{id}` (works for any entity). */
+    /** One entity's live card via `/api/concept/{id}` → `{ok, concept:{ha_card}}`. */
     fun getCard(entityId: String): Card? {
         http.newCall(authed("/api/concept/$entityId").get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return null
             val body = resp.body?.string() ?: return null
-            val card = JSONObject(body).optJSONObject("ha_card") ?: return null
+            val concept = JSONObject(body).optJSONObject("concept") ?: return null
+            val card = concept.optJSONObject("ha_card") ?: return null
             return parseCard(card)
         }
     }
@@ -110,28 +111,30 @@ class ApiClient(private val ctx: Context) {
         unit = o.optString("unit").ifBlank { null },
     )
 
-    /** addable groups actuators by room: `{ rooms: { <room>: [ {entity_id, name, …} ] } }`. */
+    /** addable: `{ ok, rooms: [ {room, cards:[ {entity_id, name, domain, device_class} ]} ] }`. */
     private fun parseAddable(root: JSONObject): List<Device> {
         val out = mutableListOf<Device>()
-        val rooms = root.optJSONObject("rooms") ?: return out
-        for (room in rooms.keys()) {
-            val arr = rooms.optJSONArray(room) ?: continue
-            for (i in 0 until arr.length()) {
-                val d = arr.optJSONObject(i) ?: continue
-                val eid = d.optString("entity_id")
+        val rooms = root.optJSONArray("rooms") ?: return out
+        for (i in 0 until rooms.length()) {
+            val roomObj = rooms.optJSONObject(i) ?: continue
+            val room = roomObj.optString("room").ifBlank { null }
+            val cards = roomObj.optJSONArray("cards") ?: continue
+            for (j in 0 until cards.length()) {
+                val c = cards.optJSONObject(j) ?: continue
+                val eid = c.optString("entity_id")
                 if (eid.isBlank()) continue
                 out.add(
                     Device(
                         entityId = eid,
-                        name = d.optString("name").ifBlank { d.optString("label").ifBlank { eid } },
-                        domain = eid.substringBefore("."),
-                        deviceClass = d.optString("device_class").ifBlank { null },
+                        name = c.optString("name").ifBlank { eid },
+                        domain = c.optString("domain").ifBlank { eid.substringBefore(".") },
+                        deviceClass = c.optString("device_class").ifBlank { null },
                         room = room,
                     ),
                 )
             }
         }
-        return out.sortedWith(compareBy({ it.room ?: "" }, { it.name }))
+        return out.sortedWith(compareBy({ it.room ?: "￿" }, { it.name }))
     }
 
     companion object {
