@@ -36,6 +36,15 @@ object PwaLauncher {
          * entity's card.
          */
         fun device(entityId: String): String = "/#/p/device/$entityId"
+
+        /**
+         * Voice widget (#17): open a NEW household chat pre-loaded with [text] as the
+         * user turn, which the PWA auto-sends once on load (confirmed solarisbay#766,
+         * consumed via history.replaceState). The text is URL-encoded so spaces and
+         * umlauts survive. Pure/Android-free so it's unit-testable.
+         */
+        fun ask(text: String): String =
+            "/#/?ask=" + java.net.URLEncoder.encode(text, "UTF-8")
     }
 
     /**
