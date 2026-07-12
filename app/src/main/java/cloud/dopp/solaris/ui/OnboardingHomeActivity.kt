@@ -149,22 +149,34 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun handleDeepLink(intent: Intent?) {
         val data = intent?.data ?: return
         if (data.scheme != SolarisConfig.PAIR_SCHEME || data.host != SolarisConfig.PAIR_HOST) return
-        val token = tokenFromFragment(data.fragment)
-            ?: data.getQueryParameter(SolarisConfig.PAIR_TOKEN_PARAM)
-        if (!token.isNullOrBlank() && token.startsWith("sol_device_")) {
-            TokenStore.save(this, token)
-            toast(getString(R.string.pairing_success))
+        // Token rides the fragment (cloud.dopp.solaris://pair#token=…). Parse the
+        // fragment AND query by hand — never call getQueryParameter (it throws on
+        // opaque URIs) — and swallow anything so this path can't crash the app.
+        val token = try {
+            paramFrom(data.fragment) ?: paramFrom(data.encodedQuery)
+        } catch (e: Exception) {
+            null
+        }
+        if (token != null && token.startsWith("sol_device_")) {
+            try {
+                TokenStore.save(this, token)
+                toast(getString(R.string.pairing_success))
+            } catch (e: Exception) {
+                toast(getString(R.string.pairing_failed))
+            }
         } else {
             toast(getString(R.string.pairing_failed))
         }
     }
 
-    private fun tokenFromFragment(fragment: String?): String? {
-        if (fragment.isNullOrBlank()) return null
-        return fragment.split("&")
+    /** Pull `token=…` out of a `k=v&k=v` string (URL fragment or query). */
+    private fun paramFrom(s: String?): String? {
+        if (s.isNullOrBlank()) return null
+        val raw = s.split("&")
             .firstOrNull { it.startsWith("${SolarisConfig.PAIR_TOKEN_PARAM}=") }
-            ?.substringAfter("=")
-            ?.let { Uri.decode(it) }
+            ?.substringAfter("=") ?: return null
+        val decoded = runCatching { Uri.decode(raw) }.getOrNull() ?: raw
+        return decoded.ifBlank { null }
     }
 
     private fun addWidget() {
