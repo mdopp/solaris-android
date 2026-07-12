@@ -14,4 +14,18 @@
     <string name="widget_config_no_match">Keine Treffer.</string>
     <string name="widget_config_empty">Keine steuerbaren Geräte gefunden.</string>
     <string name="widget_config_pair_first">Bitte zuerst das Gerät koppeln.</string>
+
+    <!-- Active-devices overview widget (#28). -->
+    <string name="active_widget_label">Solaris · Aktive Geräte</string>
+    <string name="active_widget_description">Übersicht: welche Geräte gerade an/offen sind</string>
+    <string name="active_title">Aktiv</string>
+    <string name="active_loading">wird geladen …</string>
+    <string name="active_pair">koppeln</string>
+    <string name="active_none">Alles aus</string>
+    <!-- %1$d = Anzahl aktiver Geräte -->
+    <string name="active_count">%1$d an</string>
+    <string name="active_more">+%1$d weitere</string>
+
+    <!-- Large device widget 48h history (#29). -->
+    <string name="device_nohistory">kein Verlauf</string>
 </resources>

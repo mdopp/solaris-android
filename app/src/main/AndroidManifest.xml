@@ -114,6 +114,19 @@
                 android:resource="@xml/energy_stats_widget_info" />
         </receiver>
 
+        <!-- Active-devices overview widget (#28): which devices are on/open. -->
+        <receiver
+            android:name=".widget.ActiveDevicesWidgetProvider"
+            android:exported="true"
+            android:label="@string/active_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/active_devices_widget_info" />
+        </receiver>
+
         <!-- Energy totals widget (#16): 2x2 kWh totals grid (Gesamt). -->
         <receiver
             android:name=".widget.EnergyTotalsWidgetProvider"

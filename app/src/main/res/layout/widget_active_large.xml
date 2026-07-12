@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Large active-devices overview (#28): header (count) + a bounded list of the
+     currently active devices, each row = type icon + name + state, styled like
+     the picker rows. RemoteViews can't host a real ListView without a
+     RemoteViewsService, so we use a fixed set of slots (6) and hide the unused
+     ones; a "+N weitere" line signals overflow. Tap anywhere → PWA overview. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/av_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="14dp">
+
+    <!-- Header: title + count, refresh -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <ImageView
+            android:id="@+id/av_icon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_device"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/av_count"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="3 an"
+            android:textColor="#FFF2F2F5"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <ImageView
+            android:id="@+id/av_refresh"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:padding="3dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FF9AA0AE"
+            android:contentDescription="@string/widget_refresh" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/av_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/active_none"
+        android:textColor="#FFB0BEC5"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Row 0 -->
+    <LinearLayout android:id="@+id/av_row0"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row0_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row0_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="Wohnzimmer" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row0_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 1 -->
+    <LinearLayout android:id="@+id/av_row1"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row1_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row1_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row1_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 2 -->
+    <LinearLayout android:id="@+id/av_row2"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row2_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row2_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row2_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 3 -->
+    <LinearLayout android:id="@+id/av_row3"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row3_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row3_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row3_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 4 -->
+    <LinearLayout android:id="@+id/av_row4"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row4_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row4_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row4_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 5 -->
+    <LinearLayout android:id="@+id/av_row5"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row5_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row5_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row5_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/av_more"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text=""
+        android:textColor="#FF9AA0AE"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</LinearLayout>

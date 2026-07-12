@@ -132,6 +132,26 @@ class ApiClient(private val ctx: Context) {
     }
 
     /**
+     * The household's currently **active** devices (lights on, covers open,
+     * switches on, …) for the overview widget (#28). There is no single "list
+     * active" endpoint client-side, so this reuses [listAddable] for the roster
+     * and fetches each entity's live [Card] via [getCard], keeping only the
+     * active ones. Bounded by [cap] to keep the widget refresh cheap; the
+     * fetched cards are ordered by domain then name. If a dedicated
+     * `/napi/portal/active` (or a batch states call) lands server-side this
+     * should switch to it (see the builder note / a solarisbay ticket).
+     */
+    fun listActive(cap: Int = 40): List<Card> {
+        val roster = listAddable().take(cap)
+        val out = mutableListOf<Card>()
+        for (d in roster) {
+            val card = try { getCard(d.entityId) } catch (e: Exception) { null } ?: continue
+            if (card.isOn) out.add(card)
+        }
+        return out.sortedWith(compareBy({ it.domain }, { it.name }))
+    }
+
+    /**
      * Recent state history for one entity via `/napi/portal/entity-history`
      * (#755). Returns the numeric series (non-numeric states dropped).
      */
