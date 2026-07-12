@@ -133,6 +133,29 @@
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
 
+        <!-- Camera snapshot widget (#30): a bound camera's current frame. -->
+        <receiver
+            android:name=".widget.CameraWidgetProvider"
+            android:exported="true"
+            android:label="@string/camera_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/camera_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".widget.CameraWidgetConfigActivity"
+            android:exported="true"
+            android:label="@string/camera_widget_label"
+            android:theme="@style/Theme.Solaris.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Energy totals widget (#16): 2x2 kWh totals grid (Gesamt). -->
         <receiver
             android:name=".widget.EnergyTotalsWidgetProvider"

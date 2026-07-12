@@ -1,6 +1,8 @@
 package cloud.dopp.solaris.data
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import cloud.dopp.solaris.SolarisConfig
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -207,6 +209,28 @@ class ApiClient(private val ctx: Context) {
         }
     }
 
+    /**
+     * A current snapshot frame for a camera entity via
+     * `/napi/portal/camera/<entity_id>/snapshot` (solarisbay#770) — an image
+     * (JPEG/PNG) authenticated with the device bearer. The bytes are decoded and
+     * **downscaled** to a safe max edge ([CAMERA_MAX_EDGE_PX]) so the RemoteViews
+     * bundle stays under the Binder transaction limit (oversized bitmaps →
+     * "Widget kann nicht geladen werden"). Returns null on error / non-image.
+     */
+    fun getCameraSnapshot(entityId: String): Bitmap? {
+        return try {
+            val path = "/portal/camera/$entityId/snapshot"
+            http.newCall(authed(path).get().build()).execute().use { resp ->
+                if (!resp.isSuccessful) return null
+                val bytes = resp.body?.bytes() ?: return null
+                if (bytes.isEmpty()) return null
+                decodeDownscaled(bytes, CAMERA_MAX_EDGE_PX)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun parseCard(o: JSONObject): Card = Card(
         entityId = o.optString("entity_id"),
         name = o.optString("name").ifBlank { o.optString("entity_id") },
@@ -245,7 +269,40 @@ class ApiClient(private val ctx: Context) {
         return out.sortedWith(compareBy({ it.room ?: "￿" }, { it.name }))
     }
 
+    /**
+     * Decode [bytes] into a bitmap whose longer edge is at most [maxEdge] px. Uses
+     * a power-of-two `inSampleSize` (cheap, decoder-native) sized by [sampleSize],
+     * so we never allocate the full-resolution bitmap. Returns null on non-image.
+     */
+    private fun decodeDownscaled(bytes: ByteArray, maxEdge: Int): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val opts = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, maxEdge)
+        }
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+    }
+
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
+
+        /** Safe max edge for a camera snapshot pushed into a RemoteViews bundle. */
+        const val CAMERA_MAX_EDGE_PX = 640
+
+        /**
+         * Smallest power-of-two `inSampleSize` that brings the longer edge of a
+         * [srcW]×[srcH] image at or below [maxEdge]. Pure (no Android types) so it
+         * is JVM-unit-testable. Always ≥ 1.
+         */
+        fun sampleSize(srcW: Int, srcH: Int, maxEdge: Int): Int {
+            if (maxEdge <= 0) return 1
+            val longer = maxOf(srcW, srcH)
+            var sample = 1
+            while (longer / (sample * 2) >= maxEdge) {
+                sample *= 2
+            }
+            return sample
+        }
     }
 }

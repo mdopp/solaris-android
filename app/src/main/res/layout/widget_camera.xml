@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera snapshot widget (#30): a full-bleed ImageView with the current frame
+     (centerCrop), a small translucent header overlay carrying the camera name and
+     a refresh icon, plus a "lädt … / kein Bild" placeholder for the empty/error
+     state. RemoteViews-safe (FrameLayout / LinearLayout / ImageView / TextView
+     only — no plain <View>). Body/image tap → PWA device view. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cam_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg">
+
+    <ImageView
+        android:id="@+id/cam_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:adjustViewBounds="false"
+        android:contentDescription="@string/camera_widget_label" />
+
+    <!-- Empty / error placeholder, shown until (or instead of) a frame. -->
+    <TextView
+        android:id="@+id/cam_placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:text="@string/camera_loading"
+        android:textColor="#FFB0BEC5"
+        android:textSize="13sp"
+        android:padding="12dp" />
+
+    <!-- Header overlay: camera name + refresh, over a subtle scrim. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false"
+        android:background="#99000000"
+        android:paddingLeft="10dp"
+        android:paddingRight="6dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/cam_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/camera_widget_label"
+            android:textColor="#FFFFFFFF"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/cam_refresh"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:padding="4dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FFE0E0E0"
+            android:contentDescription="@string/widget_refresh" />
+    </LinearLayout>
+</FrameLayout>
