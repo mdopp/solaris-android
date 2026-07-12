@@ -3,6 +3,9 @@
     <!-- Legacy Google-template shortcut background (kept for shortcut drawables). -->
     <color name="shortcut_background">#F5F5F5</color>
 
+    <!-- Adaptive launcher-icon background: solid ServiceBay blue (blue-500). -->
+    <color name="ic_launcher_background">#3B82F6</color>
+
     <!-- ── Solaris palette ─────────────────────────────────────────────────
          Mirrors the Solaris web frontend + the ServiceBay blue used across
          the widgets. Backgrounds are the same deep near-black as the splash

@@ -1,0 +1,144 @@
+{
+  "_comment": "Shared work queue for the solaris-android autoloop. Single source of truth between Planner/Builder/Verify. Labels are mirrored FROM this file, never the reverse.",
+  "repo": "mdopp/solaris-android",
+  "queue": [
+    {
+      "id": "u1",
+      "kind": "cluster",
+      "issues": [
+        15,
+        16
+      ],
+      "theme": "Solaris design pass — app UI theme + energy widgets",
+      "region": "app/src/main/res/values/, app/src/main/res/layout/, app/src/main/res/drawable/, app/src/main/java/cloud/dopp/solaris/widget/EnergyRender.kt, .../widget/ChartRenderer.kt",
+      "scope": "#15: app-wide Solaris dark theme (bg #070709/#0c0c0e, accent ServiceBay blue #3b82f6/#2563eb), filled/rounded button styles, typo; restyle activity_home + activity_pairing (Solaris brand/logo, tiered cards, nicer 'connected' status) + activity_widget_config; device-picker row layout with type-icon+name+room instead of simple_list_item_1. #16 builds ON #15: three energy widgets in the Solaris card look — (1) 'Jetzt' 2x2 flow-grid PV/Haus/Netz/Akku with colored W + direction (redesign EnergyWidgetProvider), (2) 'Verlauf' multi-line chart PV/Haus/Netz/Akku + 24h/7d toggle persisted per instance via /napi/portal/entity-history (upgrade EnergyStatsWidgetProvider), (3) 'Gesamt' 2x2 kWh totals grid from /napi/portal/energy totals (new provider). colors.xml currently holds only the Google template — real palette must be added.",
+      "acceptance": "colors.xml + a Solaris AppCompat theme applied app-wide (dark bg + blue accent + button styles); home/pairing/config screens restyled to Solaris look; device picker uses a custom row (icon+name+room); the three energy widgets render in the dark card style with correct colors/directions and the Verlauf widget has a working 24h/7d per-instance toggle. Compiles; Robolectric green. Visual correctness confirmed on-device (verify gate).",
+      "gate": "verify",
+      "security": false,
+      "status": "built",
+      "pr": null,
+      "notes": "Priority. #16 depends visually on #15 — build #15 first within the cluster. Data endpoints exist (solarisbay#762 CLOSED). entity_ids for the multi-line chart come from /napi/portal/energy flow — no new server ticket needed."
+    },
+    {
+      "id": "u2",
+      "kind": "issue",
+      "issues": [
+        13
+      ],
+      "theme": "App icon — ServiceBay blue adaptive background",
+      "region": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml, app/src/main/res/mipmap-*/",
+      "scope": "Replace the Google-template adaptive icon (currently white background + ic_maskable, transparent foreground). Set ic_launcher_background = solid ServiceBay blue #3b82f6 (optional #2563eb gradient/edge); ic_launcher_foreground = the Solaris mark (cut-out/white). Re-render mipmap-*/ic_launcher.png legacy densities with the blue background. No white/black icon field.",
+      "acceptance": "Adaptive icon shows blue #3b82f6 background with the Solaris foreground; legacy PNGs regenerated; no white/black flat field. Compiles.",
+      "gate": "verify",
+      "security": false,
+      "status": "built",
+      "pr": null,
+      "notes": "Small. Foreground can reuse the existing ic_maskable mark tinted/cut-out over blue."
+    },
+    {
+      "id": "u3",
+      "kind": "issue",
+      "issues": [
+        14
+      ],
+      "theme": "Crash-reporter UX — staged dialog + GitHub-issue report",
+      "region": "app/src/main/java/cloud/dopp/solaris/ui/OnboardingHomeActivity.kt (showTrace/showLastCrashIfAny), app/src/main/java/cloud/dopp/solaris/SolarisApp.kt",
+      "scope": "Rework the DISPLAY only (capture to filesDir/last_crash.txt stays). Stage 1: friendly message ('Es ist ein Fehler aufgetreten. Bitte melde ihn...') with [Details] / [Fehler melden] / [Schließen]. Stage 2: [Details] reveals the scrollable stacktrace + [Kopieren] (as today). [Fehler melden] opens a prefilled GitHub issue via Custom Tab: github.com/mdopp/solaris-android/issues/new?title=<Crash: ExceptionClass>&body=<urlencoded trace + app version + Build.MODEL/Build.VERSION.RELEASE>, trace truncated to ~8KB URL limit. Include app version + device/Android version in the report body.",
+      "acceptance": "Crash surface shows the friendly Stage-1 dialog first; Details reveals the trace + Copy; 'Fehler melden' opens a prefilled new-issue URL carrying the (truncated) trace + app/device metadata. Compiles; Robolectric green.",
+      "gate": "verify",
+      "security": false,
+      "status": "planned",
+      "pr": null,
+      "notes": "showTrace currently dumps the full trace immediately with only Copy/Close. No login/token needed for the GitHub prefill URL."
+    }
+  ],
+  "batch": {
+    "branch": "batch/design-pass",
+    "units": [
+      "u1",
+      "u2"
+    ],
+    "issues": [
+      15,
+      16,
+      13
+    ],
+    "count": 2,
+    "sealed": false
+  },
+  "verify_state": {
+    "sha": null,
+    "status": "green",
+    "detail": "",
+    "since": null
+  },
+  "needs_refinement": [],
+  "awaiting_user": [],
+  "review": [],
+  "device_test": [
+    {
+      "issue": 4,
+      "pr": 12,
+      "apk": null,
+      "what_to_check": "Universelles Geraete-Widget mit Live-Daten: platzieren, ein HA-Geraet konfigurieren, schalten/oeffnen (Garage/Tuer mit Confirm-403). Daten ueber /napi/ (solarisbay#762 CLOSED).",
+      "since": "2026-07-12"
+    },
+    {
+      "issue": 8,
+      "pr": 12,
+      "apk": null,
+      "what_to_check": "Energie-Widget size-adaptive: klein = Netz in/out, gross = PV/Haus/Netz/Akku-Fluss. Live-Daten via /napi/portal/energy.",
+      "since": "2026-07-12"
+    },
+    {
+      "issue": 9,
+      "pr": 12,
+      "apk": null,
+      "what_to_check": "Energie-Statistik-Widget: 48h-Hausverbrauch-Sparkline via /napi/portal/entity-history. Rendert mit echten Daten.",
+      "since": "2026-07-12"
+    }
+  ],
+  "blocked": [],
+  "upstream_waits": [
+    {
+      "issue": 17,
+      "cross_repo_issue": "mdopp/solarisbay#766",
+      "reason": "Voice widget: on-device capture (RECORD_AUDIO -> RecognizerIntent) is buildable, but the user-facing flow is blocked on the web-chat ?ask=<text> auto-submit URL schema. #766 must define/ship the exact URL (e.g. /#/?ask=…) before the app fixes its Custom Tab target. Build the capture scaffold ready; wire the URL when #766 closes.",
+      "since": "2026-07-12"
+    }
+  ],
+  "completed": [
+    {
+      "issue": 10,
+      "pr": 12,
+      "note": "Closed by planner. Widget polish delivered (type icons + state color, gradient/border card bg, previewLayout placeholders, per-leg magnitude bars). Further energy-look refinement folded into #16.",
+      "since": "2026-07-12"
+    }
+  ],
+  "release_warnings": [
+    "SEAL BASE: batch/design-pass is stacked on feat/standalone-widgets-app (PR #12), NOT origin/main (still the retired TWA). The batch PR must target feat/standalone-widgets-app, not main — everything stays stacked until PR #12 lands on main as the standalone app."
+  ],
+  "notes": [
+    {
+      "note": "#11 = multi-tenant CONCEPT/umbrella epic (largely executed by the standalone refactor in PR #12). Tracking-only — NOT queued as buildable.",
+      "since": "2026-07-12"
+    },
+    {
+      "note": "#3 = Play Console upload — human-gated release work, cannot run headlessly. Not queued; leave open as human task.",
+      "since": "2026-07-12"
+    },
+    {
+      "note": "Latest build v2.7.0 (versionCode 15) on feat/standalone-widgets-app (PR #12). solarisbay#762 (widget /napi/ endpoints) CLOSED — widget data is live.",
+      "since": "2026-07-12"
+    }
+  ],
+  "_schemas": {
+    "queue_unit": "{id, kind:'cluster'|'issue', issues:[int], theme, region, scope, acceptance, gate:'normal'|'verify', security:false, status:'planned'|'in_progress'|'built'|'blocked', pr:null, notes}",
+    "batch": "{branch:'batch/<id>', units:[int], count:int, sealed:bool}",
+    "verify_state": "{sha, status:'owed'|'verifying'|'green'|'red', detail, since}",
+    "needs_refinement": "{issue, question, comment_url, since}",
+    "review": "{issue, pr, flag, since}  (security:true draft PRs — never auto-merge)",
+    "device_test": "{issue, pr, apk, what_to_check, since}  (human sideloads + confirms)",
+    "upstream_waits": "{issue, cross_repo_issue, reason, since}  (blocked on solarisbay/servicebay ticket)"
+  }
+}
