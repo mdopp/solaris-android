@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Small active-devices overview (#28): a compact count / "Ampel". Icon + big
-     count ("3 an") + label. RemoteViews-safe (LinearLayout only). Tap → PWA. -->
+<!-- Small/compact active-devices overview (#28): a header count + a bounded row of
+     per-type chips (icon + "N an/offen"), e.g. "💡 3 an · 🪟 2 offen". No single
+     grand total on its own — the chips are the grouped-by-type summary. Up to 5
+     chip slots + a "+N" overflow, all RemoteViews-safe (LinearLayout/ImageView/
+     TextView only — no plain <View>). Tap → PWA. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/av_root"
     android:layout_width="match_parent"
@@ -13,7 +16,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
+        android:layout_marginBottom="4dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:baselineAligned="false">
@@ -27,9 +30,17 @@
             android:contentDescription="@null" />
 
         <TextView
+            android:id="@+id/av_count"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="3 an"
+            android:textColor="#FF66BB6A"
+            android:textStyle="bold"
+            android:textSize="20sp" />
 
         <ImageView
             android:id="@+id/av_refresh"
@@ -41,25 +52,101 @@
             android:contentDescription="@string/widget_refresh" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/av_count"
+    <!-- Grouped-by-type chips. Each slot = icon + "N verb"; shown/hidden per group. -->
+    <LinearLayout
+        android:id="@+id/av_chips"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:text="3 an"
-        android:textColor="#FF66BB6A"
-        android:textStyle="bold"
-        android:textSize="22sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
 
-    <TextView
-        android:id="@+id/av_sub"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:text="@string/active_title"
-        android:textColor="#FFB0BEC5"
-        android:textSize="12sp" />
+        <ImageView
+            android:id="@+id/av_chip0_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/av_chip0_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="9dp"
+            android:maxLines="1"
+            android:textColor="#FFE0E6EA"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/av_chip1_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/av_chip1_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="9dp"
+            android:maxLines="1"
+            android:textColor="#FFE0E6EA"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/av_chip2_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/av_chip2_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="9dp"
+            android:maxLines="1"
+            android:textColor="#FFE0E6EA"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/av_chip3_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/av_chip3_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="9dp"
+            android:maxLines="1"
+            android:textColor="#FFE0E6EA"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/av_chip4_icon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:tint="#FF66BB6A"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/av_chip4_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="9dp"
+            android:maxLines="1"
+            android:textColor="#FFE0E6EA"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/av_chip_more"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="#FFB0BEC5"
+            android:textSize="12sp" />
+    </LinearLayout>
 </LinearLayout>

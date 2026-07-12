@@ -25,6 +25,8 @@
     <!-- %1$d = Anzahl aktiver Geräte -->
     <string name="active_count">%1$d an</string>
     <string name="active_more">+%1$d weitere</string>
+    <!-- Compact overflow for the grouped-by-type chips: %1$d = weitere Typen. -->
+    <string name="active_types_more">+%1$d</string>
 
     <!-- Large device widget 48h history (#29). -->
     <string name="device_nohistory">kein Verlauf</string>

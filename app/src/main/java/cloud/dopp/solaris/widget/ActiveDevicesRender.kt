@@ -17,14 +17,28 @@ import java.util.Locale
  */
 object ActiveDevicesRender {
 
-    /** The two tiers: a compact count vs. the scrollable list. */
+    /** The two tiers: a compact grouped summary vs. the scrollable list. */
     enum class Tier { SMALL, LARGE }
 
-    /** Large once the host box is tall/wide enough to fit the scrollable list. */
-    fun sizeTier(minW: Int, minH: Int): Tier =
-        if (minW >= 180 && minH >= 180) Tier.LARGE else Tier.SMALL
+    /** Icon slots available in the compact tier for per-type chips (see layout). */
+    const val CHIP_SLOTS = 5
 
-    /** Small-tier scaffold: count + subtitle. [active] null → loading/hint text. */
+    /**
+     * Large once the host box is roughly **2 cells tall** — a 4x2 / full-width
+     * 3-tall widget already fits 5-6 scrollable rows, so the list shouldn't wait
+     * for a big square. Boundary lowered from 180dp to ~110dp height (device
+     * feedback #28); width stays modest so a flat 1-row strip still reads as the
+     * compact grouped summary.
+     */
+    fun sizeTier(minW: Int, minH: Int): Tier =
+        if (minW >= 160 && minH >= 110) Tier.LARGE else Tier.SMALL
+
+    /**
+     * Compact-tier scaffold: a header count **plus** a grouped-by-type chip row
+     * (icon + "N an/offen" per domain), not a lone grand total. [active] null →
+     * loading ("…"); empty → "Alles aus". Bounded to [CHIP_SLOTS] chips with a
+     * "+N" overflow, RemoteViews-safe.
+     */
     fun small(ctx: Context, active: List<Card>?): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_active_small)
         val count = active?.size
@@ -36,8 +50,42 @@ object ActiveDevicesRender {
                 else -> ctx.getString(R.string.active_count, count)
             },
         )
-        v.setTextViewText(R.id.av_sub, ctx.getString(R.string.active_title))
+        renderChips(ctx, v, active)
         return v
+    }
+
+    private val CHIP_ICON = intArrayOf(
+        R.id.av_chip0_icon, R.id.av_chip1_icon, R.id.av_chip2_icon,
+        R.id.av_chip3_icon, R.id.av_chip4_icon,
+    )
+    private val CHIP_TEXT = intArrayOf(
+        R.id.av_chip0_text, R.id.av_chip1_text, R.id.av_chip2_text,
+        R.id.av_chip3_text, R.id.av_chip4_text,
+    )
+
+    /** Fill the bounded chip slots from the grouped-by-type summary; hide the rest. */
+    private fun renderChips(ctx: Context, v: RemoteViews, active: List<Card>?) {
+        val groups = if (active == null) emptyList() else ActiveSummary.byType(active)
+        val shown = groups.take(CHIP_SLOTS)
+        for (i in 0 until CHIP_SLOTS) {
+            val g = shown.getOrNull(i)
+            if (g == null) {
+                v.setViewVisibility(CHIP_ICON[i], View.GONE)
+                v.setViewVisibility(CHIP_TEXT[i], View.GONE)
+            } else {
+                v.setViewVisibility(CHIP_ICON[i], View.VISIBLE)
+                v.setViewVisibility(CHIP_TEXT[i], View.VISIBLE)
+                v.setImageViewResource(CHIP_ICON[i], DeviceIcons.forDomain(g.domain))
+                v.setTextViewText(CHIP_TEXT[i], g.label)
+            }
+        }
+        val overflow = groups.size - shown.size
+        if (overflow > 0) {
+            v.setViewVisibility(R.id.av_chip_more, View.VISIBLE)
+            v.setTextViewText(R.id.av_chip_more, ctx.getString(R.string.active_types_more, overflow))
+        } else {
+            v.setViewVisibility(R.id.av_chip_more, View.GONE)
+        }
     }
 
     /**

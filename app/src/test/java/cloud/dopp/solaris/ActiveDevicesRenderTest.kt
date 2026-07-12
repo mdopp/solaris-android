@@ -17,15 +17,18 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class ActiveDevicesRenderTest {
 
-    @Test fun tallWideIsLarge() {
+    @Test fun listShowsAtTwoCellsTall() {
+        // Boundary lowered (#28): a ~2-cell-tall / full-width widget now shows the list.
+        assertEquals(Tier.LARGE, ActiveDevicesRender.sizeTier(160, 110))
+        assertEquals(Tier.LARGE, ActiveDevicesRender.sizeTier(300, 110))
         assertEquals(Tier.LARGE, ActiveDevicesRender.sizeTier(180, 180))
         assertEquals(Tier.LARGE, ActiveDevicesRender.sizeTier(300, 300))
     }
 
-    @Test fun smallOrFlatIsSmall() {
+    @Test fun flatOrNarrowIsCompact() {
+        assertEquals(Tier.SMALL, ActiveDevicesRender.sizeTier(300, 60))   // 1 row tall
         assertEquals(Tier.SMALL, ActiveDevicesRender.sizeTier(110, 40))
-        assertEquals(Tier.SMALL, ActiveDevicesRender.sizeTier(300, 100))
-        assertEquals(Tier.SMALL, ActiveDevicesRender.sizeTier(120, 300))
+        assertEquals(Tier.SMALL, ActiveDevicesRender.sizeTier(120, 300))  // too narrow
     }
 
     private fun card(domain: String, state: String, brightness: Int? = null, position: Int? = null) =
