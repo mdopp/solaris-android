@@ -7,8 +7,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -135,39 +133,59 @@ class ApiClient(private val ctx: Context) {
 
     /**
      * The household's currently **active** devices (lights on, covers open,
-     * switches on, …) for the overview widget (#28). There is no single "list
-     * active" endpoint client-side, so this reuses [listAddable] for the roster
-     * and fetches each entity's live [Card] via [getCard], keeping only the
-     * active ones. Bounded by [cap] to keep the widget refresh cheap; the
-     * fetched cards are ordered by domain then name. If a dedicated
-     * `/napi/portal/active` (or a batch states call) lands server-side this
-     * should switch to it — tracked in **solarisbay#773** (collective states /
-     * active endpoint). Until then the per-entity [getCard] reads are **fired
-     * concurrently** on a small bounded pool (was sequential N+1 → ~10s) so the
-     * widget refresh stays fast; each read is timeout- and exception-guarded so a
-     * single slow/broken entity can't stall or fail the whole list.
+     * switches on, …) for the overview widget (#28) — a **single** GET to the
+     * server's collective endpoint `/napi/portal/active` (confirmed in
+     * **solarisbay#773**), replacing the old per-entity N+1 fan-out. The endpoint
+     * returns the already-active entities as a flat list, so no client-side
+     * `isOn` filtering or roster join is needed. Bounded by [cap]. Ordered by
+     * domain then name for a stable list. Empty/error → empty list (the widget
+     * renders its "keine aktiven Geräte" state), so a hiccup never crashes it.
      */
     fun listActive(cap: Int = 40): List<Card> {
-        val roster = listAddable().take(cap)
-        if (roster.isEmpty()) return emptyList()
-
-        // Bounded fan-out: OkHttp reads are blocking, so a handful of workers turns
-        // the sequential N reads into ~N/POOL waves. Kept small to be gentle on the
-        // server (solarisbay#773 will collapse this to one call).
-        val pool = Executors.newFixedThreadPool(minOf(ACTIVE_POOL, roster.size))
         try {
-            val tasks = roster.map { d ->
-                Callable { try { getCard(d.entityId) } catch (e: Exception) { null } }
+            http.newCall(authed("/portal/active").get().build()).execute().use { resp ->
+                if (!resp.isSuccessful) return emptyList()
+                val body = resp.body?.string() ?: return emptyList()
+                return parseActive(body).take(cap)
             }
-            val out = mutableListOf<Card>()
-            for (f in pool.invokeAll(tasks, ACTIVE_FANOUT_TIMEOUT_S, TimeUnit.SECONDS)) {
-                val card = try { f.get() } catch (e: Exception) { null } ?: continue
-                if (card.isOn) out.add(card)
-            }
-            return out.sortedWith(compareBy({ it.domain }, { it.name }))
-        } finally {
-            pool.shutdownNow()
+        } catch (e: Exception) {
+            return emptyList()
         }
+    }
+
+    /**
+     * Parse the `/napi/portal/active` payload into [Card]s. Accepts either a bare
+     * JSON array or an object wrapping the list under `active`/`cards`/`devices`.
+     * Each item is `{id|entity_id, name, room, domain, state}` — id may arrive as
+     * either `id` or `entity_id`, so both are accepted. Room is carried on the
+     * [Card.deviceClass] slot is *not* used; the active widget reads name/state.
+     */
+    internal fun parseActive(body: String): List<Card> {
+        val root = JSONObject(body.trim().let { if (it.startsWith("[")) "{\"active\":$it}" else it })
+        val arr = root.optJSONArray("active")
+            ?: root.optJSONArray("cards")
+            ?: root.optJSONArray("devices")
+            ?: return emptyList()
+        val out = ArrayList<Card>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val eid = o.optString("entity_id").ifBlank { o.optString("id") }
+            if (eid.isBlank()) continue
+            out.add(
+                Card(
+                    entityId = eid,
+                    name = o.optString("name").ifBlank { eid },
+                    domain = o.optString("domain").ifBlank { eid.substringBefore(".") },
+                    deviceClass = o.optString("device_class").ifBlank { null },
+                    state = o.optString("state").ifBlank { null },
+                    unit = o.optString("unit").ifBlank { null },
+                    brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
+                    position = o.optInt("current_position", -1).takeIf { it in 0..100 },
+                    temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
+                ),
+            )
+        }
+        return out.sortedWith(compareBy({ it.domain }, { it.name }))
     }
 
     /**
@@ -229,11 +247,5 @@ class ApiClient(private val ctx: Context) {
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
-
-        /** Worker count for the [listActive] per-entity state fan-out. */
-        private const val ACTIVE_POOL = 8
-
-        /** Hard ceiling for the whole [listActive] fan-out wave (seconds). */
-        private const val ACTIVE_FANOUT_TIMEOUT_S = 12L
     }
 }
