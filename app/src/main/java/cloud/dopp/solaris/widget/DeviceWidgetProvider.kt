@@ -67,7 +67,7 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             }
             return
         }
-        val tap = tapPending(context, appWidgetId)
+        val tap = tapPending(context, appWidgetId, entityId)
         val domain = WidgetStore.domain(context, appWidgetId)
         // Immediate render from cache, then async live-state fetch.
         try {
@@ -117,10 +117,10 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         )
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent =
-        // Body tap opens the PWA in a Custom Tab (#27). The device-specific PWA
-        // route is pending solarisbay#769 — until then, root (see PwaLauncher.Routes).
-        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT)
+    private fun tapPending(context: Context, appWidgetId: Int, entityId: String): PendingIntent =
+        // Name/body tap opens this bound entity's card in the PWA Custom Tab
+        // (#27, route confirmed in solarisbay#769).
+        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.device(entityId))
 
     private fun configPending(context: Context, appWidgetId: Int): PendingIntent {
         val i = Intent(context, WidgetConfigActivity::class.java)

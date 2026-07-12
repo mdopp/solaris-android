@@ -19,17 +19,23 @@ import cloud.dopp.solaris.ui.OnboardingHomeActivity
 object PwaLauncher {
 
     /**
-     * PWA deep-link routes appended to `ServerStore.baseUrl`. The **exact** routes
-     * (hash vs path, device-specific views) are being defined server-side in
-     * solarisbay#769 — until then these are best-effort and centralised here so a
-     * single edit refines them once #769 lands.
+     * PWA deep-link routes appended to `ServerStore.baseUrl`. Confirmed server-side
+     * in solarisbay#769 (the PWA is hash-routed under `/#/p/…`); centralised here so
+     * every widget tap lands on the exact view.
      */
     object Routes {
-        /** Energy widgets → the energy view. Best-effort until solarisbay#769. */
-        const val ENERGY = "/#/energy"
+        /** Energy widgets → the energy portal view (confirmed solarisbay#769). */
+        const val ENERGY = "/#/p/energy"
 
-        /** Device widget → root (device-specific route pending solarisbay#769). */
+        /** Generic/overview tap → the PWA root. */
         const val ROOT = "/"
+
+        /**
+         * A single device's card view (confirmed solarisbay#769) — a tap on a
+         * device widget's name, or an active-devices row, opens exactly that
+         * entity's card.
+         */
+        fun device(entityId: String): String = "/#/p/device/$entityId"
     }
 
     /**

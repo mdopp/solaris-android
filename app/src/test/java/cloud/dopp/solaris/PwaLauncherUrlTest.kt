@@ -13,19 +13,35 @@ class PwaLauncherUrlTest {
 
     @Test
     fun trailingSlashBaseAndLeadingSlashPath_noDoubleSlash() {
-        assertEquals("https://chat.dopp.cloud/#/energy", PwaLauncher.url("https://chat.dopp.cloud/", "/#/energy"))
+        assertEquals("https://chat.dopp.cloud/#/p/energy", PwaLauncher.url("https://chat.dopp.cloud/", "/#/p/energy"))
     }
 
     @Test
     fun baseWithoutTrailingSlash_exactlyOneSlash() {
-        assertEquals("https://chat.dopp.cloud/#/energy", PwaLauncher.url("https://chat.dopp.cloud", "/#/energy"))
+        assertEquals("https://chat.dopp.cloud/#/p/energy", PwaLauncher.url("https://chat.dopp.cloud", "/#/p/energy"))
     }
 
     @Test
     fun energyRouteProducesExpectedUrl() {
         assertEquals(
-            "https://chat.dopp.cloud/#/energy",
+            "https://chat.dopp.cloud/#/p/energy",
             PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.ENERGY),
+        )
+    }
+
+    @Test
+    fun deviceRouteEmbedsEntityId() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/device/light.kitchen",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.device("light.kitchen")),
+        )
+    }
+
+    @Test
+    fun deviceRouteWithTrailingSlashBase_noDoubleSlash() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/device/cover.garage",
+            PwaLauncher.url("https://chat.dopp.cloud/", PwaLauncher.Routes.device("cover.garage")),
         )
     }
 

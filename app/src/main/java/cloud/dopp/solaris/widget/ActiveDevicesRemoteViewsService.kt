@@ -56,9 +56,11 @@ private class ActiveDevicesFactory(
         row.setTextViewText(R.id.av_item_state, ActiveDevicesRender.stateLabel(card))
 
         // Per-row fill-in intent, merged with the ListView's PendingIntentTemplate
-        // (set in the provider) so a tap opens the PWA. Entity-specific routing waits
-        // on solarisbay#769; until then every row lands on the PWA overview.
-        val fill = Intent().putExtra(PwaTrampolineActivity.EXTRA_PATH, PwaLauncher.Routes.ROOT)
+        // (set in the provider) so a tap opens that device's card in the PWA
+        // (#27, route confirmed in solarisbay#769).
+        val route = card.entityId.ifBlank { null }
+            ?.let { PwaLauncher.Routes.device(it) } ?: PwaLauncher.Routes.ROOT
+        val fill = Intent().putExtra(PwaTrampolineActivity.EXTRA_PATH, route)
         row.setOnClickFillInIntent(R.id.av_item_root, fill)
         return row
     }
