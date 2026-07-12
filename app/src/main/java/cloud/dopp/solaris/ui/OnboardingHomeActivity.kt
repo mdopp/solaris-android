@@ -130,8 +130,20 @@ class OnboardingHomeActivity : AppCompatActivity() {
 
     private fun openPairing() {
         val base = ServerStore.baseUrl(this) ?: return
-        CustomTabsIntent.Builder().build()
-            .launchUrl(this, Uri.parse(base + SolarisConfig.PAIR_PATH))
+        openUrl(Uri.parse(base + SolarisConfig.PAIR_PATH))
+    }
+
+    /** Open in a Custom Tab, falling back to a plain browser intent, then a toast. */
+    private fun openUrl(uri: Uri) {
+        try {
+            CustomTabsIntent.Builder().build().launchUrl(this, uri)
+        } catch (e: Exception) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, uri))
+            } catch (e2: Exception) {
+                toast(getString(R.string.home_no_browser))
+            }
+        }
     }
 
     private fun handleDeepLink(intent: Intent?) {
@@ -168,7 +180,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
 
     private fun openSolaris() {
         val base = ServerStore.baseUrl(this) ?: return
-        CustomTabsIntent.Builder().build().launchUrl(this, Uri.parse("$base/"))
+        openUrl(Uri.parse("$base/"))
     }
 
     private fun logout() {

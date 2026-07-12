@@ -14,4 +14,5 @@
     <string name="home_open">Solaris öffnen</string>
     <string name="home_logout">Abmelden</string>
     <string name="home_logged_out">Abgemeldet.</string>
+    <string name="home_no_browser">Kein Browser gefunden.</string>
 </resources>
