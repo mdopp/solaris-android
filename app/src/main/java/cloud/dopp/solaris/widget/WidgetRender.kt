@@ -43,6 +43,15 @@ object WidgetRender {
     fun showsChart(tier: Tier): Boolean = tier == Tier.LARGE
 
     /**
+     * Does a **body/central-area tap** toggle the device on/off for this domain
+     * (#33)? Lights and switches are simple on↔off actuators, so the big obvious
+     * area should switch them directly — the PWA moves to the name/header tap.
+     * Covers (no simple toggle) and sensors keep the body tap = open-PWA. Pure so
+     * it's JVM-testable.
+     */
+    fun togglesOnBodyTap(domain: String): Boolean = domain == "light" || domain == "switch"
+
+    /**
      * @param onBodyTap fired by a tap on the widget body/header — opens the PWA
      *   (#27), NOT a control action. The control buttons keep their own actions.
      *   When the widget is unconfigured this is instead the picker intent.
@@ -94,12 +103,29 @@ object WidgetRender {
             R.id.w_refresh, op(ctx, appWidgetId, 7, WidgetActionReceiver.OP_REFRESH),
         )
 
-        // Body/header tap opens the PWA (#27), not a control action.
+        // Tap model per domain (#33): for lights/switches the big central area
+        // toggles on/off and the *name* opens the PWA; for covers/sensors the body
+        // opens the PWA (#27) and the per-domain control buttons do the rest.
+        val toggles = togglesOnBodyTap(dom)
+        val bodyToggle = op(ctx, appWidgetId, 9, WidgetActionReceiver.OP_TOGGLE)
         if (tier == Tier.MEDIUM || tier == Tier.WIDE || tier == Tier.LARGE) {
-            v.setOnClickPendingIntent(R.id.w_header, onBodyTap)
+            if (toggles) {
+                // Central icon+state area toggles; name opens the PWA.
+                v.setOnClickPendingIntent(R.id.w_icon, bodyToggle)
+                v.setOnClickPendingIntent(R.id.w_state, bodyToggle)
+                v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
+            } else {
+                v.setOnClickPendingIntent(R.id.w_header, onBodyTap)
+            }
             wireControls(ctx, v, appWidgetId, dom)
         } else {
-            v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
+            if (toggles) {
+                // Small tier: whole card toggles, name opens the PWA.
+                v.setOnClickPendingIntent(R.id.w_root, bodyToggle)
+                v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
+            } else {
+                v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
+            }
         }
 
         // 48h history sparkline — LARGE only (#29). Draw when there's a numeric

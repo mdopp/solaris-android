@@ -60,4 +60,14 @@ class WidgetSizeTierTest {
         assertEquals(false, WidgetRender.showsChart(Tier.WIDE))
         assertEquals(false, WidgetRender.showsChart(Tier.SMALL))
     }
+
+    /** #33: lights/switches toggle on a body tap; covers/sensors open the PWA. */
+    @Test fun onlyLightAndSwitchToggleOnBodyTap() {
+        assertEquals(true, WidgetRender.togglesOnBodyTap("light"))
+        assertEquals(true, WidgetRender.togglesOnBodyTap("switch"))
+        assertEquals(false, WidgetRender.togglesOnBodyTap("cover"))
+        assertEquals(false, WidgetRender.togglesOnBodyTap("sensor"))
+        assertEquals(false, WidgetRender.togglesOnBodyTap("climate"))
+        assertEquals(false, WidgetRender.togglesOnBodyTap(""))
+    }
 }
