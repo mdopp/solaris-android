@@ -82,6 +82,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Headless tap handler for the device widget (no visible screen). -->
+        <receiver
+            android:name=".widget.WidgetActionReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".widget.WidgetActionActivity"
             android:exported="false"

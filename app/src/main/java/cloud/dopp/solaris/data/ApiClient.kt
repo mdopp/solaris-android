@@ -135,6 +135,9 @@ class ApiClient(private val ctx: Context) {
         deviceClass = o.optString("device_class").ifBlank { null },
         state = o.optString("state").ifBlank { null },
         unit = o.optString("unit").ifBlank { null },
+        brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
+        position = o.optInt("current_position", -1).takeIf { it in 0..100 },
+        temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
     )
 
     /** addable: `{ ok, rooms: [ {room, cards:[ {entity_id, name, domain, device_class} ]} ] }`. */

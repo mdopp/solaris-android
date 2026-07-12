@@ -82,10 +82,11 @@ class DeviceWidgetProvider : AppWidgetProvider() {
     }
 
     private fun tapPending(context: Context, appWidgetId: Int): PendingIntent {
-        val i = Intent(context, WidgetActionActivity::class.java)
+        // A broadcast (no Activity) so a tap runs headless without flashing a screen.
+        val i = Intent(context, WidgetActionReceiver::class.java)
+            .setAction(WidgetActionReceiver.ACTION_TAP)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return PendingIntent.getActivity(
+        return PendingIntent.getBroadcast(
             context, appWidgetId, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
