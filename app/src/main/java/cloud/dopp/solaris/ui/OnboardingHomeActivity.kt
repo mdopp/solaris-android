@@ -27,6 +27,7 @@ import cloud.dopp.solaris.SolarisApp
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
+import cloud.dopp.solaris.widget.PwaLauncher
 import cloud.dopp.solaris.widget.WidgetTypes
 import java.io.File
 import java.io.PrintWriter
@@ -54,6 +55,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
             findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
             findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
+            findViewById<Button>(R.id.install_pwa_btn).setOnClickListener { installPwa() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
             handleDeepLink(intent)
@@ -234,6 +236,15 @@ class OnboardingHomeActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.home_pick_widget_cancel, null)
             .show()
+    }
+
+    /**
+     * Step 2 of onboarding (#11): nudge the user to install the Solaris PWA — that's
+     * where chat & push notifications live. Opens the server root in the browser so
+     * the site's `beforeinstallprompt` / "add to home screen" affordance appears.
+     */
+    private fun installPwa() {
+        PwaLauncher.open(this, PwaLauncher.Routes.ROOT)
     }
 
     private fun openSolaris() {
