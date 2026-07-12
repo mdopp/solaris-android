@@ -8,7 +8,7 @@ import android.content.Intent
 import android.os.Bundle
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.TokenStore
-import cloud.dopp.solaris.pair.PairingActivity
+import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import kotlin.concurrent.thread
 
 /**
@@ -67,9 +67,9 @@ class EnergyWidgetProvider : AppWidgetProvider() {
     private fun tapPending(context: Context, appWidgetId: Int, paired: Boolean): PendingIntent {
         val intent = if (paired) {
             context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?: Intent(context, PairingActivity::class.java)
+                ?: Intent(context, OnboardingHomeActivity::class.java)
         } else {
-            Intent(context, PairingActivity::class.java)
+            Intent(context, OnboardingHomeActivity::class.java)
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return PendingIntent.getActivity(

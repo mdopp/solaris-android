@@ -12,8 +12,9 @@ import androidx.appcompat.app.AppCompatActivity
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.Device
+import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
-import cloud.dopp.solaris.pair.PairingActivity
+import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import kotlin.concurrent.thread
 
 /**
@@ -39,11 +40,11 @@ class WidgetConfigActivity : AppCompatActivity() {
         }
         setContentView(R.layout.activity_widget_config)
 
-        if (!TokenStore.isPaired(this)) {
+        if (!ServerStore.isConfigured(this) || !TokenStore.isPaired(this)) {
             findViewById<TextView>(R.id.config_status).setText(R.string.widget_config_pair_first)
             findViewById<Button>(R.id.config_pair).apply {
                 visibility = View.VISIBLE
-                setOnClickListener { startActivity(Intent(context, PairingActivity::class.java)) }
+                setOnClickListener { startActivity(Intent(context, OnboardingHomeActivity::class.java)) }
             }
             return
         }
@@ -52,8 +53,8 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Coming back from pairing — retry if now paired.
-        if (TokenStore.isPaired(this) &&
+        // Coming back from pairing — retry if now connected.
+        if (ServerStore.isConfigured(this) && TokenStore.isPaired(this) &&
             findViewById<ListView>(R.id.config_list).adapter == null
         ) {
             findViewById<Button>(R.id.config_pair).visibility = View.GONE

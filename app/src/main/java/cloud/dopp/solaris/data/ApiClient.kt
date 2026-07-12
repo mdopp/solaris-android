@@ -16,6 +16,9 @@ import java.util.concurrent.TimeUnit
  */
 class ApiClient(private val ctx: Context) {
 
+    /** No server configured yet — the app must be connected first. */
+    class NotConfiguredException : Exception("no server configured")
+
     /** No device token stored yet — the app must be paired first. */
     class NotPairedException : Exception("no device token")
 
@@ -27,16 +30,20 @@ class ApiClient(private val ctx: Context) {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    private fun base(): String =
+        ServerStore.baseUrl(ctx)?.trimEnd('/') ?: throw NotConfiguredException()
+
     private fun token(): String = TokenStore.get(ctx) ?: throw NotPairedException()
 
+    /** All native calls hit the proxy-bypassed, token-only `/napi/` prefix (#757). */
     private fun authed(path: String): Request.Builder =
         Request.Builder()
-            .url(SolarisConfig.BASE_URL + path)
+            .url(base() + SolarisConfig.NAPI + path)
             .header("Authorization", "Bearer ${token()}")
 
-    /** One entity's live card via `/api/concept/{id}` → `{ok, concept:{ha_card}}`. */
+    /** One entity's live card via `/napi/concept/{id}` → `{ok, concept:{ha_card}}`. */
     fun getCard(entityId: String): Card? {
-        http.newCall(authed("/api/concept/$entityId").get().build()).execute().use { resp ->
+        http.newCall(authed("/concept/$entityId").get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return null
             val body = resp.body?.string() ?: return null
             val concept = JSONObject(body).optJSONObject("concept") ?: return null
@@ -45,9 +52,9 @@ class ApiClient(private val ctx: Context) {
         }
     }
 
-    /** Controllable actuators for the config picker via `/api/portal/start/addable`. */
+    /** Controllable actuators for the config picker via `/napi/portal/start/addable`. */
     fun listAddable(): List<Device> {
-        http.newCall(authed("/api/portal/start/addable").get().build()).execute().use { resp ->
+        http.newCall(authed("/portal/start/addable").get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return emptyList()
             val body = resp.body?.string() ?: return emptyList()
             return parseAddable(JSONObject(body))
@@ -71,15 +78,15 @@ class ApiClient(private val ctx: Context) {
         if (confirmed) payload.put("confirmed", true)
         if (data != null) payload.put("data", data)
         val reqBody = payload.toString().toRequestBody(JSON)
-        http.newCall(authed("/api/ha/call").post(reqBody).build()).execute().use { resp ->
+        http.newCall(authed("/ha/call").post(reqBody).build()).execute().use { resp ->
             if (resp.code == 403) throw SensitiveException()
             return resp.isSuccessful
         }
     }
 
-    /** The house energy picture via `/api/portal/energy` (the flow legs). */
+    /** The house energy picture via `/napi/portal/energy` (the flow legs). */
     fun getEnergy(): Energy? {
-        http.newCall(authed("/api/portal/energy").get().build()).execute().use { resp ->
+        http.newCall(authed("/portal/energy").get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return null
             val body = resp.body?.string() ?: return null
             val root = JSONObject(body)

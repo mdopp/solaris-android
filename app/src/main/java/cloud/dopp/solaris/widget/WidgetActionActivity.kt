@@ -7,7 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
-import cloud.dopp.solaris.pair.PairingActivity
+import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import kotlin.concurrent.thread
 
 /**
@@ -52,13 +52,10 @@ class WidgetActionActivity : Activity() {
                 }
                 else -> { /* climate & others are read-only in C1 */ }
             }
+        } catch (e: ApiClient.NotConfiguredException) {
+            runOnUiThread { openHome() }
         } catch (e: ApiClient.NotPairedException) {
-            runOnUiThread {
-                startActivity(
-                    Intent(this, PairingActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
+            runOnUiThread { openHome() }
         } catch (e: Exception) {
             // network/other — keep the last rendered state
         }
@@ -82,6 +79,14 @@ class WidgetActionActivity : Activity() {
             .setNegativeButton(R.string.widget_confirm_no) { _, _ -> done() }
             .setOnCancelListener { done() }
             .show()
+    }
+
+    private fun openHome() {
+        startActivity(
+            Intent(this, OnboardingHomeActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        done()
     }
 
     private fun done() {

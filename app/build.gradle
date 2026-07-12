@@ -60,8 +60,8 @@ android {
         // needs the AndroidKeyStore-backed master key from API 23.
         minSdkVersion 23
         targetSdkVersion 35
-        versionCode 5
-        versionName "1.0.4"
+        versionCode 6
+        versionName "2.0.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -214,11 +214,11 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
-
-    // --- Phase 3: native surfaces (widgets / tiles / device-token pairing) ---
+    // --- Native standalone app (widgets + onboarding + pairing) ---
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Custom Tabs for pairing (/pair-device) and "open Solaris".
+    implementation 'androidx.browser:browser:1.8.0'
     // Encrypted-at-rest storage for the sol_device_… bearer token.
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     // Networking for the widget data/action calls.
