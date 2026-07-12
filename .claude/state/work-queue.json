@@ -105,6 +105,20 @@
       "apk": "app/build/outputs/apk/debug/app-debug.apk",
       "what_to_check": "Widget-Fläche gefüllt: Steuertasten (Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle) spannen die volle Breite mit großen Tap-Zielen; Zustand ('43 % offen' / '80 %' / Temp) gut lesbar/fett, Positions-/Helligkeitsbalken full-width; im hohen (medium) Widget sind Header oben, State+Balken Mitte, Controls unten verteilt — keine leere Ecke rechts/unten. Sensoren ohne Control-Row wirken trotzdem ausgewogen.",
       "since": "2026-07-12"
+    },
+    {
+      "issue": 28,
+      "pr": 18,
+      "apk": "app/build/outputs/apk/debug/app-debug.apk",
+      "what_to_check": "Neues 'Aktive Geräte'-Übersichtswidget platzieren: klein zeigt eine kompakte Anzahl ('3 an' / 'Alles aus'), groß (>=180x220dp) zeigt eine Liste der gerade aktiven Geräte (Typ-Icon + Name + Zustand, max 6 + '+N weitere'). Live-Daten via /napi/ (addable + per-Entity state). Tap → PWA-Übersicht, Refresh-Icon aktualisiert. HINWEIS: kein dedizierter 'active/states'-Endpoint — Widget macht N+1 Abrufe (addable + je Entity state), gekappt auf 40; falls träge/teuer → solarisbay-Ticket für /napi/portal/active bzw. Batch-States.",
+      "since": "2026-07-12"
+    },
+    {
+      "issue": 29,
+      "pr": 18,
+      "apk": "app/build/outputs/apk/debug/app-debug.apk",
+      "what_to_check": "Geräte-Widget auf groß (>=180x220dp) ziehen: unter Zustand/Balken/Controls erscheint die 48h-Verlaufskurve des gebundenen Geräts (Sparkline, akzentfarben je Domain) via /napi/portal/entity-history?range=48h. Ohne Verlauf: 'kein Verlauf'-Platzhalter. Kleines/mittleres/wide-Widget unverändert.",
+      "since": "2026-07-12"
     }
   ],
   "blocked": [],
@@ -175,6 +189,10 @@
     },
     {
       "note": "#22 (Widget-Layout-Dichte-Pass) built on batch/design-pass (PR #18). small/medium/wide-Layouts überarbeitet: Steuertasten volle Breite via layout_weight + größere Tap-Ziele (~52dp), prominenter Zustand (fett, 22sp im medium) + dickerer full-width Balken, medium spreizt Header/State/Controls vertikal (weighted middle) statt oben-links-Cluster; neue Switch-Toggle-Zeile (w_switch_controls) in medium/wide, in WidgetRender.wireControls verdrahtet (OP_TOGGLE); Nicht-steuerbare Domains kollabieren die Control-Row. Gate green (assembleDebug + testDebugUnitTest). device_test owed — User lädt sideload zur Bestätigung.",
+      "since": "2026-07-12"
+    },
+    {
+      "note": "#28 (aktive-Geräte-Übersichtswidget) + #29 (48h-Verlauf in der Geräte-Widget-Großansicht) built on batch/design-pass (PR #18), auf 2.8.3/versionCode 19 gebumpt. #28: neuer ActiveDevicesWidgetProvider + ActiveDevicesRender + widget_active_small/large.xml + active_devices_widget_info.xml + Manifest-Receiver; ApiClient.listActive() (reuse addable + per-Entity state, gekappt 40) — SME/Datenlücke: es gibt keinen dedizierten /napi-Endpoint für aktive Geräte/Batch-States, das Widget macht N+1 Reads; falls das im Betrieb träge/teuer ist, solarisbay-Ticket für /napi/portal/active bzw. Batch-States anlegen (nicht erfunden). #29: WidgetRender.Tier.LARGE + widget_device_large.xml (medium-Controls + 48h-Sparkline via ChartRenderer.sparkline/getEntityHistory), DeviceWidgetProvider holt History nur für LARGE. Gate green: assembleDebug + testDebugUnitTest (neu: ActiveDevicesRenderTest, erweitert: WidgetSizeTierTest LARGE/showsChart). device_test owed (#28/#29). Nicht neu geseal't/gemerged.",
       "since": "2026-07-12"
     }
   ],
