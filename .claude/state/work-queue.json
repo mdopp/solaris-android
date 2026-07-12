@@ -214,6 +214,10 @@
         {
             "note": "Builder: #28 großes Aktive-Geräte-Widget auf scrollbare ListView-Collection umgebaut (ActiveDevicesRemoteViewsService + item_active_row + Instant-Cache in WidgetStore/ActiveCache). Gate GRÜN (testDebugUnitTest inkl. ActiveCacheTest + assembleDebug). Version 2.8.9/vc25. Push → PR #18. Serverseitiger Speed-Fix bleibt solarisbay#773.",
             "since": "2026-07-12"
+        },
+        {
+            "note": "#30 (Kamera-Snapshot-Widget) built on batch/design-pass (PR #18), auf 2.9.1/versionCode 27 gebumpt. Neuer CameraWidgetProvider (goAsync+thread: sofort 'lädt …'-Scaffold, dann Snapshot-Fetch → setImageViewBitmap oder 'kein Bild'; Refresh-Icon self-broadcast reqCode appWidgetId+400000; Body/Image-Tap → PwaLauncher.Routes.device(entityId) #769 best-effort; try/catch→WidgetFallback #32) + widget_camera.xml (FrameLayout: full-bleed ImageView centerCrop + Header-Scrim mit Name+ic_refresh + Placeholder-TextView, RemoteViews-safe, kein plain <View>) + camera_widget_info.xml (resizable, 2x2, configure, previewLayout=widget_camera, updatePeriodMillis 1800000) + ic_camera.xml + Manifest-Receiver+Config-Activity. ApiClient.getCameraSnapshot(entityId): GET /napi/portal/camera/<id>/snapshot (solarisbay#770, Bearer via bestehendem authed()), Bytes→BitmapFactory, Downscale auf CAMERA_MAX_EDGE_PX=640 via pure sampleSize()-Helper (JVM-getestet: CameraSampleSizeTest). Config = eigene CameraWidgetConfigActivity (Klon von WidgetConfigActivity), Picker filtert listAddable() auf domain=='camera'. LIST-ENDPOINT-GAP: /napi/portal/start/addable ist auf steuerbare Aktoren scoped — falls Kameras dort NICHT auftauchen, zeigt der Picker 'Keine Kameras gefunden.'; dann bräuchte es einen dedizierten Kamera-Listen-Endpoint (solarisbay-Follow-up, NICHT erfunden). Gate GRÜN: testDebugUnitTest + assembleDebug. device_test owed (#30): Widget hinzufügen → Kamera wählen → aktuelles Bild erscheint, Refresh zieht neuen Frame, Tap öffnet Live-Ansicht. Nicht neu geseal't/gemerged.",
+            "since": "2026-07-12"
         }
     ],
     "_schemas": {
