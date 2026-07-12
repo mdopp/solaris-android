@@ -32,4 +32,19 @@ class WidgetSizeTierTest {
         assertEquals(Tier.SMALL, WidgetRender.sizeTier(110, 40))
         assertEquals(Tier.SMALL, WidgetRender.sizeTier(180, 40)) // wide-ish but < 250
     }
+
+    @Test fun bigBoxIsLarge() {
+        // Tall + wide enough to host the 48h chart (#29).
+        assertEquals(Tier.LARGE, WidgetRender.sizeTier(180, 220))
+        assertEquals(Tier.LARGE, WidgetRender.sizeTier(300, 300))
+        // Just below the LARGE height stays MEDIUM.
+        assertEquals(Tier.MEDIUM, WidgetRender.sizeTier(300, 200))
+    }
+
+    @Test fun onlyLargeShowsChart() {
+        assertEquals(true, WidgetRender.showsChart(Tier.LARGE))
+        assertEquals(false, WidgetRender.showsChart(Tier.MEDIUM))
+        assertEquals(false, WidgetRender.showsChart(Tier.WIDE))
+        assertEquals(false, WidgetRender.showsChart(Tier.SMALL))
+    }
 }

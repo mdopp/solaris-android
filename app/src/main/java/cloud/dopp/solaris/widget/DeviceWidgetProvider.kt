@@ -63,17 +63,24 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             appWidgetId,
             WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
         )
+        val wantsHistory = WidgetRender.showsChart(WidgetRender.tierFor(context, appWidgetId))
         val pending = goAsync()
         thread {
             try {
-                val card = try {
-                    ApiClient(context.applicationContext).getCard(entityId)
-                } catch (e: Exception) {
+                val api = ApiClient(context.applicationContext)
+                val card = try { api.getCard(entityId) } catch (e: Exception) { null }
+                // 48h history only for the large tier (#29) — skip the fetch otherwise.
+                val history = if (wantsHistory) {
+                    try { api.getEntityHistory(entityId, "48h") } catch (e: Exception) { null }
+                } else {
                     null
                 }
                 mgr.updateAppWidget(
                     appWidgetId,
-                    WidgetRender.build(context, appWidgetId, card, WidgetStore.name(context, appWidgetId), domain, tap),
+                    WidgetRender.build(
+                        context, appWidgetId, card,
+                        WidgetStore.name(context, appWidgetId), domain, tap, history,
+                    ),
                 )
             } finally {
                 pending.finish()

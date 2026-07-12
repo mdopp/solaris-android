@@ -19,20 +19,26 @@ import java.util.Locale
 object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
 
-    /** The three widget size tiers. Selected by [sizeTier] from the host's min size. */
-    enum class Tier { SMALL, WIDE, MEDIUM }
+    /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
+    enum class Tier { SMALL, WIDE, MEDIUM, LARGE }
 
     /**
-     * Pick the layout tier from the host-reported min size (dp). A tall-enough
-     * box gets the stacked [MEDIUM] controls; an otherwise wide-but-flat box
-     * (e.g. 4×1) still gets an inline control row via [WIDE]; anything smaller
-     * falls back to [SMALL] (name + state only). Pure so it can be JVM-tested.
+     * Pick the layout tier from the host-reported min size (dp). A big box gets
+     * the [LARGE] layout (medium controls PLUS a 48h-history chart, #29); a
+     * tall-enough box gets the stacked [MEDIUM] controls; an otherwise
+     * wide-but-flat box (e.g. 4×1) still gets an inline control row via [WIDE];
+     * anything smaller falls back to [SMALL] (name + state only). Pure so it can
+     * be JVM-tested.
      */
     fun sizeTier(minW: Int, minH: Int): Tier = when {
+        minW >= 180 && minH >= 220 -> Tier.LARGE
         minW >= 180 && minH >= 110 -> Tier.MEDIUM
         minW >= 250 -> Tier.WIDE
         else -> Tier.SMALL
     }
+
+    /** True when the tier hosts the 48h-history chart (#29) — LARGE only. */
+    fun showsChart(tier: Tier): Boolean = tier == Tier.LARGE
 
     /**
      * @param onBodyTap fired by a tap on the widget body/header — opens the PWA
@@ -46,12 +52,11 @@ object WidgetRender {
         fallbackName: String,
         domain: String,
         onBodyTap: PendingIntent,
+        history: List<Float>? = null,
     ): RemoteViews {
-        val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
-        val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-        val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-        val tier = sizeTier(minW, minH)
+        val tier = tierFor(ctx, appWidgetId)
         val layout = when (tier) {
+            Tier.LARGE -> R.layout.widget_device_large
             Tier.MEDIUM -> R.layout.widget_device_medium
             Tier.WIDE -> R.layout.widget_device_wide
             Tier.SMALL -> R.layout.widget_device_small
@@ -83,13 +88,39 @@ object WidgetRender {
         )
 
         // Body/header tap opens the PWA (#27), not a control action.
-        if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
+        if (tier == Tier.MEDIUM || tier == Tier.WIDE || tier == Tier.LARGE) {
             v.setOnClickPendingIntent(R.id.w_header, onBodyTap)
             wireControls(ctx, v, appWidgetId, dom)
         } else {
             v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
         }
+
+        // 48h history sparkline — LARGE only (#29). Draw when there's a numeric
+        // series; otherwise show the "kein Verlauf" placeholder in its place.
+        if (tier == Tier.LARGE) renderChart(ctx, v, dom, on, history)
         return v
+    }
+
+    /** Draw (or hide) the 48h history sparkline on the LARGE layout (#29). */
+    private fun renderChart(ctx: Context, v: RemoteViews, domain: String, on: Boolean, history: List<Float>?) {
+        if (history != null && history.size >= 2) {
+            val line = if (on) accentFor(domain) else OFF
+            val fill = (line and 0x00FFFFFF) or 0x33000000
+            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.sparkline(560, 200, history, line, fill))
+            v.setViewVisibility(R.id.w_chart, View.VISIBLE)
+            v.setViewVisibility(R.id.w_chart_hint, View.GONE)
+        } else {
+            v.setViewVisibility(R.id.w_chart, View.GONE)
+            v.setViewVisibility(R.id.w_chart_hint, View.VISIBLE)
+        }
+    }
+
+    /** Resolve the layout tier for [appWidgetId] from the host's reported min size. */
+    fun tierFor(ctx: Context, appWidgetId: Int): Tier {
+        val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
+        val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+        val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+        return sizeTier(minW, minH)
     }
 
     /**
