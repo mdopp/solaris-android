@@ -41,7 +41,7 @@ object PwaLauncher {
             openHome(ctx)
             return
         }
-        val uri = Uri.parse(base.trimEnd('/') + path)
+        val uri = Uri.parse(url(base, path))
         val app = ctx.applicationContext
         try {
             val ct = CustomTabsIntent.Builder().build()
@@ -57,6 +57,13 @@ object PwaLauncher {
             }
         }
     }
+
+    /**
+     * Join [base] + [path] into a single URL, collapsing the seam so a trailing
+     * slash on the base and a leading slash on the path never double up. Pure and
+     * Android-free so it's unit-testable (#27).
+     */
+    fun url(base: String, path: String): String = base.trimEnd('/') + path
 
     private fun openHome(ctx: Context) {
         ctx.applicationContext.startActivity(
