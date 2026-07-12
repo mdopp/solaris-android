@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Round variant of the Solaris adaptive launcher icon. -->
+<!-- Round variant of the Solaris adaptive launcher icon — same layers as
+     ic_launcher (the OS applies the circular mask). Figure on ServiceBay blue. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <background>
+        <layer-list>
+            <item android:drawable="@color/ic_launcher_background" />
+            <item android:drawable="@mipmap/ic_maskable"
+                android:top="8.5dp"
+                android:right="8.5dp"
+                android:left="8.5dp"
+                android:bottom="8.5dp" />
+        </layer-list>
+    </background>
+    <foreground android:drawable="@android:color/transparent" />
 </adaptive-icon>
