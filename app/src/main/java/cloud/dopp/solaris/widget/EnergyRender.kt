@@ -72,15 +72,19 @@ object EnergyRender {
     }
 
     private fun renderLarge(v: RemoteViews, e: Energy) {
-        leg(v, R.id.e_pv, e.pv)
-        leg(v, R.id.e_house, e.house)
-        leg(v, R.id.e_grid, e.grid)
-        leg(v, R.id.e_battery, e.battery)
+        val maxW = listOf(e.pv, e.house, e.grid, e.battery)
+            .mapNotNull { it?.watts?.let { w -> abs(w) } }
+            .maxOrNull() ?: 1.0
+        leg(v, R.id.e_pv, R.id.e_pv_bar, e.pv, maxW)
+        leg(v, R.id.e_house, R.id.e_house_bar, e.house, maxW)
+        leg(v, R.id.e_grid, R.id.e_grid_bar, e.grid, maxW)
+        leg(v, R.id.e_battery, R.id.e_battery_bar, e.battery, maxW)
     }
 
-    private fun leg(v: RemoteViews, viewId: Int, f: EnergyFlow?) {
+    private fun leg(v: RemoteViews, textId: Int, barId: Int, f: EnergyFlow?, maxW: Double) {
         if (f?.watts == null) {
-            v.setViewVisibility(viewId, View.GONE)
+            v.setViewVisibility(textId, View.GONE)
+            v.setViewVisibility(barId, View.GONE)
             return
         }
         val w = f.watts
@@ -94,15 +98,19 @@ object EnergyRender {
             "battery" -> if (w >= 0) "  · lädt" else "  · entlädt"
             else -> ""
         }
-        v.setViewVisibility(viewId, View.VISIBLE)
-        v.setTextViewText(viewId, "${f.label}   ${fmt(w)}$dir")
-        v.setTextColor(viewId, color)
+        v.setViewVisibility(textId, View.VISIBLE)
+        v.setTextViewText(textId, "${f.label}   ${fmt(w)}$dir")
+        v.setTextColor(textId, color)
+        v.setViewVisibility(barId, View.VISIBLE)
+        val pct = (abs(w) / maxW * 100).toInt().coerceIn(0, 100)
+        v.setProgressBar(barId, 100, pct, false)
     }
 
     private fun hideRows(v: RemoteViews) {
-        v.setViewVisibility(R.id.e_pv, View.GONE)
-        v.setViewVisibility(R.id.e_house, View.GONE)
-        v.setViewVisibility(R.id.e_battery, View.GONE)
+        for (id in intArrayOf(R.id.e_pv, R.id.e_house, R.id.e_grid, R.id.e_battery,
+                R.id.e_pv_bar, R.id.e_house_bar, R.id.e_grid_bar, R.id.e_battery_bar)) {
+            v.setViewVisibility(id, View.GONE)
+        }
     }
 
     private fun fmt(w: Double): String {

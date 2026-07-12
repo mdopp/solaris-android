@@ -75,5 +75,18 @@
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Energy statistics widget (#9): 48h house-consumption sparkline. -->
+        <receiver
+            android:name=".widget.EnergyStatsWidgetProvider"
+            android:exported="true"
+            android:label="@string/stats_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/energy_stats_widget_info" />
+        </receiver>
+
     </application>
 </manifest>

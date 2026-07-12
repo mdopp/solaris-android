@@ -102,10 +102,30 @@ class ApiClient(private val ctx: Context) {
                         watts = o.optString("state").toDoubleOrNull(),
                         unit = o.optString("unit").ifBlank { "W" },
                         sense = o.optString("sense"),
+                        entityId = o.optString("entity_id").ifBlank { null },
                     ),
                 )
             }
             return Energy(legs)
+        }
+    }
+
+    /**
+     * Recent state history for one entity via `/napi/portal/entity-history`
+     * (#755). Returns the numeric series (non-numeric states dropped).
+     */
+    fun getEntityHistory(entityId: String, range: String = "48h"): List<Float> {
+        val path = "/portal/entity-history?entity_id=$entityId&range=$range"
+        http.newCall(authed(path).get().build()).execute().use { resp ->
+            if (!resp.isSuccessful) return emptyList()
+            val body = resp.body?.string() ?: return emptyList()
+            val arr = JSONObject(body).optJSONArray("history") ?: return emptyList()
+            val out = ArrayList<Float>(arr.length())
+            for (i in 0 until arr.length()) {
+                val p = arr.optJSONObject(i) ?: continue
+                p.optString("state").toFloatOrNull()?.let { out.add(it) }
+            }
+            return out
         }
     }
 

@@ -2,4 +2,11 @@
 <resources>
     <string name="energy_widget_label">Solaris-Energie</string>
     <string name="energy_widget_description">Haus-Energie: Netz-Bezug/Einspeisung, groß der ganze Fluss</string>
+
+    <string name="stats_widget_label">Solaris-Statistik</string>
+    <string name="stats_widget_description">48-Stunden-Verlauf des Hausverbrauchs</string>
+    <string name="stats_title">Verbrauch 48 h</string>
+    <string name="stats_loading">wird geladen …</string>
+    <string name="stats_pair">koppeln</string>
+    <string name="stats_nodata">keine Daten</string>
 </resources>

@@ -11,6 +11,7 @@ data class EnergyFlow(
     val watts: Double?,
     val unit: String,
     val sense: String,
+    val entityId: String? = null,
 )
 
 /** The house energy picture (the `flow` legs; totals/circuits omitted for the widget). */
