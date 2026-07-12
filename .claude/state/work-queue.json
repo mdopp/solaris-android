@@ -98,6 +98,13 @@
       "apk": "app/build/outputs/apk/debug/app-debug.apk",
       "what_to_check": "In-App-Logo im Onboarding = die Solaris-Figur (mipmap ic_launcher_round), prominenter, mit Claim-Untertitel; Pairing/QR/Connect weiterhin funktionsfähig.",
       "since": "2026-07-12"
+    },
+    {
+      "issue": 22,
+      "pr": 18,
+      "apk": "app/build/outputs/apk/debug/app-debug.apk",
+      "what_to_check": "Widget-Fläche gefüllt: Steuertasten (Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle) spannen die volle Breite mit großen Tap-Zielen; Zustand ('43 % offen' / '80 %' / Temp) gut lesbar/fett, Positions-/Helligkeitsbalken full-width; im hohen (medium) Widget sind Header oben, State+Balken Mitte, Controls unten verteilt — keine leere Ecke rechts/unten. Sensoren ohne Control-Row wirken trotzdem ausgewogen.",
+      "since": "2026-07-12"
     }
   ],
   "blocked": [],
@@ -164,6 +171,10 @@
     },
     {
       "note": "Device-feedback fixes #19 (Picker: Raum-Gruppierung + Suche + Statusbar-Inset), #20 (wide/flat Widget-Controls via neue 'wide'-Variante + sizeTier-Helper/JVM-Test), #21 (In-App-Logo = Solaris-Figur + Claim) built on batch/design-pass, updating open PR #18. Gate green (assembleDebug + testDebugUnitTest incl. WidgetSizeTierTest). device_test still owed (siehe device_test[] #19/#20/#21). Not resealed/versioned this session.",
+      "since": "2026-07-12"
+    },
+    {
+      "note": "#22 (Widget-Layout-Dichte-Pass) built on batch/design-pass (PR #18). small/medium/wide-Layouts überarbeitet: Steuertasten volle Breite via layout_weight + größere Tap-Ziele (~52dp), prominenter Zustand (fett, 22sp im medium) + dickerer full-width Balken, medium spreizt Header/State/Controls vertikal (weighted middle) statt oben-links-Cluster; neue Switch-Toggle-Zeile (w_switch_controls) in medium/wide, in WidgetRender.wireControls verdrahtet (OP_TOGGLE); Nicht-steuerbare Domains kollabieren die Control-Row. Gate green (assembleDebug + testDebugUnitTest). device_test owed — User lädt sideload zur Bestätigung.",
       "since": "2026-07-12"
     }
   ],

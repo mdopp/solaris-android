@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Wide/flat device widget (e.g. 4×1): name + state on the left, an inline
-     control row on the right. Used when the widget is wide enough for controls
-     but too short for the medium (stacked) layout. -->
+<!-- Wide/flat device widget (e.g. 4×1): icon + name + prominent state on the
+     left with a full-width level bar under it, a taller inline control row on
+     the right. Used when the widget is wide enough for controls but too short
+     for the medium (stacked) layout. RemoteViews-safe. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
@@ -10,9 +11,9 @@
     android:gravity="center_vertical"
     android:background="@drawable/widget_bg"
     android:baselineAligned="false"
-    android:padding="12dp">
+    android:padding="14dp">
 
-    <!-- Header (tap = on/off): icon + name + state, stacked -->
+    <!-- Header (tap = on/off): icon + name/state, stacked -->
     <LinearLayout
         android:id="@+id/w_header"
         android:layout_width="0dp"
@@ -23,8 +24,8 @@
 
         <ImageView
             android:id="@+id/w_icon"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:src="@drawable/ic_light"
             android:tint="#FFFFC107"
             android:contentDescription="@null" />
@@ -33,7 +34,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="12dp"
             android:orientation="vertical">
 
             <TextView
@@ -45,7 +46,7 @@
                 android:text="Wohnzimmer"
                 android:textColor="#FFF2F2F5"
                 android:textStyle="bold"
-                android:textSize="15sp" />
+                android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/w_state"
@@ -55,14 +56,15 @@
                 android:ellipsize="end"
                 android:text="an · 80 %"
                 android:textColor="#FFFFC107"
-                android:textSize="12sp" />
+                android:textStyle="bold"
+                android:textSize="15sp" />
 
             <ProgressBar
                 android:id="@+id/w_bar"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="4dp"
-                android:layout_marginTop="4dp"
+                android:layout_height="6dp"
+                android:layout_marginTop="6dp"
                 android:max="100"
                 android:progress="80"
                 android:progressTint="#FFFFC107"
@@ -75,29 +77,29 @@
         android:id="@+id/w_light_controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginStart="12dp"
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:visibility="gone">
 
         <Button
             android:id="@+id/w_bright_down"
-            android:layout_width="46dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
+            android:layout_width="54dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/widget_btn_bg"
             android:text="−"
             android:textColor="#FFF2F2F5"
-            android:textSize="20sp" />
+            android:textSize="22sp" />
 
         <Button
             android:id="@+id/w_bright_up"
-            android:layout_width="46dp"
-            android:layout_height="44dp"
+            android:layout_width="54dp"
+            android:layout_height="52dp"
             android:background="@drawable/widget_btn_bg"
             android:text="+"
             android:textColor="#FFF2F2F5"
-            android:textSize="20sp" />
+            android:textSize="22sp" />
     </LinearLayout>
 
     <!-- Cover controls: up / stop / down -->
@@ -105,38 +107,61 @@
         android:id="@+id/w_cover_controls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginStart="12dp"
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:visibility="gone">
 
         <Button
             android:id="@+id/w_cover_up"
-            android:layout_width="46dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
+            android:layout_width="54dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/widget_btn_bg"
             android:text="▲"
             android:textColor="#FF7E9CFF"
-            android:textSize="16sp" />
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/w_cover_stop"
-            android:layout_width="46dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="6dp"
+            android:layout_width="54dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="8dp"
             android:background="@drawable/widget_btn_bg"
             android:text="■"
             android:textColor="#FFF2F2F5"
-            android:textSize="16sp" />
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/w_cover_down"
-            android:layout_width="46dp"
-            android:layout_height="44dp"
+            android:layout_width="54dp"
+            android:layout_height="52dp"
             android:background="@drawable/widget_btn_bg"
             android:text="▼"
             android:textColor="#FF7E9CFF"
-            android:textSize="16sp" />
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <!-- Switch control: single toggle -->
+    <LinearLayout
+        android:id="@+id/w_switch_controls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/w_switch_toggle"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:minWidth="96dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:background="@drawable/widget_btn_bg"
+            android:text="Umschalten"
+            android:textColor="#FFF2F2F5"
+            android:textSize="15sp" />
     </LinearLayout>
 </LinearLayout>

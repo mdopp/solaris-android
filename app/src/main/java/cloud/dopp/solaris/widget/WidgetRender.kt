@@ -80,26 +80,40 @@ object WidgetRender {
         return v
     }
 
+    /**
+     * Show exactly one control row for the domain (and hide the others) so the
+     * card's bottom band is filled without leaving an empty control hole for
+     * non-controllable domains. The switch row (medium/wide only) is optional —
+     * older/small layouts omit it, so we guard with [hasSwitchRow].
+     */
     private fun wireControls(ctx: Context, v: RemoteViews, appWidgetId: Int, domain: String) {
+        // Default: everything hidden; enable just the row we need below.
+        v.setViewVisibility(R.id.w_light_controls, View.GONE)
+        v.setViewVisibility(R.id.w_cover_controls, View.GONE)
+        setSwitchRowVisibility(v, View.GONE)
         when (domain) {
             "light" -> {
                 v.setViewVisibility(R.id.w_light_controls, View.VISIBLE)
-                v.setViewVisibility(R.id.w_cover_controls, View.GONE)
                 v.setOnClickPendingIntent(R.id.w_bright_down, op(ctx, appWidgetId, 2, WidgetActionReceiver.OP_BRIGHT_DOWN))
                 v.setOnClickPendingIntent(R.id.w_bright_up, op(ctx, appWidgetId, 1, WidgetActionReceiver.OP_BRIGHT_UP))
             }
             "cover" -> {
                 v.setViewVisibility(R.id.w_cover_controls, View.VISIBLE)
-                v.setViewVisibility(R.id.w_light_controls, View.GONE)
                 v.setOnClickPendingIntent(R.id.w_cover_up, op(ctx, appWidgetId, 3, WidgetActionReceiver.OP_COVER_OPEN))
                 v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
                 v.setOnClickPendingIntent(R.id.w_cover_down, op(ctx, appWidgetId, 5, WidgetActionReceiver.OP_COVER_CLOSE))
             }
-            else -> {
-                v.setViewVisibility(R.id.w_light_controls, View.GONE)
-                v.setViewVisibility(R.id.w_cover_controls, View.GONE)
+            "switch" -> {
+                setSwitchRowVisibility(v, View.VISIBLE)
+                v.setOnClickPendingIntent(R.id.w_switch_toggle, op(ctx, appWidgetId, 6, WidgetActionReceiver.OP_TOGGLE))
             }
+            // sensors / other domains: no control row — the state + bar fill the card.
         }
+    }
+
+    /** Toggle the switch row where the layout has one (medium/wide); no-op otherwise. */
+    private fun setSwitchRowVisibility(v: RemoteViews, vis: Int) {
+        v.setViewVisibility(R.id.w_switch_controls, vis)
     }
 
     private fun op(ctx: Context, appWidgetId: Int, code: Int, op: String): PendingIntent {
