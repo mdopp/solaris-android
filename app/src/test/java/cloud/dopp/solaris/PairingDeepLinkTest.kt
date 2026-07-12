@@ -1,7 +1,10 @@
 package cloud.dopp.solaris
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
+import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +34,16 @@ class PairingDeepLinkTest {
 
     @Test
     fun deliverPairDeepLinkViaOnNewIntent_doesNotCrash() {
+        val controller = Robolectric.buildActivity(OnboardingHomeActivity::class.java).setup()
+        controller.newIntent(pairIntent())
+    }
+
+    /** Faithful device state: server already configured (from Connect), then the
+     *  pair deep link returns → render shows the "connected" section. */
+    @Test
+    fun pairReturnWhenServerConfigured_showsConnected_doesNotCrash() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        ServerStore.setBaseUrl(ctx, "https://chat.dopp.cloud")
         val controller = Robolectric.buildActivity(OnboardingHomeActivity::class.java).setup()
         controller.newIntent(pairIntent())
     }
