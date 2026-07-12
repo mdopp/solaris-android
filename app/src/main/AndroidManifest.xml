@@ -25,7 +25,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/appName"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        android:theme="@style/Theme.Solaris">
 
         <!-- Launcher + onboarding hub. Also captures the pairing deep link
              cloud.dopp.solaris://pair#token=… from the server's /pair-device page. -->
@@ -76,7 +76,7 @@
             android:name=".widget.WidgetConfigActivity"
             android:exported="true"
             android:label="@string/widget_device_label"
-            android:theme="@style/Theme.AppCompat.DayNight">
+            android:theme="@style/Theme.Solaris.Config">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
@@ -104,6 +104,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/energy_stats_widget_info" />
+        </receiver>
+
+        <!-- Energy totals widget (#16): 2x2 kWh totals grid (Gesamt). -->
+        <receiver
+            android:name=".widget.EnergyTotalsWidgetProvider"
+            android:exported="true"
+            android:label="@string/totals_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/energy_totals_widget_info" />
         </receiver>
 
     </application>

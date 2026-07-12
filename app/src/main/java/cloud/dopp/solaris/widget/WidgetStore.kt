@@ -31,6 +31,15 @@ object WidgetStore {
     fun unbind(ctx: Context, id: Int) {
         p(ctx).edit()
             .remove("e_$id").remove("n_$id").remove("d_$id").remove("c_$id")
+            .remove("range_$id")
             .apply()
+    }
+
+    /** Per-instance Verlauf history window (24h/7d), persisted across refreshes. */
+    fun range(ctx: Context, id: Int): EnergyRange =
+        EnergyRange.fromKey(p(ctx).getString("range_$id", null))
+
+    fun setRange(ctx: Context, id: Int, range: EnergyRange) {
+        p(ctx).edit().putString("range_$id", range.key).apply()
     }
 }

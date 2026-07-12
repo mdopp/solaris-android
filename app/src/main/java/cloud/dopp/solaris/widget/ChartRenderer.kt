@@ -58,4 +58,53 @@ object ChartRenderer {
         })
         return bmp
     }
+
+    /** One line series with its color, for [multiLine]. */
+    data class Series(val points: List<Float>, val color: Int)
+
+    /**
+     * A multi-line chart (PV/Haus/Netz/Akku) sharing one vertical scale, on a
+     * transparent bitmap for the Verlauf widget. Each series is drawn with its own
+     * color; a faint zero baseline is added when the data crosses zero.
+     */
+    fun multiLine(widthPx: Int, heightPx: Int, series: List<Series>): Bitmap {
+        val w = max(1, widthPx)
+        val h = max(1, heightPx)
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val drawable = series.filter { it.points.size >= 2 }
+        if (drawable.isEmpty()) return bmp
+        val c = Canvas(bmp)
+
+        val all = drawable.flatMap { it.points }
+        val minV = all.min()
+        val maxV = all.max()
+        val range = (maxV - minV).let { if (it == 0f) 1f else it }
+        val pad = h * 0.10f
+
+        fun py(v: Float) = h - pad - (v - minV) / range * (h - 2 * pad)
+
+        // Faint zero baseline when the scale straddles zero.
+        if (minV < 0f && maxV > 0f) {
+            c.drawLine(0f, py(0f), w.toFloat(), py(0f), Paint().apply {
+                color = 0x33FFFFFF; strokeWidth = max(1f, h * 0.008f)
+            })
+        }
+
+        val stroke = max(2f, h * 0.025f)
+        for (s in drawable) {
+            val n = s.points.size
+            val path = Path()
+            s.points.forEachIndexed { i, v ->
+                val x = i.toFloat() / (n - 1) * w
+                val y = py(v)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            c.drawPath(path, Paint().apply {
+                color = s.color; style = Paint.Style.STROKE
+                strokeWidth = stroke; isAntiAlias = true
+                strokeJoin = Paint.Join.ROUND; strokeCap = Paint.Cap.ROUND
+            })
+        }
+        return bmp
+    }
 }

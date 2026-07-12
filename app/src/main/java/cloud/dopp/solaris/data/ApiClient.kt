@@ -91,21 +91,38 @@ class ApiClient(private val ctx: Context) {
             val root = JSONObject(body)
             if (!root.optBoolean("ok", false)) return null
             val e = root.optJSONObject("energy") ?: return null
-            val arr = e.optJSONArray("flow") ?: return Energy(emptyList())
+            val arr = e.optJSONArray("flow")
             val legs = mutableListOf<EnergyFlow>()
-            for (i in 0 until arr.length()) {
-                val o = arr.optJSONObject(i) ?: continue
-                legs.add(
-                    EnergyFlow(
-                        label = o.optString("label"),
-                        watts = o.optString("state").toDoubleOrNull(),
-                        unit = o.optString("unit").ifBlank { "W" },
-                        sense = o.optString("sense"),
-                        entityId = o.optString("entity_id").ifBlank { null },
-                    ),
-                )
+            if (arr != null) {
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    legs.add(
+                        EnergyFlow(
+                            label = o.optString("label"),
+                            watts = o.optString("state").toDoubleOrNull(),
+                            unit = o.optString("unit").ifBlank { "W" },
+                            sense = o.optString("sense"),
+                            entityId = o.optString("entity_id").ifBlank { null },
+                        ),
+                    )
+                }
             }
-            return Energy(legs)
+            val totalsArr = e.optJSONArray("totals")
+            val totals = mutableListOf<EnergyTotal>()
+            if (totalsArr != null) {
+                for (i in 0 until totalsArr.length()) {
+                    val o = totalsArr.optJSONObject(i) ?: continue
+                    totals.add(
+                        EnergyTotal(
+                            label = o.optString("label"),
+                            value = o.optString("state").ifBlank { o.optString("value") }.toDoubleOrNull(),
+                            unit = o.optString("unit").ifBlank { "kWh" },
+                            key = o.optString("key").ifBlank { o.optString("sense") },
+                        ),
+                    )
+                }
+            }
+            return Energy(legs, totals)
         }
     }
 
