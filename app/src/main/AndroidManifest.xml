@@ -94,6 +94,13 @@
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Invisible trampoline: a widget body tap opens the PWA in a Custom Tab (#27). -->
+        <activity
+            android:name=".widget.PwaTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Energy statistics widget (#9): 48h house-consumption sparkline. -->
         <receiver
             android:name=".widget.EnergyStatsWidgetProvider"

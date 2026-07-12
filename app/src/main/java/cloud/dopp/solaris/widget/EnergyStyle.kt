@@ -73,20 +73,33 @@ object EnergyStyle {
     val TOTAL_COLORS = intArrayOf(SUPPLY, SUPPLY, DRAW, BATTERY)
 
     /**
-     * Map the server `totals` onto the four canonical slots by key/sense synonyms,
-     * preserving [TOTAL_SLOTS] order. Non-matching totals are ignored; missing
-     * slots are null.
+     * Map the server `totals` onto the four canonical slots, preserving
+     * [TOTAL_SLOTS] order. Non-matching totals are ignored; missing slots are null.
+     *
+     * The real `/napi/portal/energy` `totals` carry **no** `key`/`sense` field
+     * (#24) — only `entity_id` + a German `label`. So we classify each total by its
+     * `key` synonyms first, then fall back to the `entity_id` / `label` text (e.g.
+     * `senec_solar_energy` → pv, `senec_grid_export_energy` → export). The
+     * discharge total ("Batterie entladen") must NOT claim the charge slot, so the
+     * battery matcher requires a charge/load hint and rejects discharge.
      */
     fun orderedTotals(totals: List<EnergyTotal>): List<EnergyTotal?> =
-        TOTAL_SLOTS.map { slot -> totals.firstOrNull { matchesSlot(it.key, slot) } }
+        TOTAL_SLOTS.map { slot -> totals.firstOrNull { matchesSlot(it, slot) } }
 
-    private fun matchesSlot(key: String?, slot: String): Boolean {
-        val k = key?.lowercase() ?: return false
+    private fun matchesSlot(total: EnergyTotal, slot: String): Boolean {
+        // Everything we can classify by: explicit key, entity_id, and the label.
+        val hay = listOfNotNull(total.key, total.entityId, total.label)
+            .joinToString(" ").lowercase()
+        if (hay.isBlank()) return false
+        fun has(vararg needles: String) = needles.any { it.isNotEmpty() && hay.contains(it) }
         return when (slot) {
-            "pv" -> k == "pv" || k == "supply" || k == "solar" || k == "production" || k == "generation"
-            "export" -> k == "export" || k == "feed_in" || k == "feedin" || k == "grid_export"
-            "import" -> k == "import" || k == "grid" || k == "grid_import" || k == "consumption"
-            "battery" -> k == "battery" || k == "battery_charged" || k == "charge"
+            "pv" -> has("pv", "supply", "solar", "produktion", "production", "erzeug", "generation")
+            "export" -> has("export", "feed_in", "feedin", "grid_export", "einspeis")
+            "import" -> has("import", "grid_import", "netzbezug", "netz_bezug", "bezug", "consumption") &&
+                !has("export", "einspeis")
+            // charge only — reject the discharge/entladen total.
+            "battery" -> has("battery", "batterie", "akku", "charge", "geladen", "laden") &&
+                !has("discharge", "entladen", "entlad")
             else -> false
         }
     }

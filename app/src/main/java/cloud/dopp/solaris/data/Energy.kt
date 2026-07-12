@@ -24,6 +24,7 @@ data class EnergyTotal(
     val value: Double?,
     val unit: String,
     val key: String,
+    val entityId: String? = null,
 )
 
 /** The house energy picture: the live `flow` legs plus cumulative `totals`. */

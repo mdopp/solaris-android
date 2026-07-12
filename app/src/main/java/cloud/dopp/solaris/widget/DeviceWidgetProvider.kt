@@ -81,17 +81,10 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent {
-        // A broadcast (no Activity) so a tap runs headless without flashing a screen.
-        val i = Intent(context, WidgetActionReceiver::class.java)
-            .setAction(WidgetActionReceiver.ACTION_TAP)
-            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE)
-        return PendingIntent.getBroadcast(
-            context, appWidgetId, i,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
+    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent =
+        // Body tap opens the PWA in a Custom Tab (#27). The device-specific PWA
+        // route is pending solarisbay#769 — until then, root (see PwaLauncher.Routes).
+        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT)
 
     private fun configPending(context: Context, appWidgetId: Int): PendingIntent {
         val i = Intent(context, WidgetConfigActivity::class.java)

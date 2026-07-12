@@ -39,6 +39,16 @@
             android:textColor="#FFF2F2F5"
             android:textStyle="bold"
             android:textSize="18sp" />
+
+        <ImageView
+            android:id="@+id/w_refresh"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:padding="3dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FF9AA0AE"
+            android:contentDescription="@string/widget_refresh" />
     </LinearLayout>
 
     <!-- Middle: prominent state + full-width level bar. Weighted so it takes the

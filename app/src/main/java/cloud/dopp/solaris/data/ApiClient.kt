@@ -117,7 +117,12 @@ class ApiClient(private val ctx: Context) {
                             label = o.optString("label"),
                             value = o.optString("state").ifBlank { o.optString("value") }.toDoubleOrNull(),
                             unit = o.optString("unit").ifBlank { "kWh" },
-                            key = o.optString("key").ifBlank { o.optString("sense") },
+                            // The server's totals carry no `key`/`sense` (#24) — keep
+                            // reading them if present, else fall back to the entity_id
+                            // so EnergyStyle can classify the slot from the id/label.
+                            key = o.optString("key").ifBlank { o.optString("sense") }
+                                .ifBlank { o.optString("entity_id") },
+                            entityId = o.optString("entity_id").ifBlank { null },
                         ),
                     )
                 }

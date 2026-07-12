@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="widget_refresh">Aktualisieren</string>
+
     <string name="energy_widget_label">Solaris-Energie · Jetzt</string>
     <string name="energy_widget_description">Fluss-Grid PV/Haus/Netz/Akku (klein: Netz-Bezug/Einspeisung)</string>
 

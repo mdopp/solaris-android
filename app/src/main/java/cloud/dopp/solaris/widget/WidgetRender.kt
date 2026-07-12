@@ -34,13 +34,18 @@ object WidgetRender {
         else -> Tier.SMALL
     }
 
+    /**
+     * @param onBodyTap fired by a tap on the widget body/header — opens the PWA
+     *   (#27), NOT a control action. The control buttons keep their own actions.
+     *   When the widget is unconfigured this is instead the picker intent.
+     */
     fun build(
         ctx: Context,
         appWidgetId: Int,
         card: Card?,
         fallbackName: String,
         domain: String,
-        onToggle: PendingIntent,
+        onBodyTap: PendingIntent,
     ): RemoteViews {
         val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
         val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
@@ -71,11 +76,18 @@ object WidgetRender {
             v.setViewVisibility(R.id.w_bar, View.GONE)
         }
 
+        // Refresh icon (#26): re-fetch this widget's state headlessly. Present on
+        // all three tiers; the click is a discreet, no-flash broadcast.
+        v.setOnClickPendingIntent(
+            R.id.w_refresh, op(ctx, appWidgetId, 7, WidgetActionReceiver.OP_REFRESH),
+        )
+
+        // Body/header tap opens the PWA (#27), not a control action.
         if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
-            v.setOnClickPendingIntent(R.id.w_header, onToggle) // tap header = on/off
+            v.setOnClickPendingIntent(R.id.w_header, onBodyTap)
             wireControls(ctx, v, appWidgetId, dom)
         } else {
-            v.setOnClickPendingIntent(R.id.w_root, onToggle)
+            v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
         }
         return v
     }
