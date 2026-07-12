@@ -151,8 +151,11 @@
                 android:text="@string/home_add_widget" />
 
             <!-- Step 2 (#11): install the PWA for chat & notifications. Guidance,
-                 not a blocker — a discreet card + ghost button, skippable. -->
+                 not a blocker — a discreet card + ghost button, skippable AND
+                 dismissible (the app can't detect an installed WebAPK, so a manual
+                 "Ausblenden" persists a flag and hides the card for good). -->
             <LinearLayout
+                android:id="@+id/install_pwa_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -160,13 +163,35 @@
                 android:padding="18dp"
                 android:layout_marginTop="20dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/home_install_pwa_title"
-                    android:textColor="@color/solaris_text"
-                    android:textStyle="bold"
-                    android:textSize="16sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/home_install_pwa_title"
+                        android:textColor="@color/solaris_text"
+                        android:textStyle="bold"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/install_pwa_dismiss"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="✕"
+                        android:textColor="@color/solaris_text_muted"
+                        android:textSize="18sp"
+                        android:contentDescription="@string/home_install_pwa_dismiss" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"

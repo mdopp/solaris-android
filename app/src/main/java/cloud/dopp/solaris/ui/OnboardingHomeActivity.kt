@@ -56,6 +56,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
             findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
             findViewById<Button>(R.id.install_pwa_btn).setOnClickListener { installPwa() }
+            findViewById<TextView>(R.id.install_pwa_dismiss).setOnClickListener { dismissPwaHint() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
             handleDeepLink(intent)
@@ -107,6 +108,17 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.status).text =
                 getString(R.string.home_connected, ServerStore.host(this) ?: "")
         }
+
+        // #11: the install-PWA hint card is dismissible — once dismissed it stays
+        // hidden on future launches (we can't detect an installed WebAPK).
+        findViewById<View>(R.id.install_pwa_card).visibility =
+            if (ServerStore.isPwaHintDismissed(this)) View.GONE else View.VISIBLE
+    }
+
+    /** Persist the dismiss flag (#11) and hide the install-PWA hint card. */
+    private fun dismissPwaHint() {
+        ServerStore.dismissPwaHint(this)
+        findViewById<View>(R.id.install_pwa_card).visibility = View.GONE
     }
 
     private fun onConnect() {

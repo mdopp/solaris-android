@@ -29,6 +29,7 @@
     <string name="home_install_pwa_title">Solaris-App installieren</string>
     <string name="home_install_pwa_hint">Für Chat &amp; Benachrichtigungen — im Browser öffnen und „Zum Startbildschirm hinzufügen".</string>
     <string name="home_install_pwa">Im Browser öffnen</string>
+    <string name="home_install_pwa_dismiss">Ausblenden</string>
 
     <string name="home_open">Solaris öffnen</string>
     <string name="home_logout">Abmelden</string>

@@ -11,6 +11,7 @@ import android.net.Uri
 object ServerStore {
     private const val PREFS = "solaris_server"
     private const val KEY = "base_url"
+    private const val KEY_PWA_HINT_DISMISSED = "pwa_hint_dismissed"
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -29,6 +30,17 @@ object ServerStore {
 
     fun host(ctx: Context): String? =
         baseUrl(ctx)?.let { runCatching { Uri.parse(it).host }.getOrNull() }
+
+    /**
+     * The "Solaris-App installieren" onboarding hint (#11): the app can't reliably
+     * detect an installed WebAPK, so the user dismisses the card manually and we
+     * remember it so future launches don't show it again.
+     */
+    fun isPwaHintDismissed(ctx: Context): Boolean =
+        p(ctx).getBoolean(KEY_PWA_HINT_DISMISSED, false)
+
+    fun dismissPwaHint(ctx: Context) =
+        p(ctx).edit().putBoolean(KEY_PWA_HINT_DISMISSED, true).apply()
 
     fun clear(ctx: Context) = p(ctx).edit().remove(KEY).apply()
 }
