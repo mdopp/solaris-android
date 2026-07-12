@@ -86,6 +86,7 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         val i = Intent(context, WidgetActionReceiver::class.java)
             .setAction(WidgetActionReceiver.ACTION_TAP)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE)
         return PendingIntent.getBroadcast(
             context, appWidgetId, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

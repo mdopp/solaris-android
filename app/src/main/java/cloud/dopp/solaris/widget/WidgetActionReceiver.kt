@@ -6,12 +6,14 @@ import android.content.Context
 import android.content.Intent
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
+import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /**
- * Headless tap handler for the device widget — runs the toggle/open in the
- * background with **no visible UI** (so a tap doesn't flash a screen). Only a
- * garage/door confirm needs UI, which it defers to [WidgetActionActivity].
+ * Headless handler for every device-widget control — toggle, brightness ±, and
+ * cover up/stop/down. Runs in the background with **no visible UI** (so taps
+ * don't flash a screen). Only a garage/door open confirm defers to
+ * [WidgetActionActivity].
  */
 class WidgetActionReceiver : BroadcastReceiver() {
 
@@ -20,6 +22,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
         val id = intent.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID,
         )
+        val op = intent.getStringExtra(EXTRA_OP) ?: OP_TOGGLE
         val entityId = WidgetStore.entityId(context, id) ?: return
         val domain = WidgetStore.domain(context, id)
         val app = context.applicationContext
@@ -27,27 +30,23 @@ class WidgetActionReceiver : BroadcastReceiver() {
         thread {
             try {
                 val api = ApiClient(app)
-                when (domain) {
-                    "light", "switch" -> api.call(entityId, "$domain.toggle")
-                    "cover" -> {
-                        val card = api.getCard(entityId)
-                        val service = if (card?.isOn == true) "cover.close_cover" else "cover.open_cover"
-                        try {
-                            api.call(entityId, service)
-                        } catch (e: ApiClient.SensitiveException) {
-                            app.startActivity(
-                                Intent(app, WidgetActionActivity::class.java)
-                                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                                    .putExtra(EXTRA_ENTITY, entityId)
-                                    .putExtra(EXTRA_SERVICE, service)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                            return@thread // the confirm dialog refreshes after
+                val done = when (op) {
+                    OP_BRIGHT_UP -> { api.call(entityId, "light.turn_on", data = step(+STEP)); true }
+                    OP_BRIGHT_DOWN -> { api.call(entityId, "light.turn_on", data = step(-STEP)); true }
+                    OP_COVER_STOP -> { api.call(entityId, "cover.stop_cover"); true }
+                    OP_COVER_CLOSE -> { api.call(entityId, "cover.close_cover"); true }
+                    OP_COVER_OPEN -> callOrConfirm(api, app, id, entityId, "cover.open_cover")
+                    else -> when (domain) { // OP_TOGGLE
+                        "light", "switch" -> { api.call(entityId, "$domain.toggle"); true }
+                        "cover" -> {
+                            val card = api.getCard(entityId)
+                            val service = if (card?.isOn == true) "cover.close_cover" else "cover.open_cover"
+                            callOrConfirm(api, app, id, entityId, service)
                         }
+                        else -> true
                     }
-                    else -> { /* climate & others are read-only for now */ }
                 }
-                DeviceWidgetProvider.requestRefresh(app, id)
+                if (done) DeviceWidgetProvider.requestRefresh(app, id)
             } catch (e: ApiClient.NotConfiguredException) {
                 openHome(app)
             } catch (e: ApiClient.NotPairedException) {
@@ -60,6 +59,25 @@ class WidgetActionReceiver : BroadcastReceiver() {
         }
     }
 
+    /** Run the service; on the 403 sensitive gate, launch the confirm dialog. */
+    private fun callOrConfirm(api: ApiClient, app: Context, id: Int, entityId: String, service: String): Boolean {
+        return try {
+            api.call(entityId, service)
+            true
+        } catch (e: ApiClient.SensitiveException) {
+            app.startActivity(
+                Intent(app, WidgetActionActivity::class.java)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    .putExtra(EXTRA_ENTITY, entityId)
+                    .putExtra(EXTRA_SERVICE, service)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            false
+        }
+    }
+
+    private fun step(pct: Int) = JSONObject().put("brightness_step_pct", pct)
+
     private fun openHome(app: Context) {
         app.startActivity(
             Intent(app, OnboardingHomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -68,7 +86,17 @@ class WidgetActionReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_TAP = "cloud.dopp.solaris.widget.TAP"
+        const val EXTRA_OP = "op"
         const val EXTRA_ENTITY = "entity_id"
         const val EXTRA_SERVICE = "service"
+
+        const val OP_TOGGLE = "toggle"
+        const val OP_BRIGHT_UP = "bright_up"
+        const val OP_BRIGHT_DOWN = "bright_down"
+        const val OP_COVER_OPEN = "cover_open"
+        const val OP_COVER_STOP = "cover_stop"
+        const val OP_COVER_CLOSE = "cover_close"
+
+        private const val STEP = 20 // brightness step, %
     }
 }
