@@ -58,6 +58,32 @@ class PwaLauncherUrlTest {
         assertEquals("https://chat.dopp.cloud/", PwaLauncher.url("https://chat.dopp.cloud/", PwaLauncher.Routes.ROOT))
     }
 
+    // --- Camera widget route (#36) ---
+
+    @Test
+    fun cameraRouteEmbedsEntityId() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/camera/camera.hof",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.camera("camera.hof")),
+        )
+    }
+
+    @Test
+    fun cameraRouteWithTrailingSlashBase_noDoubleSlash() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/camera/camera.garage",
+            PwaLauncher.url("https://chat.dopp.cloud/", PwaLauncher.Routes.camera("camera.garage")),
+        )
+    }
+
+    @Test
+    fun cameraRootRouteProducesExpectedUrl() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/camera",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.CAMERA_ROOT),
+        )
+    }
+
     // --- Voice widget ?ask= route (#17) ---
 
     @Test

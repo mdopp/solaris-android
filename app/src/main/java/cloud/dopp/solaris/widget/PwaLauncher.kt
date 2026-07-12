@@ -38,6 +38,17 @@ object PwaLauncher {
         fun device(entityId: String): String = "/#/p/device/$entityId"
 
         /**
+         * Camera widget (#36): open the PWA's live camera view for [entityId]
+         * (confirmed placeholder, solarisbay#782). The camera widget is a pure
+         * trigger tile — it no longer loads a snapshot; a tap lands on the live
+         * view. Falls back to the generic camera root when no entity is bound.
+         */
+        fun camera(entityId: String): String = "/#/p/camera/$entityId"
+
+        /** The generic camera view when no specific entity is bound yet (#36). */
+        const val CAMERA_ROOT = "/#/p/camera"
+
+        /**
          * Voice widget (#17): open a NEW household chat pre-loaded with [text] as the
          * user turn, which the PWA auto-sends once on load (confirmed solarisbay#766,
          * consumed via history.replaceState). The text is URL-encoded so spaces and

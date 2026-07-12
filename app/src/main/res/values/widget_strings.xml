@@ -31,13 +31,12 @@
     <!-- Large device widget 48h history (#29). -->
     <string name="device_nohistory">kein Verlauf</string>
 
-    <!-- Camera snapshot widget (#30). -->
+    <!-- Camera trigger widget (#36): a tile that opens the PWA camera view. -->
     <string name="camera_widget_label">Kamera</string>
-    <string name="camera_widget_description">Aktuelles Kamerabild (Snapshot), Tippen öffnet die Live-Ansicht</string>
+    <string name="camera_widget_description">Kachel öffnet die Kamera-Live-Ansicht in der App</string>
     <string name="camera_config_pick">Kamera wählen:</string>
     <string name="camera_config_empty">Keine Kameras gefunden.</string>
-    <string name="camera_loading">lädt …</string>
-    <string name="camera_no_image">kein Bild</string>
+    <string name="camera_open_hint">Kamera öffnen</string>
 
     <!-- Voice/mic widget (#17). -->
     <string name="voice_widget_label">Solaris · Sprache</string>

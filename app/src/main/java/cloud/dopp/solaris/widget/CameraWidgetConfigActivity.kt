@@ -197,7 +197,10 @@ class CameraWidgetConfigActivity : AppCompatActivity() {
 
     private fun pick(d: Device) {
         WidgetStore.bind(this, appWidgetId, d.entityId, d.name, d.domain, d.deviceClass)
-        CameraWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+        // Re-render the tile now that it's bound (trigger widget — no snapshot fetch).
+        AppWidgetManager.getInstance(applicationContext).let { mgr ->
+            CameraWidgetProvider().onUpdate(applicationContext, mgr, intArrayOf(appWidgetId))
+        }
         setResult(
             RESULT_OK,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
