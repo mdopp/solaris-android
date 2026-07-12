@@ -1,7 +1,10 @@
 package cloud.dopp.solaris.ui
 
 import android.appwidget.AppWidgetManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -11,15 +14,20 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import cloud.dopp.solaris.R
+import cloud.dopp.solaris.SolarisApp
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.widget.DeviceWidgetProvider
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 
 /**
  * The app's launcher + onboarding hub (replaces the retired TWA LauncherActivity
@@ -38,28 +46,41 @@ class OnboardingHomeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
-
-        findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
-        findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
-        findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
-        findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
-        findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
-
-        handleDeepLink(intent)
-        render()
+        try {
+            setContentView(R.layout.activity_home)
+            findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
+            findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
+            findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
+            findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
+            findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
+            handleDeepLink(intent)
+            render()
+        } catch (e: Throwable) {
+            showError("onCreate", e)
+        }
+        // A crash in a previous process (e.g. the deep-link launch) was written to
+        // file — surface it now as a readable, copyable message.
+        showLastCrashIfAny()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleDeepLink(intent)
-        render()
+        try {
+            handleDeepLink(intent)
+            render()
+        } catch (e: Throwable) {
+            showError("onNewIntent", e)
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        render()
+        try {
+            render()
+        } catch (e: Throwable) {
+            showError("onResume", e)
+        }
     }
 
     private fun render() {
@@ -204,4 +225,34 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+
+    private fun showError(where: String, e: Throwable) {
+        val sw = StringWriter()
+        e.printStackTrace(PrintWriter(sw))
+        showTrace("Fehler ($where)", sw.toString())
+    }
+
+    /** Show + clear a crash saved by [SolarisApp] from a previous process death. */
+    private fun showLastCrashIfAny() {
+        val f = File(filesDir, SolarisApp.CRASH_FILE)
+        if (!f.exists()) return
+        val text = runCatching { f.readText() }.getOrNull()
+        runCatching { f.delete() }
+        if (!text.isNullOrBlank()) showTrace("Letzter Absturz", text)
+    }
+
+    private fun showTrace(title: String, text: String) {
+        runCatching {
+            AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(text.take(6000))
+                .setPositiveButton("Kopieren") { _, _ ->
+                    val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cb.setPrimaryClip(ClipData.newPlainText("Solaris-Fehler", text))
+                    toast("Kopiert")
+                }
+                .setNegativeButton("Schließen", null)
+                .show()
+        }
+    }
 }
