@@ -1,212 +1,216 @@
 {
-  "_comment": "Shared work queue for the solaris-android autoloop. Single source of truth between Planner/Builder/Verify. Labels are mirrored FROM this file, never the reverse.",
-  "repo": "mdopp/solaris-android",
-  "queue": [],
-  "batch": {
-    "branch": "batch/design-pass",
-    "units": [
-      "u1",
-      "u2",
-      "u3"
+    "_comment": "Shared work queue for the solaris-android autoloop. Single source of truth between Planner/Builder/Verify. Labels are mirrored FROM this file, never the reverse.",
+    "repo": "mdopp/solaris-android",
+    "queue": [],
+    "batch": {
+        "branch": "batch/design-pass",
+        "units": [
+            "u1",
+            "u2",
+            "u3"
+        ],
+        "issues": [
+            15,
+            16,
+            13,
+            14
+        ],
+        "count": 3,
+        "sealed": true,
+        "pr": 18
+    },
+    "verify_state": {
+        "sha": "f0afa5c0c9003f8015c43d1c50061c65964f848a",
+        "status": "green",
+        "detail": "headless green: testDebugUnitTest + assembleDebug + aapt badging (vc16/2.8.0/OnboardingHomeActivity) on PR #18 seal. Signature check DEFERRED to release (no keystore password this session). On-device behaviour = user device_test[].",
+        "since": "2026-07-12"
+    },
+    "needs_refinement": [],
+    "awaiting_user": [],
+    "review": [
+        {
+            "issue": "u1-u3 design batch",
+            "pr": 18,
+            "flag": "visual-review-no-ci",
+            "since": "2026-07-12"
+        }
     ],
-    "issues": [
-      15,
-      16,
-      13,
-      14
+    "device_test": [
+        {
+            "issue": 4,
+            "pr": 12,
+            "apk": null,
+            "what_to_check": "Universelles Geraete-Widget mit Live-Daten: platzieren, ein HA-Geraet konfigurieren, schalten/oeffnen (Garage/Tuer mit Confirm-403). Daten ueber /napi/ (solarisbay#762 CLOSED).",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 8,
+            "pr": 12,
+            "apk": null,
+            "what_to_check": "Energie-Widget size-adaptive: klein = Netz in/out, gross = PV/Haus/Netz/Akku-Fluss. Live-Daten via /napi/portal/energy.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 9,
+            "pr": 12,
+            "apk": null,
+            "what_to_check": "Energie-Statistik-Widget: 48h-Hausverbrauch-Sparkline via /napi/portal/entity-history. Rendert mit echten Daten.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": "15+16",
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "App-UI im Solaris-Design (dunkel + ServiceBay-Blau): Onboarding/Pairing/Geräte-Picker prüfen. Energie-Widgets: 'Jetzt' 2×2-Grid, 'Verlauf' Multi-Linie + 24h/7d-Toggle, 'Gesamt' Summen — mit echten /napi/-Daten.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 13,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "App-Icon: blauer Hintergrund (#3B82F6) + weißer Solaris-Bolt, adaptiv (Launcher + rund).",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 14,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Crash-Reporter: nach einem Absturz beim nächsten Start erst dezente Meldung, dann Details auf Wunsch, dann vorausgefülltes GitHub-Issue.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 19,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Geräte-Picker: Titel 'Geräte wählen:' sitzt unter der Statusleiste (Notch/Punch-Hole prüfen); Liste nach Raum gruppiert (Section-Header, alphabetisch); Suchfeld filtert live nach Name UND Raum; Klick wählt weiterhin das richtige Gerät.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 20,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Breites/flaches Widget (4×1, minW>=250, Höhe<110): neue 'wide'-Variante zeigt inline-Steuerzeile rechts — Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle; kleines Widget bleibt ohne Controls; medium unverändert.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 21,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "In-App-Logo im Onboarding = die Solaris-Figur (mipmap ic_launcher_round), prominenter, mit Claim-Untertitel; Pairing/QR/Connect weiterhin funktionsfähig.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 22,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Widget-Fläche gefüllt: Steuertasten (Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle) spannen die volle Breite mit großen Tap-Zielen; Zustand ('43 % offen' / '80 %' / Temp) gut lesbar/fett, Positions-/Helligkeitsbalken full-width; im hohen (medium) Widget sind Header oben, State+Balken Mitte, Controls unten verteilt — keine leere Ecke rechts/unten. Sensoren ohne Control-Row wirken trotzdem ausgewogen.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 28,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Neues 'Aktive Geräte'-Übersichtswidget platzieren: klein zeigt eine kompakte Anzahl ('3 an' / 'Alles aus'), groß (>=180x220dp) zeigt eine Liste der gerade aktiven Geräte (Typ-Icon + Name + Zustand, max 6 + '+N weitere'). Live-Daten via /napi/ (addable + per-Entity state). Tap → PWA-Übersicht, Refresh-Icon aktualisiert. HINWEIS: kein dedizierter 'active/states'-Endpoint — Widget macht N+1 Abrufe (addable + je Entity state), gekappt auf 40; falls träge/teuer → solarisbay-Ticket für /napi/portal/active bzw. Batch-States.",
+            "since": "2026-07-12"
+        },
+        {
+            "issue": 29,
+            "pr": 18,
+            "apk": "app/build/outputs/apk/debug/app-debug.apk",
+            "what_to_check": "Geräte-Widget auf groß (>=180x220dp) ziehen: unter Zustand/Balken/Controls erscheint die 48h-Verlaufskurve des gebundenen Geräts (Sparkline, akzentfarben je Domain) via /napi/portal/entity-history?range=48h. Ohne Verlauf: 'kein Verlauf'-Platzhalter. Kleines/mittleres/wide-Widget unverändert.",
+            "since": "2026-07-12"
+        }
     ],
-    "count": 3,
-    "sealed": true,
-    "pr": 18
-  },
-  "verify_state": {
-    "sha": "f0afa5c0c9003f8015c43d1c50061c65964f848a",
-    "status": "green",
-    "detail": "headless green: testDebugUnitTest + assembleDebug + aapt badging (vc16/2.8.0/OnboardingHomeActivity) on PR #18 seal. Signature check DEFERRED to release (no keystore password this session). On-device behaviour = user device_test[].",
-    "since": "2026-07-12"
-  },
-  "needs_refinement": [],
-  "awaiting_user": [],
-  "review": [
-    {
-      "issue": "u1-u3 design batch",
-      "pr": 18,
-      "flag": "visual-review-no-ci",
-      "since": "2026-07-12"
+    "blocked": [],
+    "upstream_waits": [
+        {
+            "issue": 17,
+            "cross_repo_issue": "mdopp/solarisbay#766",
+            "reason": "Voice widget: on-device capture (RECORD_AUDIO -> RecognizerIntent) is buildable, but the user-facing flow is blocked on the web-chat ?ask=<text> auto-submit URL schema. #766 must define/ship the exact URL (e.g. /#/?ask=…) before the app fixes its Custom Tab target. Build the capture scaffold ready; wire the URL when #766 closes.",
+            "since": "2026-07-12"
+        }
+    ],
+    "completed": [
+        {
+            "issue": 10,
+            "pr": 12,
+            "note": "Closed by planner. Widget polish delivered (type icons + state color, gradient/border card bg, previewLayout placeholders, per-leg magnitude bars). Further energy-look refinement folded into #16.",
+            "since": "2026-07-12"
+        },
+        {
+            "id": "u1",
+            "issues": [
+                15,
+                16
+            ],
+            "pr": 18,
+            "note": "Solaris design pass — app UI theme + three energy widgets (Jetzt/Verlauf/Gesamt). Sealed in batch/design-pass; device_test owed.",
+            "since": "2026-07-12"
+        },
+        {
+            "id": "u2",
+            "issues": [
+                13
+            ],
+            "pr": 18,
+            "note": "Adaptive app icon on ServiceBay blue #3B82F6 with white Solaris mark. Sealed in batch/design-pass; device_test owed.",
+            "since": "2026-07-12"
+        },
+        {
+            "id": "u3",
+            "issues": [
+                14
+            ],
+            "pr": 18,
+            "note": "Staged crash-reporter dialog + prefilled GitHub-issue report. Sealed in batch/design-pass; device_test owed.",
+            "since": "2026-07-12"
+        }
+    ],
+    "release_warnings": [
+        "SEAL BASE: batch/design-pass is stacked on feat/standalone-widgets-app (PR #12), NOT origin/main (still the retired TWA). The batch PR must target feat/standalone-widgets-app, not main — everything stays stacked until PR #12 lands on main as the standalone app.",
+        "v2.8.0 debug-APK only this session (keystore password user-held); signed release + Play = human-gated (#3)."
+    ],
+    "notes": [
+        {
+            "note": "#11 = multi-tenant CONCEPT/umbrella epic (largely executed by the standalone refactor in PR #12). Tracking-only — NOT queued as buildable.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "#3 = Play Console upload — human-gated release work, cannot run headlessly. Not queued; leave open as human task.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "Latest build v2.8.0 (versionCode 16) on batch/design-pass (PR #18, base feat/standalone-widgets-app). No CI on that base — local gate is the gate. solarisbay#762 (widget /napi/ endpoints) CLOSED — widget data is live.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "Device-feedback fixes #19 (Picker: Raum-Gruppierung + Suche + Statusbar-Inset), #20 (wide/flat Widget-Controls via neue 'wide'-Variante + sizeTier-Helper/JVM-Test), #21 (In-App-Logo = Solaris-Figur + Claim) built on batch/design-pass, updating open PR #18. Gate green (assembleDebug + testDebugUnitTest incl. WidgetSizeTierTest). device_test still owed (siehe device_test[] #19/#20/#21). Not resealed/versioned this session.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "#22 (Widget-Layout-Dichte-Pass) built on batch/design-pass (PR #18). small/medium/wide-Layouts überarbeitet: Steuertasten volle Breite via layout_weight + größere Tap-Ziele (~52dp), prominenter Zustand (fett, 22sp im medium) + dickerer full-width Balken, medium spreizt Header/State/Controls vertikal (weighted middle) statt oben-links-Cluster; neue Switch-Toggle-Zeile (w_switch_controls) in medium/wide, in WidgetRender.wireControls verdrahtet (OP_TOGGLE); Nicht-steuerbare Domains kollabieren die Control-Row. Gate green (assembleDebug + testDebugUnitTest). device_test owed — User lädt sideload zur Bestätigung.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "#28 (aktive-Geräte-Übersichtswidget) + #29 (48h-Verlauf in der Geräte-Widget-Großansicht) built on batch/design-pass (PR #18), auf 2.8.3/versionCode 19 gebumpt. #28: neuer ActiveDevicesWidgetProvider + ActiveDevicesRender + widget_active_small/large.xml + active_devices_widget_info.xml + Manifest-Receiver; ApiClient.listActive() (reuse addable + per-Entity state, gekappt 40) — SME/Datenlücke: es gibt keinen dedizierten /napi-Endpoint für aktive Geräte/Batch-States, das Widget macht N+1 Reads; falls das im Betrieb träge/teuer ist, solarisbay-Ticket für /napi/portal/active bzw. Batch-States anlegen (nicht erfunden). #29: WidgetRender.Tier.LARGE + widget_device_large.xml (medium-Controls + 48h-Sparkline via ChartRenderer.sparkline/getEntityHistory), DeviceWidgetProvider holt History nur für LARGE. Gate green: assembleDebug + testDebugUnitTest (neu: ActiveDevicesRenderTest, erweitert: WidgetSizeTierTest LARGE/showsChart). device_test owed (#28/#29). Nicht neu geseal't/gemerged.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "#26+#27 (Energie-Widgets) + #32 (Load-Fail-Härtung) + #31 (1-Feld-Geräte-Widget) built on batch/design-pass (PR #18), auf 2.8.4/versionCode 20 gebumpt. #26/#27-energy: Refresh-Button (ic_refresh) in allen drei Energie-Widget-Headern (Gesamt/Verlauf/Jetzt-Flow, inkl. widget_energy_small vertical mini-card top-right) + refreshPending self-broadcast je Provider (reqCode appWidgetId+730000), Body-Tap → PwaLauncher.Routes.ENERGY statt App-Launch; EnergyRender.build/buildSmall/buildGrid bekamen onRefresh-Param. #32: neues WidgetFallback + widget_error.xml ('konnte nicht laden', Tap=Retry-Refresh); alle Provider-Update/Thread-Bodies (device, active-devices, alle Energie) fangen jetzt Throwable → sauberer Fallback statt uncaught throw; ChartRenderer.MAX_EDGE=640 kappt sparkline+multiLine-Bitmap-Kanten (RemoteViews-Transaktionslimit); DeviceWidgetProvider fängt orphaned/entityId-null sauber ab. #31: neuer WidgetRender.Tier.TINY (minW<110 && minH<110) + widget_device_tiny.xml — Name statt Icon (2 Zeilen), EIN primärer Toggle (Cover ▲/▼ nach Zustand via OP_COVER_OPEN/CLOSE, light/switch OP_TOGGLE mit ◍/○), Zustand als full-width Bottom-Bar (level). Gate green: assembleDebug + testDebugUnitTest (WidgetSizeTierTest erweitert um TINY-Grenzen). device_test owed (#26-energy/#27-energy/#31/#32) — User lädt 2.8.4 sideload zur Bestätigung. Nicht neu geseal't/gemerged.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "Logic tests added for #19/#27/#32 on batch/design-pass (PR #18): extracted DeviceSearch.filter/matches (data/DeviceSearch.kt, name+room case-insensitive, Locale.GERMANY umlaut) out of WidgetConfigActivity.applyFilter; extracted PwaLauncher.url(base,path) (seam-collapsing join) out of PwaLauncher.open; both refactors behavior-preserving. New JVM tests: DeviceSearchTest (7, pure JUnit), PwaLauncherUrlTest (5, pure JUnit), WidgetFallbackTest (3, Robolectric sdk34 — show() never throws for bogus id/null tap). Gate green: testDebugUnitTest + assembleDebug. No version bump (test-only + behavior-preserving), stays 2.8.4/versionCode 20.",
+            "since": "2026-07-12"
+        }
+    ],
+    "_schemas": {
+        "queue_unit": "{id, kind:'cluster'|'issue', issues:[int], theme, region, scope, acceptance, gate:'normal'|'verify', security:false, status:'planned'|'in_progress'|'built'|'blocked', pr:null, notes}",
+        "batch": "{branch:'batch/<id>', units:[int], count:int, sealed:bool, pr:int}",
+        "verify_state": "{sha, status:'owed'|'verifying'|'green'|'red', detail, since}",
+        "needs_refinement": "{issue, question, comment_url, since}",
+        "review": "{issue, pr, flag, since}  (security:true draft PRs — never auto-merge)",
+        "device_test": "{issue, pr, apk, what_to_check, since}  (human sideloads + confirms)",
+        "upstream_waits": "{issue, cross_repo_issue, reason, since}  (blocked on solarisbay/servicebay ticket)"
     }
-  ],
-  "device_test": [
-    {
-      "issue": 4,
-      "pr": 12,
-      "apk": null,
-      "what_to_check": "Universelles Geraete-Widget mit Live-Daten: platzieren, ein HA-Geraet konfigurieren, schalten/oeffnen (Garage/Tuer mit Confirm-403). Daten ueber /napi/ (solarisbay#762 CLOSED).",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 8,
-      "pr": 12,
-      "apk": null,
-      "what_to_check": "Energie-Widget size-adaptive: klein = Netz in/out, gross = PV/Haus/Netz/Akku-Fluss. Live-Daten via /napi/portal/energy.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 9,
-      "pr": 12,
-      "apk": null,
-      "what_to_check": "Energie-Statistik-Widget: 48h-Hausverbrauch-Sparkline via /napi/portal/entity-history. Rendert mit echten Daten.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": "15+16",
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "App-UI im Solaris-Design (dunkel + ServiceBay-Blau): Onboarding/Pairing/Geräte-Picker prüfen. Energie-Widgets: 'Jetzt' 2×2-Grid, 'Verlauf' Multi-Linie + 24h/7d-Toggle, 'Gesamt' Summen — mit echten /napi/-Daten.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 13,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "App-Icon: blauer Hintergrund (#3B82F6) + weißer Solaris-Bolt, adaptiv (Launcher + rund).",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 14,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Crash-Reporter: nach einem Absturz beim nächsten Start erst dezente Meldung, dann Details auf Wunsch, dann vorausgefülltes GitHub-Issue.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 19,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Geräte-Picker: Titel 'Geräte wählen:' sitzt unter der Statusleiste (Notch/Punch-Hole prüfen); Liste nach Raum gruppiert (Section-Header, alphabetisch); Suchfeld filtert live nach Name UND Raum; Klick wählt weiterhin das richtige Gerät.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 20,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Breites/flaches Widget (4×1, minW>=250, Höhe<110): neue 'wide'-Variante zeigt inline-Steuerzeile rechts — Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle; kleines Widget bleibt ohne Controls; medium unverändert.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 21,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "In-App-Logo im Onboarding = die Solaris-Figur (mipmap ic_launcher_round), prominenter, mit Claim-Untertitel; Pairing/QR/Connect weiterhin funktionsfähig.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 22,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Widget-Fläche gefüllt: Steuertasten (Jalousie ⬆/⏹/⬇, Licht −/+, Schalter Toggle) spannen die volle Breite mit großen Tap-Zielen; Zustand ('43 % offen' / '80 %' / Temp) gut lesbar/fett, Positions-/Helligkeitsbalken full-width; im hohen (medium) Widget sind Header oben, State+Balken Mitte, Controls unten verteilt — keine leere Ecke rechts/unten. Sensoren ohne Control-Row wirken trotzdem ausgewogen.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 28,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Neues 'Aktive Geräte'-Übersichtswidget platzieren: klein zeigt eine kompakte Anzahl ('3 an' / 'Alles aus'), groß (>=180x220dp) zeigt eine Liste der gerade aktiven Geräte (Typ-Icon + Name + Zustand, max 6 + '+N weitere'). Live-Daten via /napi/ (addable + per-Entity state). Tap → PWA-Übersicht, Refresh-Icon aktualisiert. HINWEIS: kein dedizierter 'active/states'-Endpoint — Widget macht N+1 Abrufe (addable + je Entity state), gekappt auf 40; falls träge/teuer → solarisbay-Ticket für /napi/portal/active bzw. Batch-States.",
-      "since": "2026-07-12"
-    },
-    {
-      "issue": 29,
-      "pr": 18,
-      "apk": "app/build/outputs/apk/debug/app-debug.apk",
-      "what_to_check": "Geräte-Widget auf groß (>=180x220dp) ziehen: unter Zustand/Balken/Controls erscheint die 48h-Verlaufskurve des gebundenen Geräts (Sparkline, akzentfarben je Domain) via /napi/portal/entity-history?range=48h. Ohne Verlauf: 'kein Verlauf'-Platzhalter. Kleines/mittleres/wide-Widget unverändert.",
-      "since": "2026-07-12"
-    }
-  ],
-  "blocked": [],
-  "upstream_waits": [
-    {
-      "issue": 17,
-      "cross_repo_issue": "mdopp/solarisbay#766",
-      "reason": "Voice widget: on-device capture (RECORD_AUDIO -> RecognizerIntent) is buildable, but the user-facing flow is blocked on the web-chat ?ask=<text> auto-submit URL schema. #766 must define/ship the exact URL (e.g. /#/?ask=…) before the app fixes its Custom Tab target. Build the capture scaffold ready; wire the URL when #766 closes.",
-      "since": "2026-07-12"
-    }
-  ],
-  "completed": [
-    {
-      "issue": 10,
-      "pr": 12,
-      "note": "Closed by planner. Widget polish delivered (type icons + state color, gradient/border card bg, previewLayout placeholders, per-leg magnitude bars). Further energy-look refinement folded into #16.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u1",
-      "issues": [
-        15,
-        16
-      ],
-      "pr": 18,
-      "note": "Solaris design pass — app UI theme + three energy widgets (Jetzt/Verlauf/Gesamt). Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u2",
-      "issues": [
-        13
-      ],
-      "pr": 18,
-      "note": "Adaptive app icon on ServiceBay blue #3B82F6 with white Solaris mark. Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u3",
-      "issues": [
-        14
-      ],
-      "pr": 18,
-      "note": "Staged crash-reporter dialog + prefilled GitHub-issue report. Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    }
-  ],
-  "release_warnings": [
-    "SEAL BASE: batch/design-pass is stacked on feat/standalone-widgets-app (PR #12), NOT origin/main (still the retired TWA). The batch PR must target feat/standalone-widgets-app, not main — everything stays stacked until PR #12 lands on main as the standalone app.",
-    "v2.8.0 debug-APK only this session (keystore password user-held); signed release + Play = human-gated (#3)."
-  ],
-  "notes": [
-    {
-      "note": "#11 = multi-tenant CONCEPT/umbrella epic (largely executed by the standalone refactor in PR #12). Tracking-only — NOT queued as buildable.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#3 = Play Console upload — human-gated release work, cannot run headlessly. Not queued; leave open as human task.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Latest build v2.8.0 (versionCode 16) on batch/design-pass (PR #18, base feat/standalone-widgets-app). No CI on that base — local gate is the gate. solarisbay#762 (widget /napi/ endpoints) CLOSED — widget data is live.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Device-feedback fixes #19 (Picker: Raum-Gruppierung + Suche + Statusbar-Inset), #20 (wide/flat Widget-Controls via neue 'wide'-Variante + sizeTier-Helper/JVM-Test), #21 (In-App-Logo = Solaris-Figur + Claim) built on batch/design-pass, updating open PR #18. Gate green (assembleDebug + testDebugUnitTest incl. WidgetSizeTierTest). device_test still owed (siehe device_test[] #19/#20/#21). Not resealed/versioned this session.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#22 (Widget-Layout-Dichte-Pass) built on batch/design-pass (PR #18). small/medium/wide-Layouts überarbeitet: Steuertasten volle Breite via layout_weight + größere Tap-Ziele (~52dp), prominenter Zustand (fett, 22sp im medium) + dickerer full-width Balken, medium spreizt Header/State/Controls vertikal (weighted middle) statt oben-links-Cluster; neue Switch-Toggle-Zeile (w_switch_controls) in medium/wide, in WidgetRender.wireControls verdrahtet (OP_TOGGLE); Nicht-steuerbare Domains kollabieren die Control-Row. Gate green (assembleDebug + testDebugUnitTest). device_test owed — User lädt sideload zur Bestätigung.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#28 (aktive-Geräte-Übersichtswidget) + #29 (48h-Verlauf in der Geräte-Widget-Großansicht) built on batch/design-pass (PR #18), auf 2.8.3/versionCode 19 gebumpt. #28: neuer ActiveDevicesWidgetProvider + ActiveDevicesRender + widget_active_small/large.xml + active_devices_widget_info.xml + Manifest-Receiver; ApiClient.listActive() (reuse addable + per-Entity state, gekappt 40) — SME/Datenlücke: es gibt keinen dedizierten /napi-Endpoint für aktive Geräte/Batch-States, das Widget macht N+1 Reads; falls das im Betrieb träge/teuer ist, solarisbay-Ticket für /napi/portal/active bzw. Batch-States anlegen (nicht erfunden). #29: WidgetRender.Tier.LARGE + widget_device_large.xml (medium-Controls + 48h-Sparkline via ChartRenderer.sparkline/getEntityHistory), DeviceWidgetProvider holt History nur für LARGE. Gate green: assembleDebug + testDebugUnitTest (neu: ActiveDevicesRenderTest, erweitert: WidgetSizeTierTest LARGE/showsChart). device_test owed (#28/#29). Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#26+#27 (Energie-Widgets) + #32 (Load-Fail-Härtung) + #31 (1-Feld-Geräte-Widget) built on batch/design-pass (PR #18), auf 2.8.4/versionCode 20 gebumpt. #26/#27-energy: Refresh-Button (ic_refresh) in allen drei Energie-Widget-Headern (Gesamt/Verlauf/Jetzt-Flow, inkl. widget_energy_small vertical mini-card top-right) + refreshPending self-broadcast je Provider (reqCode appWidgetId+730000), Body-Tap → PwaLauncher.Routes.ENERGY statt App-Launch; EnergyRender.build/buildSmall/buildGrid bekamen onRefresh-Param. #32: neues WidgetFallback + widget_error.xml ('konnte nicht laden', Tap=Retry-Refresh); alle Provider-Update/Thread-Bodies (device, active-devices, alle Energie) fangen jetzt Throwable → sauberer Fallback statt uncaught throw; ChartRenderer.MAX_EDGE=640 kappt sparkline+multiLine-Bitmap-Kanten (RemoteViews-Transaktionslimit); DeviceWidgetProvider fängt orphaned/entityId-null sauber ab. #31: neuer WidgetRender.Tier.TINY (minW<110 && minH<110) + widget_device_tiny.xml — Name statt Icon (2 Zeilen), EIN primärer Toggle (Cover ▲/▼ nach Zustand via OP_COVER_OPEN/CLOSE, light/switch OP_TOGGLE mit ◍/○), Zustand als full-width Bottom-Bar (level). Gate green: assembleDebug + testDebugUnitTest (WidgetSizeTierTest erweitert um TINY-Grenzen). device_test owed (#26-energy/#27-energy/#31/#32) — User lädt 2.8.4 sideload zur Bestätigung. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    }
-  ],
-  "_schemas": {
-    "queue_unit": "{id, kind:'cluster'|'issue', issues:[int], theme, region, scope, acceptance, gate:'normal'|'verify', security:false, status:'planned'|'in_progress'|'built'|'blocked', pr:null, notes}",
-    "batch": "{branch:'batch/<id>', units:[int], count:int, sealed:bool, pr:int}",
-    "verify_state": "{sha, status:'owed'|'verifying'|'green'|'red', detail, since}",
-    "needs_refinement": "{issue, question, comment_url, since}",
-    "review": "{issue, pr, flag, since}  (security:true draft PRs — never auto-merge)",
-    "device_test": "{issue, pr, apk, what_to_check, since}  (human sideloads + confirms)",
-    "upstream_waits": "{issue, cross_repo_issue, reason, since}  (blocked on solarisbay/servicebay ticket)"
-  }
 }
