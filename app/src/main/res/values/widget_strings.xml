@@ -10,6 +10,8 @@
 
     <string name="widget_config_loading">Geräte werden geladen …</string>
     <string name="widget_config_pick">Gerät wählen:</string>
+    <string name="widget_config_search_hint">Gerät oder Raum suchen …</string>
+    <string name="widget_config_no_match">Keine Treffer.</string>
     <string name="widget_config_empty">Keine steuerbaren Geräte gefunden.</string>
     <string name="widget_config_pair_first">Bitte zuerst das Gerät koppeln.</string>
 </resources>
