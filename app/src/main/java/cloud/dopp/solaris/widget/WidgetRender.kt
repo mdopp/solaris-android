@@ -20,20 +20,22 @@ object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
 
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
-    enum class Tier { SMALL, WIDE, MEDIUM, LARGE }
+    enum class Tier { TINY, SMALL, WIDE, MEDIUM, LARGE }
 
     /**
      * Pick the layout tier from the host-reported min size (dp). A big box gets
      * the [LARGE] layout (medium controls PLUS a 48h-history chart, #29); a
      * tall-enough box gets the stacked [MEDIUM] controls; an otherwise
      * wide-but-flat box (e.g. 4×1) still gets an inline control row via [WIDE];
-     * anything smaller falls back to [SMALL] (name + state only). Pure so it can
-     * be JVM-tested.
+     * a mid box falls back to [SMALL] (name + state only); the smallest single
+     * cell (1×1) gets [TINY] — name + one toggle + a docked state bar (#31).
+     * Pure so it can be JVM-tested.
      */
     fun sizeTier(minW: Int, minH: Int): Tier = when {
         minW >= 180 && minH >= 220 -> Tier.LARGE
         minW >= 180 && minH >= 110 -> Tier.MEDIUM
         minW >= 250 -> Tier.WIDE
+        minW < 110 && minH < 110 -> Tier.TINY
         else -> Tier.SMALL
     }
 
@@ -55,16 +57,21 @@ object WidgetRender {
         history: List<Float>? = null,
     ): RemoteViews {
         val tier = tierFor(ctx, appWidgetId)
+        val dom = card?.domain?.ifBlank { null } ?: domain
+        val on = card?.isOn == true
+
+        // TINY (1×1, #31) has its own shape: name instead of icon, one primary
+        // toggle, and the state docked as a bottom bar. Built separately.
+        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap)
+
         val layout = when (tier) {
             Tier.LARGE -> R.layout.widget_device_large
             Tier.MEDIUM -> R.layout.widget_device_medium
             Tier.WIDE -> R.layout.widget_device_wide
-            Tier.SMALL -> R.layout.widget_device_small
+            else -> R.layout.widget_device_small
         }
         val v = RemoteViews(ctx.packageName, layout)
 
-        val dom = card?.domain?.ifBlank { null } ?: domain
-        val on = card?.isOn == true
         val accent = if (on) accentFor(dom) else OFF
 
         v.setImageViewResource(R.id.w_icon, iconFor(dom))
@@ -99,6 +106,61 @@ object WidgetRender {
         // series; otherwise show the "kein Verlauf" placeholder in its place.
         if (tier == Tier.LARGE) renderChart(ctx, v, dom, on, history)
         return v
+    }
+
+    /**
+     * The 1×1 (single-cell) device widget (#31): the **name** in place of the
+     * icon (2 lines), a **single toggle** button showing ▲/▼ (cover) or on/off
+     * glyph, and the **state as a full-width bottom bar** (position / brightness).
+     * The toggle runs the domain's primary action; body tap still opens the PWA.
+     */
+    private fun buildTiny(
+        ctx: Context,
+        appWidgetId: Int,
+        card: Card?,
+        fallbackName: String,
+        dom: String,
+        on: Boolean,
+        onBodyTap: PendingIntent,
+    ): RemoteViews {
+        val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
+        val accent = if (on) accentFor(dom) else OFF
+
+        v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
+
+        // Single toggle glyph + the primary action for the domain.
+        val (glyph, op) = tinyToggle(dom, card)
+        v.setTextViewText(R.id.w_tiny_toggle, glyph)
+        v.setTextColor(R.id.w_tiny_toggle, accent)
+        v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, op))
+
+        // Body (name) tap → PWA (#27).
+        v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
+
+        // State docked as a bottom bar (position / brightness).
+        val level = card?.level
+        if (level != null) {
+            v.setViewVisibility(R.id.w_bar, View.VISIBLE)
+            v.setProgressBar(R.id.w_bar, 100, level, false)
+        } else {
+            v.setViewVisibility(R.id.w_bar, View.GONE)
+        }
+        return v
+    }
+
+    /**
+     * The tiny-tier single toggle: a glyph + the op that performs the domain's
+     * primary action. Cover toggles open/close by current state (▲ when closed,
+     * ▼ when open); light/switch toggle on↔off.
+     */
+    private fun tinyToggle(domain: String, card: Card?): Pair<String, String> = when (domain) {
+        "cover" -> {
+            val open = card?.isOn == true
+            if (open) "▼" to WidgetActionReceiver.OP_COVER_CLOSE
+            else "▲" to WidgetActionReceiver.OP_COVER_OPEN
+        }
+        "light", "switch" -> (if (card?.isOn == true) "◍" else "○") to WidgetActionReceiver.OP_TOGGLE
+        else -> "⟳" to WidgetActionReceiver.OP_REFRESH
     }
 
     /** Draw (or hide) the 48h history sparkline on the LARGE layout (#29). */

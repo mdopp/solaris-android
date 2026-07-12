@@ -33,6 +33,19 @@ class WidgetSizeTierTest {
         assertEquals(Tier.SMALL, WidgetRender.sizeTier(180, 40)) // wide-ish but < 250
     }
 
+    @Test fun singleCellIsTiny() {
+        // 1×1 on a typical launcher grid: ~60–100dp square → TINY (#31).
+        assertEquals(Tier.TINY, WidgetRender.sizeTier(70, 70))
+        assertEquals(Tier.TINY, WidgetRender.sizeTier(109, 109))
+        // Just past either edge climbs back into SMALL.
+        assertEquals(Tier.SMALL, WidgetRender.sizeTier(110, 90)) // wide enough
+        assertEquals(Tier.SMALL, WidgetRender.sizeTier(90, 110)) // tall enough
+    }
+
+    @Test fun tinyNeverShowsChart() {
+        assertEquals(false, WidgetRender.showsChart(Tier.TINY))
+    }
+
     @Test fun bigBoxIsLarge() {
         // Tall + wide enough to host the 48h chart (#29).
         assertEquals(Tier.LARGE, WidgetRender.sizeTier(180, 220))
