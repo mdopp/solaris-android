@@ -5,12 +5,20 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Canvas → Bitmap helpers for widgets. RemoteViews can't draw charts directly,
  * so trends are rendered to a Bitmap and set via `setImageViewBitmap`.
  */
 object ChartRenderer {
+
+    /**
+     * Hard cap on a chart bitmap edge. RemoteViews ship the bitmap across a
+     * bounded Binder transaction; an oversized bitmap makes the host reject the
+     * update ("Widget kann nicht geladen werden", #32). Clamp every edge here.
+     */
+    const val MAX_EDGE = 640
 
     /** A filled sparkline of [points] (chronological). Empty bitmap if <2 points. */
     fun sparkline(
@@ -20,8 +28,8 @@ object ChartRenderer {
         lineColor: Int,
         fillColor: Int,
     ): Bitmap {
-        val w = max(1, widthPx)
-        val h = max(1, heightPx)
+        val w = min(MAX_EDGE, max(1, widthPx))
+        val h = min(MAX_EDGE, max(1, heightPx))
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         if (points.size < 2) return bmp
         val c = Canvas(bmp)
@@ -68,8 +76,8 @@ object ChartRenderer {
      * color; a faint zero baseline is added when the data crosses zero.
      */
     fun multiLine(widthPx: Int, heightPx: Int, series: List<Series>): Bitmap {
-        val w = max(1, widthPx)
-        val h = max(1, heightPx)
+        val w = min(MAX_EDGE, max(1, widthPx))
+        val h = min(MAX_EDGE, max(1, heightPx))
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val drawable = series.filter { it.points.size >= 2 }
         if (drawable.isEmpty()) return bmp

@@ -45,13 +45,22 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
         val mgr = AppWidgetManager.getInstance(context)
         val tier = tierFor(context, appWidgetId)
 
-        // Immediate loading scaffold, then async fetch.
-        mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, null))
+        // Immediate loading scaffold, then async fetch. A render failure must yield
+        // a clean fallback, not an uncaught throw ("kann nicht geladen werden", #32).
+        try {
+            mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, null))
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
+        }
 
         val paired = ServerStore.isConfigured(context) && TokenStore.isPaired(context)
         if (!paired) {
             // Not paired: render an empty (0) state; tap bounces to onboarding.
-            mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, emptyList()))
+            try {
+                mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, emptyList()))
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
+            }
             return
         }
 
@@ -64,6 +73,8 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
                     null
                 }
                 mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, active))
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             } finally {
                 pending.finish()
             }

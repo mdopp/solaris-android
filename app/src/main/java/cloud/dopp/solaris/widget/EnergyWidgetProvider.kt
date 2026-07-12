@@ -59,6 +59,8 @@ class EnergyWidgetProvider : AppWidgetProvider() {
                     null
                 }
                 mgr.updateAppWidget(appWidgetId, EnergyRender.build(context, appWidgetId, energy, true, tap, onRefresh))
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, onRefresh)
             } finally {
                 pending.finish()
             }

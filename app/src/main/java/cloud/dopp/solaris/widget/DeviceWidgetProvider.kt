@@ -47,22 +47,37 @@ class DeviceWidgetProvider : AppWidgetProvider() {
 
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
-        val entityId = WidgetStore.entityId(context, appWidgetId)
+        // A render/data failure must yield a clean fallback, not an uncaught throw
+        // that leaves Android showing "Widget kann nicht geladen werden" (#32).
+        val entityId = try {
+            WidgetStore.entityId(context, appWidgetId)
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
+            return
+        }
         if (entityId == null) {
-            // Not configured yet — tapping opens the picker.
-            mgr.updateAppWidget(
-                appWidgetId,
-                WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
-            )
+            // Not configured (or orphaned/unbound) — tapping opens the picker.
+            try {
+                mgr.updateAppWidget(
+                    appWidgetId,
+                    WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
+                )
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
+            }
             return
         }
         val tap = tapPending(context, appWidgetId)
         val domain = WidgetStore.domain(context, appWidgetId)
         // Immediate render from cache, then async live-state fetch.
-        mgr.updateAppWidget(
-            appWidgetId,
-            WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
-        )
+        try {
+            mgr.updateAppWidget(
+                appWidgetId,
+                WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
+            )
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
+        }
         val wantsHistory = WidgetRender.showsChart(WidgetRender.tierFor(context, appWidgetId))
         val pending = goAsync()
         thread {
@@ -82,10 +97,24 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                         WidgetStore.name(context, appWidgetId), domain, tap, history,
                     ),
                 )
+            } catch (t: Throwable) {
+                // Any render/transaction failure (e.g. oversized bitmap) → clean fallback.
+                WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
             } finally {
                 pending.finish()
             }
         }
+    }
+
+    /** A tap [PendingIntent] that re-runs this instance's refresh (fallback retry). */
+    private fun safeRefreshTap(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, DeviceWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        return PendingIntent.getBroadcast(
+            context, 900_000 + appWidgetId, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun tapPending(context: Context, appWidgetId: Int): PendingIntent =

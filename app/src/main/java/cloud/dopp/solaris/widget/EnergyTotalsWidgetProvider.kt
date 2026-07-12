@@ -83,6 +83,8 @@ class EnergyTotalsWidgetProvider : AppWidgetProvider() {
                     }
                 }
                 mgr.updateAppWidget(appWidgetId, v)
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             } finally {
                 pending.finish()
             }
