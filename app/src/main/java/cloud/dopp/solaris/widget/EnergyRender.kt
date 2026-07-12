@@ -38,28 +38,43 @@ object EnergyRender {
         v.setOnClickPendingIntent(R.id.e_root, onTap)
         v.setOnClickPendingIntent(R.id.e_refresh, onRefresh)
         if (!paired) {
-            v.setTextViewText(R.id.e_title, "Energie")
-            v.setTextViewText(R.id.e_main, "koppeln")
-            v.setTextColor(R.id.e_main, EnergyStyle.NEUTRAL)
+            small(v, "Energie", "koppeln", "gerät koppeln", EnergyStyle.NEUTRAL)
             return v
         }
         val g = e?.grid ?: e?.house
         val w = g?.watts
         if (w == null) {
-            v.setTextViewText(R.id.e_title, "Energie")
-            v.setTextViewText(R.id.e_main, if (e == null) "…" else "—")
-            v.setTextColor(R.id.e_main, EnergyStyle.NEUTRAL)
+            small(
+                v, "Energie",
+                if (e == null) "…" else "—",
+                if (e == null) "wird geladen" else "keine Daten",
+                EnergyStyle.NEUTRAL,
+            )
             return v
         }
-        val title = when {
-            g.sense == "grid" && w >= 0 -> "Netz · Bezug"
-            g.sense == "grid" -> "Netz · Einspeisung"
-            else -> "Haus"
+        val accent = EnergyStyle.colorFor(g.sense, w)
+        val title = if (g.sense == "grid") "Netz" else "Haus"
+        val sub = when {
+            g.sense == "grid" && w >= 0 -> "Bezug"
+            g.sense == "grid" -> "Einspeisung"
+            else -> "Verbrauch"
         }
-        v.setTextViewText(R.id.e_title, title)
-        v.setTextViewText(R.id.e_main, EnergyStyle.formatWatts(w))
-        v.setTextColor(R.id.e_main, EnergyStyle.colorFor(g.sense, w))
+        small(v, title, EnergyStyle.formatWatts(w), sub, accent)
         return v
+    }
+
+    /**
+     * Fill the compact "Jetzt" card (#25): big colored value, an all-caps label,
+     * a muted direction subtitle, and the left accent rail + icon tinted to
+     * [accent] so the small format reads at a glance and fills its space.
+     */
+    private fun small(v: RemoteViews, title: String, value: String, sub: String, accent: Int) {
+        v.setTextViewText(R.id.e_title, title)
+        v.setTextViewText(R.id.e_main, value)
+        v.setTextColor(R.id.e_main, accent)
+        v.setTextViewText(R.id.e_sub, sub)
+        v.setInt(R.id.e_accent, "setColorFilter", accent)
+        v.setInt(R.id.e_icon, "setColorFilter", accent)
     }
 
     private fun buildGrid(ctx: Context, e: Energy?, paired: Boolean, onTap: PendingIntent, onRefresh: PendingIntent): RemoteViews {
