@@ -47,7 +47,7 @@
       "acceptance": "Crash surface shows the friendly Stage-1 dialog first; Details reveals the trace + Copy; 'Fehler melden' opens a prefilled new-issue URL carrying the (truncated) trace + app/device metadata. Compiles; Robolectric green.",
       "gate": "verify",
       "security": false,
-      "status": "planned",
+      "status": "built",
       "pr": null,
       "notes": "showTrace currently dumps the full trace immediately with only Copy/Close. No login/token needed for the GitHub prefill URL."
     }
@@ -56,14 +56,16 @@
     "branch": "batch/design-pass",
     "units": [
       "u1",
-      "u2"
+      "u2",
+      "u3"
     ],
     "issues": [
       15,
       16,
-      13
+      13,
+      14
     ],
-    "count": 2,
+    "count": 3,
     "sealed": false
   },
   "verify_state": {

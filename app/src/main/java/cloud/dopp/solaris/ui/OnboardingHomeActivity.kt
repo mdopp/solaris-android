@@ -229,30 +229,69 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun showError(where: String, e: Throwable) {
         val sw = StringWriter()
         e.printStackTrace(PrintWriter(sw))
-        showTrace("Fehler ($where)", sw.toString())
+        // An error in the *current* session — jump straight to the details view
+        // (Copy + Melden), no "report last crash?" preamble needed.
+        showCrashDetails(sw.toString())
     }
 
-    /** Show + clear a crash saved by [SolarisApp] from a previous process death. */
+    /**
+     * Surface a crash saved by [SolarisApp] from a previous process death, then
+     * clear it so it doesn't nag on every launch. Staged: a discreet Stage-1
+     * message with [Details]/[Fehler melden]/[Schließen] — the raw trace only
+     * appears on request.
+     */
     private fun showLastCrashIfAny() {
         val f = File(filesDir, SolarisApp.CRASH_FILE)
         if (!f.exists()) return
         val text = runCatching { f.readText() }.getOrNull()
         runCatching { f.delete() }
-        if (!text.isNullOrBlank()) showTrace("Letzter Absturz", text)
+        if (!text.isNullOrBlank()) showCrashPrompt(text)
     }
 
-    private fun showTrace(title: String, text: String) {
+    /** Stage 1 — friendly message; the trace is not shown yet. */
+    private fun showCrashPrompt(trace: String) {
         runCatching {
             AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(text.take(6000))
-                .setPositiveButton("Kopieren") { _, _ ->
-                    val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cb.setPrimaryClip(ClipData.newPlainText("Solaris-Fehler", text))
-                    toast("Kopiert")
-                }
-                .setNegativeButton("Schließen", null)
+                .setTitle(R.string.crash_title)
+                .setMessage(R.string.crash_message)
+                .setPositiveButton(R.string.crash_report) { _, _ -> reportCrash(trace) }
+                .setNeutralButton(R.string.crash_details) { _, _ -> showCrashDetails(trace) }
+                .setNegativeButton(R.string.crash_close, null)
                 .show()
         }
     }
+
+    /** Stage 2 — the full stack trace (scrollable), with Copy + Melden. */
+    private fun showCrashDetails(trace: String) {
+        runCatching {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.crash_details_title)
+                .setMessage(trace.take(6000))
+                .setPositiveButton(R.string.crash_copy) { _, _ -> copyTrace(trace) }
+                .setNeutralButton(R.string.crash_report) { _, _ -> reportCrash(trace) }
+                .setNegativeButton(R.string.crash_close, null)
+                .show()
+        }
+    }
+
+    private fun copyTrace(trace: String) {
+        val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cb.setPrimaryClip(ClipData.newPlainText("Solaris-Fehler", trace))
+        toast(getString(R.string.crash_copied))
+    }
+
+    /** Open a prefilled GitHub new-issue form (title+body+label) in a Custom Tab. */
+    private fun reportCrash(trace: String) {
+        val url = cloud.dopp.solaris.CrashReport.issueUrl(
+            trace = trace,
+            appVersion = appVersionName(),
+            device = "${Build.MANUFACTURER} ${Build.MODEL}".trim(),
+            androidVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        )
+        openUrl(Uri.parse(url))
+    }
+
+    private fun appVersionName(): String = runCatching {
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+    }.getOrDefault("?")
 }

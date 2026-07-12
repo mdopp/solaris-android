@@ -16,4 +16,14 @@
     <string name="home_logout">Abmelden</string>
     <string name="home_logged_out">Abgemeldet.</string>
     <string name="home_no_browser">Kein Browser gefunden.</string>
+
+    <!-- Crash-reporter UX (staged): friendly message first, trace on request. -->
+    <string name="crash_title">Fehler beim letzten Start</string>
+    <string name="crash_message">Es ist ein Fehler aufgetreten. Bitte melde ihn, damit wir ihn beheben können.</string>
+    <string name="crash_details">Details</string>
+    <string name="crash_report">Fehler melden</string>
+    <string name="crash_close">Schließen</string>
+    <string name="crash_copy">Kopieren</string>
+    <string name="crash_copied">Kopiert</string>
+    <string name="crash_details_title">Technische Details</string>
 </resources>
