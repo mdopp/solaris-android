@@ -53,13 +53,26 @@ class PairingActivity : AppCompatActivity() {
     private fun handleDeepLink(intent: Intent?) {
         val data: Uri = intent?.data ?: return
         if (data.scheme != SolarisConfig.PAIR_SCHEME || data.host != SolarisConfig.PAIR_HOST) return
-        val token = data.getQueryParameter(SolarisConfig.PAIR_TOKEN_PARAM)
+        // The pairing page carries the token in the URL FRAGMENT
+        // (cloud.dopp.solaris://pair#token=…&id=…) so the plaintext never reaches
+        // the proxy logs. Read the fragment first; keep a query fallback.
+        val token = tokenFromFragment(data.fragment)
+            ?: data.getQueryParameter(SolarisConfig.PAIR_TOKEN_PARAM)
         if (!token.isNullOrBlank() && token.startsWith("sol_device_")) {
             TokenStore.save(this, token)
             toast(getString(R.string.pairing_success))
         } else {
             toast(getString(R.string.pairing_failed))
         }
+    }
+
+    /** Parse `token=…` out of a `token=…&id=…` fragment. */
+    private fun tokenFromFragment(fragment: String?): String? {
+        if (fragment.isNullOrBlank()) return null
+        return fragment.split("&")
+            .firstOrNull { it.startsWith("${SolarisConfig.PAIR_TOKEN_PARAM}=") }
+            ?.substringAfter("=")
+            ?.let { Uri.decode(it) }
     }
 
     private fun startPairing() {
