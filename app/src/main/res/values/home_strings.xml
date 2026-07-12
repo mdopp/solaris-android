@@ -11,6 +11,11 @@
     <string name="home_enter_url">Bitte die Server-Adresse eingeben.</string>
     <string name="home_status_label">Status</string>
     <string name="home_connected">✓ Verbunden mit %1$s</string>
+    <string name="home_status_connected">Verbunden</string>
+
+    <!-- "deine Widgets" teaser (#37): tease what's available on the home screen. -->
+    <string name="home_widgets_teaser_title">Deine Widgets</string>
+    <string name="home_widgets_teaser_hint">Geräte, Energie, aktive Geräte, Kamera und Sprache — direkt auf dem Startbildschirm.</string>
     <string name="home_add_widget">Widget hinzufügen</string>
     <string name="home_add_widget_manual">Widget über den Homescreen-Editor hinzufügen (lang drücken → Widgets).</string>
 

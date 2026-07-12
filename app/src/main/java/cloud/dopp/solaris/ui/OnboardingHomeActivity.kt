@@ -107,6 +107,10 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (connected) {
             findViewById<TextView>(R.id.status).text =
                 getString(R.string.home_connected, ServerStore.host(this) ?: "")
+            // Ampel: green dot when connected, muted grey otherwise (#37).
+            findViewById<View>(R.id.status_dot).background?.setTint(
+                getColor(R.color.energy_supply),
+            )
         }
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays

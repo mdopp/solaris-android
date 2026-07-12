@@ -1,39 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/solaris_bg"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
 
-        <!-- Brand header: the "Solaris" wordmark with the figure as the "i"
-             (Solar[figure]s) — no separate leading icon, mirroring the Solaris
-             chat app. Extra top breathing room (#21). -->
+        <!-- ── Hero ────────────────────────────────────────────────────────
+             The "Solar[figure]s" wordmark with the figure as the "i", plus the
+             claim underneath. Generous top breathing room so the brand can
+             breathe (#37 design pass, keeps the wordmark + accent). -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="48dp"
-            android:layout_marginBottom="6dp">
+            android:layout_marginTop="56dp"
+            android:layout_marginBottom="10dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Solar"
                 android:textColor="@color/solaris_text"
-                android:textSize="34sp"
+                android:textSize="38sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.01" />
 
             <ImageView
                 android:layout_width="wrap_content"
-                android:layout_height="33dp"
+                android:layout_height="37dp"
                 android:adjustViewBounds="true"
                 android:layout_marginStart="2dp"
                 android:layout_marginEnd="1dp"
@@ -46,37 +52,48 @@
                 android:layout_height="wrap_content"
                 android:text="s"
                 android:textColor="@color/solaris_text"
-                android:textSize="34sp"
+                android:textSize="38sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.01" />
         </LinearLayout>
+
+        <!-- Accent underline: a short ServiceBay-blue rule tying the wordmark to
+             the brand colour. -->
+        <View
+            android:layout_width="52dp"
+            android:layout_height="3dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginBottom="14dp"
+            android:background="@color/solaris_accent" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="2dp"
-            android:layout_marginBottom="28dp"
+            android:layout_marginBottom="32dp"
             android:text="@string/home_claim"
             android:textColor="@color/solaris_text_muted"
-            android:textSize="15sp" />
+            android:textSize="16sp"
+            android:letterSpacing="0.01" />
 
-        <!-- Not connected: connect to your own server -->
+        <!-- ── Not connected: connect to your own server ─────────────────── -->
         <LinearLayout
             android:id="@+id/connect_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/card_solaris"
-            android:padding="20dp">
+            android:padding="22dp">
 
             <TextView
                 android:id="@+id/connect_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="18dp"
+                android:layout_marginBottom="20dp"
                 android:text="@string/home_connect_hint"
                 android:textColor="@color/solaris_text"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:lineSpacingExtra="3sp" />
 
             <Button
                 android:id="@+id/qr_scan_btn"
@@ -87,8 +104,8 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="10dp"
                 android:text="@string/home_or_manual"
                 android:textColor="@color/solaris_text_muted"
                 android:textSize="14sp" />
@@ -111,7 +128,7 @@
                 android:text="@string/home_connect" />
         </LinearLayout>
 
-        <!-- Connected: status + actions -->
+        <!-- ── Connected: status + actions ───────────────────────────────── -->
         <LinearLayout
             android:id="@+id/connected_section"
             android:layout_width="match_parent"
@@ -119,13 +136,16 @@
             android:orientation="vertical"
             android:visibility="gone">
 
+            <!-- Status card: label + a colored status dot (Ampel) alongside the
+                 server host, in a refined card. The dot is tinted green when
+                 connected, muted otherwise (wired in the Activity). -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/card_solaris"
-                android:padding="20dp"
-                android:layout_marginBottom="20dp">
+                android:padding="22dp"
+                android:layout_marginBottom="24dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -133,22 +153,132 @@
                     android:text="@string/home_status_label"
                     android:textColor="@color/solaris_text_muted"
                     android:textSize="13sp"
-                    android:layout_marginBottom="4dp" />
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="10dp" />
 
-                <TextView
-                    android:id="@+id/status"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/energy_supply"
-                    android:textStyle="bold"
-                    android:textSize="17sp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:id="@+id/status_dot"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginEnd="10dp"
+                        android:background="@drawable/status_dot" />
+
+                    <TextView
+                        android:id="@+id/status"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/solaris_text"
+                        android:textStyle="bold"
+                        android:textSize="17sp" />
+                </LinearLayout>
             </LinearLayout>
 
+            <!-- Primary action: add a widget. Filled accent → the clear CTA. -->
             <Button
                 android:id="@+id/add_widget_btn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/home_add_widget" />
+
+            <!-- "Deine Widgets" teaser (#37): a discreet card hinting at what's
+                 available, so the primary CTA has context. -->
+            <LinearLayout
+                android:id="@+id/widgets_teaser_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_solaris"
+                android:padding="20dp"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_widgets_teaser_title"
+                    android:textColor="@color/solaris_text"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_widgets_teaser_hint"
+                    android:textColor="@color/solaris_text_muted"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="3sp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Type chips: icon-only pills teasing the widget catalogue. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="10dp"
+                        android:padding="11dp"
+                        android:background="@drawable/chip_solaris"
+                        android:src="@drawable/ic_device"
+                        app:tint="@color/solaris_accent"
+                        android:contentDescription="@string/widget_type_device" />
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="10dp"
+                        android:padding="11dp"
+                        android:background="@drawable/chip_solaris"
+                        android:src="@drawable/ic_bolt"
+                        app:tint="@color/solaris_accent"
+                        android:contentDescription="@string/widget_type_energy_now" />
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="10dp"
+                        android:padding="11dp"
+                        android:background="@drawable/chip_solaris"
+                        android:src="@drawable/ic_switch"
+                        app:tint="@color/solaris_accent"
+                        android:contentDescription="@string/widget_type_active" />
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="10dp"
+                        android:padding="11dp"
+                        android:background="@drawable/chip_solaris"
+                        android:src="@drawable/ic_camera"
+                        app:tint="@color/solaris_accent"
+                        android:contentDescription="@string/widget_type_camera" />
+
+                    <ImageView
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:padding="11dp"
+                        android:background="@drawable/chip_solaris"
+                        android:src="@drawable/ic_mic"
+                        app:tint="@color/solaris_accent"
+                        android:contentDescription="@string/widget_type_voice" />
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Step 2 (#11): install the PWA for chat & notifications. Guidance,
                  not a blocker — a discreet card + ghost button, skippable AND
@@ -160,8 +290,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/card_solaris"
-                android:padding="18dp"
-                android:layout_marginTop="20dp">
+                android:padding="20dp"
+                android:layout_marginTop="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -196,26 +326,28 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:text="@string/home_install_pwa_hint"
                     android:textColor="@color/solaris_text_muted"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="3sp" />
 
                 <Button
                     android:id="@+id/install_pwa_btn"
                     style="@style/Widget.Solaris.Button.Ghost"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="16dp"
                     android:text="@string/home_install_pwa" />
             </LinearLayout>
 
+            <!-- Secondary actions, visually subordinate to the primary CTA. -->
             <Button
                 android:id="@+id/open_btn"
                 style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="24dp"
                 android:text="@string/home_open" />
 
             <Button
@@ -223,7 +355,7 @@
                 style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="12dp"
                 android:text="@string/home_logout" />
         </LinearLayout>
     </LinearLayout>
