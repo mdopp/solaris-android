@@ -246,5 +246,18 @@
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Phase 3: house energy widget (#8). No per-instance config. -->
+        <receiver
+            android:name=".widget.EnergyWidgetProvider"
+            android:exported="true"
+            android:label="@string/energy_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/energy_widget_info" />
+        </receiver>
+
     </application>
 </manifest>

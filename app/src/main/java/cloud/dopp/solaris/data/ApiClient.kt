@@ -76,6 +76,31 @@ class ApiClient(private val ctx: Context) {
         }
     }
 
+    /** The house energy picture via `/api/portal/energy` (the flow legs). */
+    fun getEnergy(): Energy? {
+        http.newCall(authed("/api/portal/energy").get().build()).execute().use { resp ->
+            if (!resp.isSuccessful) return null
+            val body = resp.body?.string() ?: return null
+            val root = JSONObject(body)
+            if (!root.optBoolean("ok", false)) return null
+            val e = root.optJSONObject("energy") ?: return null
+            val arr = e.optJSONArray("flow") ?: return Energy(emptyList())
+            val legs = mutableListOf<EnergyFlow>()
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                legs.add(
+                    EnergyFlow(
+                        label = o.optString("label"),
+                        watts = o.optString("state").toDoubleOrNull(),
+                        unit = o.optString("unit").ifBlank { "W" },
+                        sense = o.optString("sense"),
+                    ),
+                )
+            }
+            return Energy(legs)
+        }
+    }
+
     private fun parseCard(o: JSONObject): Card = Card(
         entityId = o.optString("entity_id"),
         name = o.optString("name").ifBlank { o.optString("entity_id") },

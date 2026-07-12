@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="energy_widget_label">Solaris-Energie</string>
+    <string name="energy_widget_description">Haus-Energie: Netz-Bezug/Einspeisung, groß der ganze Fluss</string>
+</resources>
