@@ -41,13 +41,12 @@ class ApiClient(private val ctx: Context) {
             .url(base() + SolarisConfig.NAPI + path)
             .header("Authorization", "Bearer ${token()}")
 
-    /** One entity's live card via `/napi/concept/{id}` → `{ok, concept:{ha_card}}`. */
+    /** One entity's live card via `/napi/portal/state?entity_id=…` → `{ok, card}`. */
     fun getCard(entityId: String): Card? {
-        http.newCall(authed("/concept/$entityId").get().build()).execute().use { resp ->
+        http.newCall(authed("/portal/state?entity_id=$entityId").get().build()).execute().use { resp ->
             if (!resp.isSuccessful) return null
             val body = resp.body?.string() ?: return null
-            val concept = JSONObject(body).optJSONObject("concept") ?: return null
-            val card = concept.optJSONObject("ha_card") ?: return null
+            val card = JSONObject(body).optJSONObject("card") ?: return null
             return parseCard(card)
         }
     }
