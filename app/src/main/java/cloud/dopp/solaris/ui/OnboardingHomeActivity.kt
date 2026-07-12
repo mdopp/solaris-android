@@ -10,8 +10,11 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -24,7 +27,7 @@ import cloud.dopp.solaris.SolarisApp
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
-import cloud.dopp.solaris.widget.DeviceWidgetProvider
+import cloud.dopp.solaris.widget.WidgetTypes
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -200,15 +203,37 @@ class OnboardingHomeActivity : AppCompatActivity() {
         return decoded.ifBlank { null }
     }
 
+    /**
+     * Offer *every* widget type (#34), not just the device widget: a styled list
+     * (type icon + German name) → pin the picked provider via requestPinAppWidget.
+     * Launchers that don't support pinning get a German toast fallback.
+     */
     private fun addWidget() {
         val mgr = getSystemService(AppWidgetManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            mgr != null && mgr.isRequestPinAppWidgetSupported
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            mgr == null || !mgr.isRequestPinAppWidgetSupported
         ) {
-            mgr.requestPinAppWidget(ComponentName(this, DeviceWidgetProvider::class.java), null, null)
-        } else {
             toast(getString(R.string.home_add_widget_manual))
+            return
         }
+        val entries = WidgetTypes.ALL
+        val adapter = object : ArrayAdapter<WidgetTypes.Entry>(this, 0, entries) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val row = convertView ?: layoutInflater.inflate(R.layout.item_widget_type, parent, false)
+                val entry = entries[position]
+                row.findViewById<ImageView>(R.id.type_icon).setImageResource(entry.icon)
+                row.findViewById<TextView>(R.id.type_label).setText(entry.label)
+                return row
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.home_pick_widget_title)
+            .setAdapter(adapter) { _, which ->
+                val provider = entries[which].provider
+                mgr.requestPinAppWidget(ComponentName(this, provider), null, null)
+            }
+            .setNegativeButton(R.string.home_pick_widget_cancel, null)
+            .show()
     }
 
     private fun openSolaris() {
