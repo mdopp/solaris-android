@@ -39,6 +39,17 @@ object EnergyStyle {
         }
     }
 
+    /**
+     * The compact grid-balance label for the tiny "Jetzt" tier (#25): an arrow +
+     * a short in/out word describing whether the house **draws from** the grid
+     * (import, `w >= 0` → `→ in`) or **feeds into** it (export, `w < 0` →
+     * `← out`). Pure so it's JVM-testable; color comes from [colorFor]("grid", w).
+     */
+    fun gridBalanceLabel(watts: Double?): String {
+        val w = watts ?: return "—"
+        return if (w >= 0) "→ in" else "← out"
+    }
+
     /** Line/legend color for a leg in the Verlauf chart. */
     fun seriesColor(sense: String?): Int = when (sense) {
         "supply" -> SUPPLY

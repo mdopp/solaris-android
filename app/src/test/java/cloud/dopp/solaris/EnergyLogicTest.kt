@@ -78,6 +78,25 @@ class EnergyLogicTest {
         assertEquals("1,2 kW", EnergyStyle.formatWatts(-1200.0)) // magnitude only
     }
 
+    // ── EnergyStyle: compact grid in/out balance (#25) ────────────────────────
+
+    @Test fun gridBalanceImportPointsInExportPointsOut() {
+        assertEquals("→ in", EnergyStyle.gridBalanceLabel(500.0))
+        assertEquals("→ in", EnergyStyle.gridBalanceLabel(0.0)) // zero counts as import side
+        assertEquals("← out", EnergyStyle.gridBalanceLabel(-500.0))
+    }
+
+    @Test fun gridBalanceMissingWattsIsDash() {
+        assertEquals("—", EnergyStyle.gridBalanceLabel(null))
+    }
+
+    @Test fun tinyTierHidesPvExtraSpaceShowsPv() {
+        // 1×1 tight cell → grid balance only; a taller/wider box adds PV.
+        assertEquals(false, cloud.dopp.solaris.widget.EnergyRender.showPv(80, 80))
+        assertEquals(true, cloud.dopp.solaris.widget.EnergyRender.showPv(80, 110))
+        assertEquals(true, cloud.dopp.solaris.widget.EnergyRender.showPv(140, 80))
+    }
+
     // ── EnergyStyle: totals-slot mapping for the Gesamt grid ──────────────────
 
     @Test fun totalsMapOntoCanonicalSlotsByKeySynonyms() {
