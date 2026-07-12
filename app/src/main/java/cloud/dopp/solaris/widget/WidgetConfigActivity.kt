@@ -1,11 +1,15 @@
 package cloud.dopp.solaris.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.ArrayAdapter
+import android.view.ViewGroup
+import android.widget.BaseAdapter
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -82,9 +86,29 @@ class WidgetConfigActivity : AppCompatActivity() {
             return
         }
         status.setText(R.string.widget_config_pick)
-        val labels = devices.map { "${it.name}  ·  ${it.room ?: it.domain}" }
-        list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
+        list.adapter = DeviceAdapter(this, devices)
         list.setOnItemClickListener { _, _, pos, _ -> pick(devices[pos]) }
+    }
+
+    /** Solaris-styled picker rows: type icon + name + room (replaces simple_list_item_1). */
+    private class DeviceAdapter(
+        ctx: Context,
+        private val devices: List<Device>,
+    ) : BaseAdapter() {
+        private val inflater = LayoutInflater.from(ctx)
+
+        override fun getCount() = devices.size
+        override fun getItem(position: Int) = devices[position]
+        override fun getItemId(position: Int) = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+            val v = convertView ?: inflater.inflate(R.layout.item_device_row, parent, false)
+            val d = devices[position]
+            v.findViewById<ImageView>(R.id.row_icon).setImageResource(DeviceIcons.forDomain(d.domain))
+            v.findViewById<TextView>(R.id.row_name).text = d.name
+            v.findViewById<TextView>(R.id.row_room).text = d.room ?: d.domain
+            return v
+        }
     }
 
     private fun pick(d: Device) {

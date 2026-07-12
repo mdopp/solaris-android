@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/solaris_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -10,27 +11,48 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <TextView
+        <!-- Brand header: logo + wordmark -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="Solaris"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="28dp">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_solaris_logo"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Solaris"
+                android:textColor="@color/solaris_text"
+                android:textSize="30sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.01" />
+        </LinearLayout>
 
         <!-- Not connected: connect to your own server -->
         <LinearLayout
             android:id="@+id/connect_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="@drawable/card_solaris"
+            android:padding="20dp">
 
             <TextView
                 android:id="@+id/connect_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="18dp"
                 android:text="@string/home_connect_hint"
+                android:textColor="@color/solaris_text"
                 android:textSize="16sp" />
 
             <Button
@@ -42,10 +64,10 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="18dp"
                 android:layout_marginBottom="8dp"
                 android:text="@string/home_or_manual"
-                android:textColor="#FF888890"
+                android:textColor="@color/solaris_text_muted"
                 android:textSize="14sp" />
 
             <EditText
@@ -59,6 +81,7 @@
 
             <Button
                 android:id="@+id/connect_btn"
+                style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -73,12 +96,30 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/status"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:textSize="16sp" />
+                android:orientation="vertical"
+                android:background="@drawable/card_solaris"
+                android:padding="20dp"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_status_label"
+                    android:textColor="@color/solaris_text_muted"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/energy_supply"
+                    android:textStyle="bold"
+                    android:textSize="17sp" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/add_widget_btn"
@@ -88,13 +129,15 @@
 
             <Button
                 android:id="@+id/open_btn"
+                style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:text="@string/home_open" />
 
             <Button
                 android:id="@+id/logout_btn"
+                style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"

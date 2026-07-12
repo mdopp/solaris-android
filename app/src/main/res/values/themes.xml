@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App-wide Solaris theme: dark surfaces + ServiceBay-blue accent.
+         Applied in AndroidManifest to the application + activities so the
+         onboarding/pairing/config screens stop looking like stock Android. -->
+    <style name="Theme.Solaris" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/solaris_accent</item>
+        <item name="colorPrimaryDark">@color/solaris_bg_elevated</item>
+        <item name="colorAccent">@color/solaris_accent</item>
+        <item name="android:colorBackground">@color/solaris_bg</item>
+        <item name="android:windowBackground">@color/solaris_bg</item>
+        <item name="android:textColorPrimary">@color/solaris_text</item>
+        <item name="android:textColorSecondary">@color/solaris_text_muted</item>
+        <item name="android:textColorHint">@color/solaris_text_faint</item>
+        <item name="android:statusBarColor">@color/solaris_bg_elevated</item>
+        <item name="android:navigationBarColor">@color/solaris_bg</item>
+        <item name="buttonStyle">@style/Widget.Solaris.Button</item>
+        <item name="editTextStyle">@style/Widget.Solaris.EditText</item>
+    </style>
+
+    <!-- Same theme, but drawn over whatever is behind (used by the widget config
+         activity so the picker floats on a dimmed backdrop). -->
+    <style name="Theme.Solaris.Config" parent="Theme.Solaris" />
+
+    <!-- Filled, rounded, accent-blue primary button. -->
+    <style name="Widget.Solaris.Button" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_solaris</item>
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- Secondary/ghost button: outlined, muted — for less prominent actions. -->
+    <style name="Widget.Solaris.Button.Ghost" parent="Widget.Solaris.Button">
+        <item name="android:background">@drawable/btn_solaris_ghost</item>
+        <item name="android:textColor">@color/solaris_text_muted</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <!-- Dark, rounded input field. -->
+    <style name="Widget.Solaris.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/field_solaris</item>
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textColorHint">@color/solaris_text_faint</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+</resources>

@@ -93,13 +93,7 @@ object WidgetRender {
         )
     }
 
-    private fun iconFor(domain: String): Int = when (domain) {
-        "light" -> R.drawable.ic_light
-        "switch" -> R.drawable.ic_switch
-        "cover" -> R.drawable.ic_cover
-        "climate" -> R.drawable.ic_climate
-        else -> R.drawable.ic_device
-    }
+    private fun iconFor(domain: String): Int = DeviceIcons.forDomain(domain)
 
     private fun accentFor(domain: String): Int = when (domain) {
         "light" -> 0xFFFFC107.toInt()

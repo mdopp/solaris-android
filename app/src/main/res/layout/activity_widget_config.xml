@@ -3,14 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/solaris_bg"
+    android:padding="20dp">
 
     <TextView
         android:id="@+id/config_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        android:textSize="16sp" />
+        android:layout_marginBottom="14dp"
+        android:textColor="@color/solaris_text"
+        android:textStyle="bold"
+        android:textSize="17sp" />
 
     <Button
         android:id="@+id/config_pair"
@@ -24,5 +27,8 @@
         android:id="@+id/config_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:divider="@color/solaris_divider"
+        android:dividerHeight="1dp"
+        android:scrollbarStyle="outsideOverlay" />
 </LinearLayout>
