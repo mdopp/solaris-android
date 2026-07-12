@@ -32,11 +32,13 @@
                 android:letterSpacing="0.01" />
 
             <ImageView
-                android:layout_width="26dp"
-                android:layout_height="31dp"
-                android:layout_marginStart="1dp"
+                android:layout_width="wrap_content"
+                android:layout_height="33dp"
+                android:adjustViewBounds="true"
+                android:layout_marginStart="2dp"
                 android:layout_marginEnd="1dp"
-                android:src="@mipmap/ic_launcher_round"
+                android:layout_marginBottom="2dp"
+                android:src="@drawable/ic_solaris_figure"
                 android:contentDescription="@null" />
 
             <TextView
