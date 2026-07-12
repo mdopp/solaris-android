@@ -192,20 +192,43 @@ class ApiClient(private val ctx: Context) {
 
     /**
      * Recent state history for one entity via `/napi/portal/entity-history`
-     * (#755). Returns the numeric series (non-numeric states dropped).
+     * (#755). Returns the numeric series (non-numeric states dropped) — used for
+     * the line sparkline (dimmable brightness, temperature, power, …).
      */
     fun getEntityHistory(entityId: String, range: String = "48h"): List<Float> {
+        val arr = fetchHistoryArray(entityId, range) ?: return emptyList()
+        val out = ArrayList<Float>(arr.length())
+        for (i in 0 until arr.length()) {
+            val p = arr.optJSONObject(i) ?: continue
+            p.optString("state").toFloatOrNull()?.let { out.add(it) }
+        }
+        return out
+    }
+
+    /**
+     * The **raw** state timeline for one entity (#29). Unlike [getEntityHistory]
+     * this keeps every point's textual `state` (e.g. "on"/"off"/"open"/"closed"),
+     * so a binary device (a plain light, a switch, a cover) can be shown as an
+     * on/off timeline instead of an empty "kein Verlauf" block. Chronological.
+     */
+    fun getEntityStateHistory(entityId: String, range: String = "48h"): List<String> {
+        val arr = fetchHistoryArray(entityId, range) ?: return emptyList()
+        val out = ArrayList<String>(arr.length())
+        for (i in 0 until arr.length()) {
+            val p = arr.optJSONObject(i) ?: continue
+            val s = p.optString("state", "")
+            if (s.isNotEmpty()) out.add(s)
+        }
+        return out
+    }
+
+    /** Fetch + parse the `history` array once; null on error/empty. */
+    private fun fetchHistoryArray(entityId: String, range: String): org.json.JSONArray? {
         val path = "/portal/entity-history?entity_id=$entityId&range=$range"
         http.newCall(authed(path).get().build()).execute().use { resp ->
-            if (!resp.isSuccessful) return emptyList()
-            val body = resp.body?.string() ?: return emptyList()
-            val arr = JSONObject(body).optJSONArray("history") ?: return emptyList()
-            val out = ArrayList<Float>(arr.length())
-            for (i in 0 until arr.length()) {
-                val p = arr.optJSONObject(i) ?: continue
-                p.optString("state").toFloatOrNull()?.let { out.add(it) }
-            }
-            return out
+            if (!resp.isSuccessful) return null
+            val body = resp.body?.string() ?: return null
+            return JSONObject(body).optJSONArray("history")
         }
     }
 

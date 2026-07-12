@@ -54,11 +54,13 @@ class WidgetSizeTierTest {
         assertEquals(Tier.MEDIUM, WidgetRender.sizeTier(300, 200))
     }
 
-    @Test fun onlyLargeShowsChart() {
+    /** #29 refinement: the history now shows at MEDIUM too, not only LARGE. */
+    @Test fun mediumAndLargeShowChart() {
         assertEquals(true, WidgetRender.showsChart(Tier.LARGE))
-        assertEquals(false, WidgetRender.showsChart(Tier.MEDIUM))
+        assertEquals(true, WidgetRender.showsChart(Tier.MEDIUM))
         assertEquals(false, WidgetRender.showsChart(Tier.WIDE))
         assertEquals(false, WidgetRender.showsChart(Tier.SMALL))
+        assertEquals(false, WidgetRender.showsChart(Tier.TINY))
     }
 
     /** #33: lights/switches toggle on a body tap; covers/sensors open the PWA. */

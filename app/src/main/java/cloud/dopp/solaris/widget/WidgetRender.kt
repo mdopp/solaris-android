@@ -40,8 +40,12 @@ object WidgetRender {
         else -> Tier.SMALL
     }
 
-    /** True when the tier hosts the 48h-history chart (#29) — LARGE only. */
-    fun showsChart(tier: Tier): Boolean = tier == Tier.LARGE
+    /**
+     * True when the tier hosts the 48h-history chart (#29). Now **MEDIUM and
+     * LARGE** — a medium-height card shows the history too (the chart bitmap is
+     * scaled down for the smaller area). Small/wide/tiny stay chart-free.
+     */
+    fun showsChart(tier: Tier): Boolean = tier == Tier.MEDIUM || tier == Tier.LARGE
 
     /**
      * Does a **body/central-area tap** toggle the device on/off for this domain
@@ -65,6 +69,7 @@ object WidgetRender {
         domain: String,
         onBodyTap: PendingIntent,
         history: List<Float>? = null,
+        stateHistory: List<String>? = null,
     ): RemoteViews {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
@@ -134,9 +139,13 @@ object WidgetRender {
             }
         }
 
-        // 48h history sparkline — LARGE only (#29). Draw when there's a numeric
-        // series; otherwise show the "kein Verlauf" placeholder in its place.
-        if (tier == Tier.LARGE) renderChart(ctx, v, dom, on, history)
+        // 48h history — MEDIUM + LARGE (#29). Numeric entities get the line
+        // sparkline; binary devices (light/switch/cover) get an on/off timeline;
+        // when there's genuinely no history the chart area is collapsed so the
+        // card isn't a big empty block. LARGE has a taller area than MEDIUM.
+        if (tier == Tier.LARGE || tier == Tier.MEDIUM) {
+            renderChart(ctx, v, dom, on, history, stateHistory, large = tier == Tier.LARGE)
+        }
         return v
     }
 
@@ -198,18 +207,54 @@ object WidgetRender {
         else -> "⟳" to WidgetActionReceiver.OP_REFRESH
     }
 
-    /** Draw (or hide) the 48h history sparkline on the LARGE layout (#29). */
-    private fun renderChart(ctx: Context, v: RemoteViews, domain: String, on: Boolean, history: List<Float>?) {
+    /**
+     * Draw the 48h history on the MEDIUM/LARGE layout (#29). Numeric entities
+     * (dimmable brightness, temperature, power) → the line sparkline; binary
+     * devices (a plain light, a switch, a cover) → an on/off timeline derived
+     * from the raw state history; genuinely no history → **collapse** the area
+     * (hide chart AND hint) so the card falls back to the compact layout rather
+     * than showing a big empty block. The bitmap is smaller for the MEDIUM area.
+     */
+    private fun renderChart(
+        ctx: Context,
+        v: RemoteViews,
+        domain: String,
+        on: Boolean,
+        history: List<Float>?,
+        stateHistory: List<String>?,
+        large: Boolean,
+    ) {
+        // Bitmap size per tier — kept well under ChartRenderer.MAX_EDGE (#32).
+        val w = if (large) 560 else 480
+        val h = if (large) 200 else 120
+
         if (history != null && history.size >= 2) {
             val line = if (on) accentFor(domain) else OFF
             val fill = (line and 0x00FFFFFF) or 0x33000000
-            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.sparkline(560, 200, history, line, fill))
-            v.setViewVisibility(R.id.w_chart, View.VISIBLE)
-            v.setViewVisibility(R.id.w_chart_hint, View.GONE)
-        } else {
-            v.setViewVisibility(R.id.w_chart, View.GONE)
-            v.setViewVisibility(R.id.w_chart_hint, View.VISIBLE)
+            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.sparkline(w, h, history, line, fill))
+            showChart(v)
+            return
         }
+        val timeline = stateHistory?.map { ChartRenderer.stateIsOn(it) }
+        if (timeline != null && timeline.size >= 2) {
+            val onColor = accentFor(domain)
+            val offColor = 0x33FFFFFF
+            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.onOffTimeline(w, h, timeline, onColor, offColor))
+            showChart(v)
+            return
+        }
+        // Genuinely no history → collapse (neither chart nor "kein Verlauf" block).
+        collapseChart(v)
+    }
+
+    private fun showChart(v: RemoteViews) {
+        v.setViewVisibility(R.id.w_chart, View.VISIBLE)
+        v.setViewVisibility(R.id.w_chart_hint, View.GONE)
+    }
+
+    private fun collapseChart(v: RemoteViews) {
+        v.setViewVisibility(R.id.w_chart, View.GONE)
+        v.setViewVisibility(R.id.w_chart_hint, View.GONE)
     }
 
     /**
