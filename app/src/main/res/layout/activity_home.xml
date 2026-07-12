@@ -11,26 +11,38 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Brand header: the Solaris figure + wordmark + claim -->
+        <!-- Brand header: the "Solaris" wordmark with the figure as the "i"
+             (Solar[figure]s) — no separate leading icon, mirroring the Solaris
+             chat app. Extra top breathing room (#21). -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="48dp"
             android:layout_marginBottom="6dp">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Solar"
+                android:textColor="@color/solaris_text"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.01" />
+
             <ImageView
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="14dp"
+                android:layout_width="26dp"
+                android:layout_height="31dp"
+                android:layout_marginStart="1dp"
+                android:layout_marginEnd="1dp"
                 android:src="@mipmap/ic_launcher_round"
                 android:contentDescription="@null" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Solaris"
+                android:text="s"
                 android:textColor="@color/solaris_text"
                 android:textSize="34sp"
                 android:textStyle="bold"
