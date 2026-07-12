@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="home_connect_hint">Verbinde dich mit deinem Solaris-Server.</string>
+    <string name="qr_scan">QR-Code scannen</string>
+    <string name="qr_prompt">Solaris-QR-Code scannen</string>
+    <string name="qr_invalid">Kein gültiger Solaris-QR-Code.</string>
+    <string name="home_or_manual">oder Server-Adresse manuell eingeben:</string>
     <string name="home_reconnect">Bei %1$s anmelden, um die Kopplung abzuschließen.</string>
     <string name="home_connect">Verbinden</string>
     <string name="home_enter_url">Bitte die Server-Adresse eingeben.</string>

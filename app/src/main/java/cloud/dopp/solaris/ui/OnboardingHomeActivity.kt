@@ -13,6 +13,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
@@ -30,10 +32,15 @@ import cloud.dopp.solaris.widget.DeviceWidgetProvider
  */
 class OnboardingHomeActivity : AppCompatActivity() {
 
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        result.contents?.let { handleScanned(it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
         findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
         findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
         findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
@@ -82,6 +89,46 @@ class OnboardingHomeActivity : AppCompatActivity() {
             toast(getString(R.string.home_enter_url)); return
         }
         ServerStore.setBaseUrl(this, url)
+        openPairing()
+    }
+
+    private fun startScan() {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt(getString(R.string.qr_prompt))
+                .setBeepEnabled(false)
+                .setOrientationLocked(false),
+        )
+    }
+
+    /** Parse `cloud.dopp.solaris://setup?server=…&token=…`, or a plain https URL. */
+    private fun handleScanned(text: String) {
+        val uri = runCatching { Uri.parse(text) }.getOrNull()
+        if (uri != null && uri.scheme == SolarisConfig.PAIR_SCHEME && uri.host == SolarisConfig.SETUP_HOST) {
+            val server = uri.getQueryParameter(SolarisConfig.SETUP_SERVER_PARAM)
+            val token = uri.getQueryParameter(SolarisConfig.PAIR_TOKEN_PARAM)
+            if (!server.isNullOrBlank()) {
+                ServerStore.setBaseUrl(this, server)
+                if (!token.isNullOrBlank() && token.startsWith("sol_device_")) {
+                    TokenStore.save(this, token)
+                    toast(getString(R.string.pairing_success))
+                    render()
+                } else {
+                    openPairing()
+                }
+                return
+            }
+        }
+        if (text.startsWith("http://", true) || text.startsWith("https://", true)) {
+            ServerStore.setBaseUrl(this, text)
+            openPairing()
+            return
+        }
+        toast(getString(R.string.qr_invalid))
+    }
+
+    private fun openPairing() {
         val base = ServerStore.baseUrl(this) ?: return
         CustomTabsIntent.Builder().build()
             .launchUrl(this, Uri.parse(base + SolarisConfig.PAIR_PATH))

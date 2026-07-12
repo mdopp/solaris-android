@@ -26,6 +26,14 @@ object SolarisConfig {
     const val PAIR_HOST = "pair"
     const val PAIR_TOKEN_PARAM = "token"
 
+    /**
+     * QR content the server's "connect phone" page encodes (scanned, not launched
+     * as an intent): `cloud.dopp.solaris://setup?server=<url>&token=<sol_device_…>`.
+     * `server` required, `token` optional (present → instant pair; absent → login).
+     */
+    const val SETUP_HOST = "setup"
+    const val SETUP_SERVER_PARAM = "server"
+
     /** Prefilled hint in the onboarding server field. */
     const val DEFAULT_SERVER_HINT = "https://chat.dopp.cloud"
 }

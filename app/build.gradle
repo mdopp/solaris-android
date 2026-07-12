@@ -60,8 +60,8 @@ android {
         // needs the AndroidKeyStore-backed master key from API 23.
         minSdkVersion 23
         targetSdkVersion 35
-        versionCode 6
-        versionName "2.0.0"
+        versionCode 7
+        versionName "2.1.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -150,12 +150,28 @@ android {
 
         
     }
+    signingConfigs {
+        release {
+            // Populated from env (CI secrets / local signed builds). When unset,
+            // assembleRelease produces an unsigned APK — no hardcoded keystore.
+            def ksFile = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ksFile) {
+                storeFile file(ksFile)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: "solaris"
+                keyPassword(System.getenv("ANDROID_KEY_PASSWORD")
+                        ?: System.getenv("ANDROID_KEYSTORE_PASSWORD"))
+            }
+        }
+    }
     buildTypes {
         release {
-            // Disabled during Phase-3 native development so R8 doesn't strip
-            // reflection-referenced classes. Re-enable with proper keep rules
-            // before a Play release.
+            // Disabled during native development so R8 doesn't strip
+            // reflection-referenced classes. Re-enable with keep rules before Play.
             minifyEnabled false
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
@@ -223,4 +239,6 @@ dependencies {
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     // Networking for the widget data/action calls.
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // Self-contained QR scanner for onboarding (no Google Play Services).
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
 }
