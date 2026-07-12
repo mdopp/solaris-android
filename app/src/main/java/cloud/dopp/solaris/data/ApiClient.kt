@@ -7,6 +7,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -139,16 +141,33 @@ class ApiClient(private val ctx: Context) {
      * active ones. Bounded by [cap] to keep the widget refresh cheap; the
      * fetched cards are ordered by domain then name. If a dedicated
      * `/napi/portal/active` (or a batch states call) lands server-side this
-     * should switch to it (see the builder note / a solarisbay ticket).
+     * should switch to it — tracked in **solarisbay#773** (collective states /
+     * active endpoint). Until then the per-entity [getCard] reads are **fired
+     * concurrently** on a small bounded pool (was sequential N+1 → ~10s) so the
+     * widget refresh stays fast; each read is timeout- and exception-guarded so a
+     * single slow/broken entity can't stall or fail the whole list.
      */
     fun listActive(cap: Int = 40): List<Card> {
         val roster = listAddable().take(cap)
-        val out = mutableListOf<Card>()
-        for (d in roster) {
-            val card = try { getCard(d.entityId) } catch (e: Exception) { null } ?: continue
-            if (card.isOn) out.add(card)
+        if (roster.isEmpty()) return emptyList()
+
+        // Bounded fan-out: OkHttp reads are blocking, so a handful of workers turns
+        // the sequential N reads into ~N/POOL waves. Kept small to be gentle on the
+        // server (solarisbay#773 will collapse this to one call).
+        val pool = Executors.newFixedThreadPool(minOf(ACTIVE_POOL, roster.size))
+        try {
+            val tasks = roster.map { d ->
+                Callable { try { getCard(d.entityId) } catch (e: Exception) { null } }
+            }
+            val out = mutableListOf<Card>()
+            for (f in pool.invokeAll(tasks, ACTIVE_FANOUT_TIMEOUT_S, TimeUnit.SECONDS)) {
+                val card = try { f.get() } catch (e: Exception) { null } ?: continue
+                if (card.isOn) out.add(card)
+            }
+            return out.sortedWith(compareBy({ it.domain }, { it.name }))
+        } finally {
+            pool.shutdownNow()
         }
-        return out.sortedWith(compareBy({ it.domain }, { it.name }))
     }
 
     /**
@@ -210,5 +229,11 @@ class ApiClient(private val ctx: Context) {
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
+
+        /** Worker count for the [listActive] per-entity state fan-out. */
+        private const val ACTIVE_POOL = 8
+
+        /** Hard ceiling for the whole [listActive] fan-out wave (seconds). */
+        private const val ACTIVE_FANOUT_TIMEOUT_S = 12L
     }
 }

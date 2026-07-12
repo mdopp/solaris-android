@@ -81,18 +81,24 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun tierFor(context: Context, appWidgetId: Int): ActiveDevicesRender.Tier {
-        val opts = AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
-        val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-        val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
-        return ActiveDevicesRender.sizeTier(minW, minH)
-    }
+    private fun tierFor(context: Context, appWidgetId: Int): ActiveDevicesRender.Tier =
+        ActiveDevicesRender.sizeTier(minWidth(context, appWidgetId), minHeight(context, appWidgetId))
+
+    private fun minWidth(context: Context, appWidgetId: Int): Int =
+        AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
+            .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+
+    private fun minHeight(context: Context, appWidgetId: Int): Int =
+        AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
+            .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
 
     private fun scaffold(
         context: Context, appWidgetId: Int, tier: ActiveDevicesRender.Tier, active: List<Card>?,
     ): RemoteViews {
         val v = when (tier) {
-            ActiveDevicesRender.Tier.LARGE -> ActiveDevicesRender.large(context, active)
+            // Pass the widget's min height so the row count is size-adaptive (#28).
+            ActiveDevicesRender.Tier.LARGE ->
+                ActiveDevicesRender.large(context, active, minHeight(context, appWidgetId))
             ActiveDevicesRender.Tier.SMALL -> ActiveDevicesRender.small(context, active)
         }
         v.setOnClickPendingIntent(

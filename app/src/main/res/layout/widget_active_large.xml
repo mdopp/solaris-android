@@ -175,6 +175,120 @@
             android:textStyle="bold" android:textSize="13sp" />
     </LinearLayout>
 
+    <!-- Row 6 -->
+    <LinearLayout android:id="@+id/av_row6"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row6_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row6_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row6_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 7 -->
+    <LinearLayout android:id="@+id/av_row7"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row7_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row7_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row7_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 8 -->
+    <LinearLayout android:id="@+id/av_row8"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row8_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row8_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row8_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 9 -->
+    <LinearLayout android:id="@+id/av_row9"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row9_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row9_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row9_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 10 -->
+    <LinearLayout android:id="@+id/av_row10"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row10_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row10_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row10_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row 11 -->
+    <LinearLayout android:id="@+id/av_row11"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:baselineAligned="false" android:layout_marginTop="8dp"
+        android:visibility="gone">
+        <ImageView android:id="@+id/av_row11_icon" android:layout_width="22dp"
+            android:layout_height="22dp" android:src="@drawable/ic_light"
+            android:tint="#FFFFC107" android:contentDescription="@null" />
+        <TextView android:id="@+id/av_row11_name" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="10dp" android:maxLines="1" android:ellipsize="end"
+            android:text="" android:textColor="#FFF2F2F5" android:textSize="14sp" />
+        <TextView android:id="@+id/av_row11_state" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginStart="8dp"
+            android:maxLines="1" android:text="an" android:textColor="#FFB0BEC5"
+            android:textStyle="bold" android:textSize="13sp" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/av_more"
         android:layout_width="match_parent"
