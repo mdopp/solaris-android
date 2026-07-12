@@ -56,3 +56,11 @@ data class Device(
 
 /** Covers whose open is confirm-first, matching the server's gate. */
 val SENSITIVE_COVER_CLASSES = setOf("garage", "door", "gate")
+
+/**
+ * Is a device (by [domain] + [deviceClass]) safety-gated — i.e. its action needs
+ * a confirmation (#38)? Mirrors [Card.isSensitiveCover] but works from the bound
+ * widget metadata when no live [Card] is available yet (cache/loading render).
+ */
+fun isSensitiveDevice(domain: String?, deviceClass: String?): Boolean =
+    domain == "cover" && deviceClass in SENSITIVE_COVER_CLASSES

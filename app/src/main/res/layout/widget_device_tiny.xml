@@ -11,20 +11,39 @@
     android:orientation="vertical"
     android:background="@drawable/widget_bg">
 
-    <!-- Name: 2 lines, tap = open PWA. -->
-    <TextView
-        android:id="@+id/w_name"
+    <!-- Name row: name (2 lines, tap = open PWA) + a lock badge (#38) for
+         sensitive devices needing a confirm. -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="false"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
-        android:paddingTop="9dp"
-        android:maxLines="2"
-        android:ellipsize="end"
-        android:text="Wohnzimmer"
-        android:textColor="#FFF2F2F5"
-        android:textStyle="bold"
-        android:textSize="13sp" />
+        android:paddingTop="9dp">
+
+        <TextView
+            android:id="@+id/w_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Wohnzimmer"
+            android:textColor="#FFF2F2F5"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/w_lock"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_lock"
+            android:tint="#FFB0BEC5"
+            android:visibility="gone"
+            android:contentDescription="@string/widget_lock" />
+    </LinearLayout>
 
     <!-- Single primary toggle, weighted to fill the middle. -->
     <Button

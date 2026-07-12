@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.RemoteViews
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.Card
+import cloud.dopp.solaris.data.isSensitiveDevice
 import java.util.Locale
 
 /**
@@ -71,7 +72,9 @@ object WidgetRender {
 
         // TINY (1×1, #31) has its own shape: name instead of icon, one primary
         // toggle, and the state docked as a bottom bar. Built separately.
-        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap)
+        val sensitive = isSensitive(ctx, appWidgetId, card, dom)
+
+        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, sensitive)
 
         val layout = when (tier) {
             Tier.LARGE -> R.layout.widget_device_large
@@ -88,6 +91,9 @@ object WidgetRender {
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setTextViewText(R.id.w_state, stateLabel(card))
         v.setTextColor(R.id.w_state, accent)
+
+        // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
+        v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
 
         val level = card?.level
         if (level != null) {
@@ -148,11 +154,14 @@ object WidgetRender {
         dom: String,
         on: Boolean,
         onBodyTap: PendingIntent,
+        sensitive: Boolean,
     ): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
         val accent = if (on) accentFor(dom) else OFF
 
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
+        // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
+        v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
 
         // Single toggle glyph + the primary action for the domain.
         val (glyph, op) = tinyToggle(dom, card)
@@ -201,6 +210,16 @@ object WidgetRender {
             v.setViewVisibility(R.id.w_chart, View.GONE)
             v.setViewVisibility(R.id.w_chart_hint, View.VISIBLE)
         }
+    }
+
+    /**
+     * Does this widget's device need a confirm (#38)? Prefer the live [card]'s
+     * class; when there's no card yet (cache/loading render) fall back to the
+     * bound widget metadata (domain + deviceClass) persisted at config time.
+     */
+    private fun isSensitive(ctx: Context, appWidgetId: Int, card: Card?, dom: String): Boolean {
+        if (card != null) return card.isSensitiveCover
+        return isSensitiveDevice(dom, WidgetStore.deviceClass(ctx, appWidgetId))
     }
 
     /** Resolve the layout tier for [appWidgetId] from the host's reported min size. */

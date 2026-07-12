@@ -32,6 +32,17 @@
         android:textColor="#FFF2F2F5"
         android:textSize="14sp" />
 
+    <!-- Lock badge (#38): shown for sensitive devices needing a confirm. -->
+    <ImageView
+        android:id="@+id/av_item_lock"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/ic_lock"
+        android:tint="#FFB0BEC5"
+        android:visibility="gone"
+        android:contentDescription="@string/widget_lock" />
+
     <TextView
         android:id="@+id/av_item_state"
         android:layout_width="wrap_content"

@@ -2,6 +2,7 @@
 <resources>
     <string name="widget_refresh">Aktualisieren</string>
     <string name="widget_load_error">konnte nicht laden</string>
+    <string name="widget_lock">Bestätigung erforderlich</string>
 
     <string name="energy_widget_label">Solaris-Energie · Jetzt</string>
     <string name="energy_widget_description">Fluss-Grid PV/Haus/Netz/Akku (klein: Netz-Bezug/Einspeisung)</string>

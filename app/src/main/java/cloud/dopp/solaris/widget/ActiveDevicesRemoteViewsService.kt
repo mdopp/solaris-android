@@ -54,6 +54,8 @@ private class ActiveDevicesFactory(
         row.setInt(R.id.av_item_icon, "setColorFilter", accentFor(card.domain))
         row.setTextViewText(R.id.av_item_name, card.name.ifBlank { card.entityId })
         row.setTextViewText(R.id.av_item_state, ActiveDevicesRender.stateLabel(card))
+        // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
+        row.setViewVisibility(R.id.av_item_lock, if (card.isSensitiveCover) View.VISIBLE else View.GONE)
 
         // Per-row fill-in intent, merged with the ListView's PendingIntentTemplate
         // (set in the provider) so a tap opens that device's card in the PWA

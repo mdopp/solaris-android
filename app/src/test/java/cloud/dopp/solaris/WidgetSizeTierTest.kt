@@ -70,4 +70,16 @@ class WidgetSizeTierTest {
         assertEquals(false, WidgetRender.togglesOnBodyTap("climate"))
         assertEquals(false, WidgetRender.togglesOnBodyTap(""))
     }
+
+    /** #38: only garage/door/gate covers are lock-gated (need a confirm). */
+    @Test fun onlySensitiveCoverClassesNeedTheLockBadge() {
+        assertEquals(true, cloud.dopp.solaris.data.isSensitiveDevice("cover", "garage"))
+        assertEquals(true, cloud.dopp.solaris.data.isSensitiveDevice("cover", "door"))
+        assertEquals(true, cloud.dopp.solaris.data.isSensitiveDevice("cover", "gate"))
+        // Ordinary covers + other domains are not gated.
+        assertEquals(false, cloud.dopp.solaris.data.isSensitiveDevice("cover", "shade"))
+        assertEquals(false, cloud.dopp.solaris.data.isSensitiveDevice("cover", null))
+        assertEquals(false, cloud.dopp.solaris.data.isSensitiveDevice("light", "garage"))
+        assertEquals(false, cloud.dopp.solaris.data.isSensitiveDevice(null, "garage"))
+    }
 }

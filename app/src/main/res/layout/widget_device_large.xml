@@ -40,6 +40,17 @@
             android:textStyle="bold"
             android:textSize="18sp" />
 
+        <!-- Lock badge (#38): shown for sensitive devices needing a confirm. -->
+        <ImageView
+            android:id="@+id/w_lock"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginStart="6dp"
+            android:src="@drawable/ic_lock"
+            android:tint="#FFB0BEC5"
+            android:visibility="gone"
+            android:contentDescription="@string/widget_lock" />
+
         <ImageView
             android:id="@+id/w_refresh"
             android:layout_width="28dp"
