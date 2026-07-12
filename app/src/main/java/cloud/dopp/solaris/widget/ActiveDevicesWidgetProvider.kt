@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
 import cloud.dopp.solaris.data.ApiClient
@@ -57,7 +58,11 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
         if (!paired) {
             // Not paired: render an empty (0) state; tap bounces to onboarding.
             try {
+                WidgetStore.setActiveCacheJson(context, ActiveCache.encode(emptyList()))
                 mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, emptyList()))
+                if (tier == ActiveDevicesRender.Tier.LARGE) {
+                    mgr.notifyAppWidgetViewDataChanged(appWidgetId, R_av_list)
+                }
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             }
@@ -72,7 +77,16 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
                 } catch (e: Exception) {
                     null
                 }
+                // Persist the fresh list so the collection factory renders it (stale→fresh),
+                // then tell the ListView to reload. The real latency fix is a server-side
+                // batch/active endpoint (solarisbay#773); this cache only hides the wait.
+                if (active != null) {
+                    WidgetStore.setActiveCacheJson(context, ActiveCache.encode(active))
+                }
                 mgr.updateAppWidget(appWidgetId, scaffold(context, appWidgetId, tier, active))
+                if (tier == ActiveDevicesRender.Tier.LARGE) {
+                    mgr.notifyAppWidgetViewDataChanged(appWidgetId, R_av_list)
+                }
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             } finally {
@@ -96,15 +110,37 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
         context: Context, appWidgetId: Int, tier: ActiveDevicesRender.Tier, active: List<Card>?,
     ): RemoteViews {
         val v = when (tier) {
-            // Pass the widget's min height so the row count is size-adaptive (#28).
-            ActiveDevicesRender.Tier.LARGE ->
-                ActiveDevicesRender.large(context, active, minHeight(context, appWidgetId))
+            ActiveDevicesRender.Tier.LARGE -> largeCollection(context, appWidgetId, active)
             ActiveDevicesRender.Tier.SMALL -> ActiveDevicesRender.small(context, active)
         }
         v.setOnClickPendingIntent(
             R_av_root, PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT),
         )
         v.setOnClickPendingIntent(R_av_refresh, refreshPending(context, appWidgetId))
+        return v
+    }
+
+    /**
+     * Build the large tier as a scrollable collection (#28): header + a ListView
+     * bound to [ActiveDevicesRemoteViewsService] via setRemoteAdapter, an empty view,
+     * and a PendingIntentTemplate so per-row fill-in taps open the PWA. The service
+     * intent carries the appWidgetId (unique data Uri) so distinct instances don't
+     * share an adapter.
+     */
+    private fun largeCollection(context: Context, appWidgetId: Int, active: List<Card>?): RemoteViews {
+        val v = ActiveDevicesRender.large(context, active)
+
+        val svc = Intent(context, ActiveDevicesRemoteViewsService::class.java)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .setData(Uri.parse("solaris://active/$appWidgetId"))
+        v.setRemoteAdapter(R_av_list, svc)
+        v.setEmptyView(R_av_list, R_av_empty)
+
+        // Template merged with each row's fill-in intent (set in the factory) → tap → PWA.
+        v.setPendingIntentTemplate(
+            R_av_list,
+            PwaLauncher.rowTapTemplate(context, appWidgetId),
+        )
         return v
     }
 
@@ -124,5 +160,9 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
         // Shared ids across both layouts (small + large use the same root/refresh ids).
         private val R_av_root = cloud.dopp.solaris.R.id.av_root
         private val R_av_refresh = cloud.dopp.solaris.R.id.av_refresh
+
+        // Large-tier collection ids.
+        private val R_av_list = cloud.dopp.solaris.R.id.av_list
+        private val R_av_empty = cloud.dopp.solaris.R.id.av_empty
     }
 }

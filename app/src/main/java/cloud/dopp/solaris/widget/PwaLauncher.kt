@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.browser.customtabs.CustomTabsIntent
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
@@ -84,6 +85,23 @@ object PwaLauncher {
         return PendingIntent.getActivity(
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * The `PendingIntentTemplate` for a collection widget's ListView (#28): a single
+     * mutable [PendingIntent] into [PwaTrampolineActivity] that each row's fill-in
+     * intent completes (supplying the target PWA path). Must be **mutable** so the
+     * collection can merge the per-row fill-in; `reqCode` is unique per widget id.
+     */
+    fun rowTapTemplate(ctx: Context, reqCode: Int): PendingIntent {
+        val i = Intent(ctx, PwaTrampolineActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val mutable =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+        return PendingIntent.getActivity(
+            ctx, 300_000 + reqCode, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or mutable,
         )
     }
 }

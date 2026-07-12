@@ -127,6 +127,12 @@
                 android:resource="@xml/active_devices_widget_info" />
         </receiver>
 
+        <!-- Collection service backing the scrollable active-devices ListView (#28). -->
+        <service
+            android:name=".widget.ActiveDevicesRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
         <!-- Energy totals widget (#16): 2x2 kWh totals grid (Gesamt). -->
         <receiver
             android:name=".widget.EnergyTotalsWidgetProvider"

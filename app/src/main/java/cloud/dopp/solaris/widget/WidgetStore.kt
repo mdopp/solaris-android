@@ -42,4 +42,18 @@ object WidgetStore {
     fun setRange(ctx: Context, id: Int, range: EnergyRange) {
         p(ctx).edit().putString("range_$id", range.key).apply()
     }
+
+    /**
+     * Last-known active-devices list, persisted as JSON so the collection widget's
+     * factory renders **instantly** from cache while the provider re-fetches in the
+     * background (#28 stale-then-fresh). Shared across all active widgets (the list
+     * is the whole household roster, not per-instance).
+     */
+    fun activeCacheJson(ctx: Context): String? = p(ctx).getString(KEY_ACTIVE_CACHE, null)
+
+    fun setActiveCacheJson(ctx: Context, json: String) {
+        p(ctx).edit().putString(KEY_ACTIVE_CACHE, json).apply()
+    }
+
+    private const val KEY_ACTIVE_CACHE = "active_cache_json"
 }

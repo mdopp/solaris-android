@@ -109,8 +109,8 @@
         {
             "issue": 28,
             "pr": 18,
-            "apk": "app/build/outputs/apk/debug/app-debug.apk",
-            "what_to_check": "Neues 'Aktive Geräte'-Übersichtswidget platzieren: klein zeigt eine kompakte Anzahl ('3 an' / 'Alles aus'), groß (>=180x220dp) zeigt eine Liste der gerade aktiven Geräte (Typ-Icon + Name + Zustand, max 6 + '+N weitere'). Live-Daten via /napi/ (addable + per-Entity state). Tap → PWA-Übersicht, Refresh-Icon aktualisiert. HINWEIS: kein dedizierter 'active/states'-Endpoint — Widget macht N+1 Abrufe (addable + je Entity state), gekappt auf 40; falls träge/teuer → solarisbay-Ticket für /napi/portal/active bzw. Batch-States.",
+            "apk": "app/build/outputs/apk/release/app-release.apk",
+            "what_to_check": "Aktive-Geräte-Widget GROSS ist jetzt eine echte SCROLLBARE Liste (ListView-Collection): alle aktiven Geräte werden gezeigt und man kann scrollen (nicht mehr nur wenige feste Slots). Prüfen: alle aktiven Geräte sichtbar + Scroll funktioniert; Reihe = Typ-Icon + Name + Zustand (Solaris-Dark). Instant-Cache: Widget zeigt sofort die zuletzt bekannte Liste (stale) und aktualisiert dann (fresh) — kein langer Leerzustand. Leer → \"Alles aus\" (setEmptyView). Tap auf Reihe → PWA. Klein bleibt kompakte Anzahl. WICHTIG: darf NICHT \"Widget kann nicht geladen werden\" zeigen (Service BIND_REMOTEVIEWS + setRemoteAdapter). Server-Latenz (N+1) weiterhin solarisbay#773.",
             "since": "2026-07-12"
         },
         {
@@ -205,6 +205,10 @@
         },
         {
             "note": "#33 + #28-improve built on batch/design-pass (PR #18), auf 2.8.6/versionCode 22 gebumpt. #33 (Licht/Schalter-Tap-Modell): WidgetRender.togglesOnBodyTap(domain) (pure, light/switch=true) — fuer Licht/Schalter schaltet die zentrale Flaeche (w_icon+w_state, bzw. w_root im small) direkt via OP_TOGGLE, der Name (w_name) oeffnet die PWA; Cover/Sensoren unveraendert (Body-Tap=PWA, Control-Buttons steuern); TINY schon per Einzel-Toggle korrekt. #28-improve: (a) SPEED — ApiClient.listActive() parallelisiert die per-Entity getCard-Reads ueber einen bounded FixedThreadPool(8) via invokeAll(12s-Ceiling), jeder Read timeout-/exception-guarded (war sequentielles N+1 ~10s); Server-Collective-Endpoint = solarisbay#773 (im Code-Kommentar referenziert). (b) ROWS — ActiveDevicesRender.rowsToShow(minH,count) rechnet die passenden Zeilen aus OPTION_APPWIDGET_MIN_HEIGHT statt hartem MAX_ROWS=6; Slot-Ceiling auf 12 erhoeht (widget_active_large.xml Rows 6-11 ergaenzt, alle RemoteViews-safe, kein plain View), '+N weitere' nur bei echtem Overflow; large() nimmt minH, Provider reicht es durch. Neue/erweiterte JVM-Tests: WidgetSizeTierTest.togglesOnBodyTap, ActiveDevicesRenderTest.rowsToShow. Gate green: testDebugUnitTest + assembleDebug. device_test owed (#33 + #28): Licht/Schalter-Widget antippen = an/aus (Name=PWA); Aktive-Geraete-Widget spuerbar schneller + fuellt hohe Groesse ohne frueh abzuschneiden, kleines rendert. Nicht neu geseal't/gemerged.",
+            "since": "2026-07-12"
+        },
+        {
+            "note": "Builder: #28 großes Aktive-Geräte-Widget auf scrollbare ListView-Collection umgebaut (ActiveDevicesRemoteViewsService + item_active_row + Instant-Cache in WidgetStore/ActiveCache). Gate GRÜN (testDebugUnitTest inkl. ActiveCacheTest + assembleDebug). Version 2.8.9/vc25. Push → PR #18. Serverseitiger Speed-Fix bleibt solarisbay#773.",
             "since": "2026-07-12"
         }
     ],
