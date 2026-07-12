@@ -22,6 +22,7 @@ import androidx.core.view.updatePadding
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.Device
+import cloud.dopp.solaris.data.DeviceSearch
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
@@ -133,15 +134,7 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     /** Live filter by device name AND room (case-insensitive), keeping grouping. */
     private fun applyFilter(list: ListView, status: TextView, query: String) {
-        val q = query.trim().lowercase(Locale.GERMANY)
-        val matches = if (q.isEmpty()) {
-            allDevices
-        } else {
-            allDevices.filter {
-                it.name.lowercase(Locale.GERMANY).contains(q) ||
-                    (it.room ?: it.domain).lowercase(Locale.GERMANY).contains(q)
-            }
-        }
+        val matches = DeviceSearch.filter(allDevices, query)
         status.setText(if (matches.isEmpty()) R.string.widget_config_no_match else R.string.widget_config_pick)
         list.adapter = SectionedDeviceAdapter(this, groupByRoom(matches))
     }
