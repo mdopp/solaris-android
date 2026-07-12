@@ -6,7 +6,16 @@
     android:orientation="vertical"
     android:gravity="center_vertical"
     android:background="@drawable/widget_bg"
-    android:padding="10dp">
+    android:padding="12dp">
+
+    <ImageView
+        android:id="@+id/w_icon"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginBottom="6dp"
+        android:src="@drawable/ic_light"
+        android:tint="#FFFFC107"
+        android:contentDescription="@null" />
 
     <TextView
         android:id="@+id/w_name"
@@ -14,7 +23,8 @@
         android:layout_height="wrap_content"
         android:maxLines="2"
         android:ellipsize="end"
-        android:textColor="#FFFFFFFF"
+        android:text="Wohnzimmer"
+        android:textColor="#FFF2F2F5"
         android:textStyle="bold"
         android:textSize="13sp" />
 
@@ -22,9 +32,10 @@
         android:id="@+id/w_state"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="1dp"
         android:maxLines="1"
         android:ellipsize="end"
-        android:textColor="#FF9E9E9E"
+        android:text="an"
+        android:textColor="#FFFFC107"
         android:textSize="12sp" />
 </LinearLayout>

@@ -9,7 +9,8 @@ import cloud.dopp.solaris.data.Card
 
 /**
  * Builds the size-adaptive [RemoteViews] for one device widget instance.
- * Small = name + state; medium (wider/taller) = + a detail line. Larger tiers
+ * Small = icon + name + state; medium (wider/taller) = + a detail line. The
+ * icon reflects the device type and is tinted by on/off state. Larger tiers
  * (brightness %, 48h history) arrive with solarisbay#754 / #755.
  */
 object WidgetRender {
@@ -21,6 +22,7 @@ object WidgetRender {
         appWidgetId: Int,
         card: Card?,
         fallbackName: String,
+        domain: String,
         onTap: PendingIntent,
     ): RemoteViews {
         val opts = AppWidgetManager.getInstance(ctx).getAppWidgetOptions(appWidgetId)
@@ -31,13 +33,26 @@ object WidgetRender {
         val layout = if (medium) R.layout.widget_device_medium else R.layout.widget_device_small
         val v = RemoteViews(ctx.packageName, layout)
 
+        val on = card?.isOn == true
+        val dom = card?.domain?.ifBlank { null } ?: domain
+        v.setImageViewResource(R.id.w_icon, iconFor(dom))
+        v.setInt(R.id.w_icon, "setColorFilter", if (on) ON else OFF)
+
         val name = (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } }
         v.setTextViewText(R.id.w_name, name)
         v.setTextViewText(R.id.w_state, stateLabel(card))
-        v.setTextColor(R.id.w_state, if (card?.isOn == true) ON else OFF)
-        if (medium) v.setTextViewText(R.id.w_detail, detailLine(card))
+        v.setTextColor(R.id.w_state, if (on) ON else OFF)
+        if (medium) v.setTextViewText(R.id.w_detail, detailLine(card, dom))
         v.setOnClickPendingIntent(R.id.w_root, onTap)
         return v
+    }
+
+    private fun iconFor(domain: String): Int = when (domain) {
+        "light" -> R.drawable.ic_light
+        "switch" -> R.drawable.ic_switch
+        "cover" -> R.drawable.ic_cover
+        "climate" -> R.drawable.ic_climate
+        else -> R.drawable.ic_device
     }
 
     private fun stateLabel(card: Card?): String {
@@ -49,9 +64,15 @@ object WidgetRender {
         }
     }
 
-    private fun detailLine(card: Card?): String {
+    private fun detailLine(card: Card?, domain: String): String {
         card ?: return ""
-        return if (card.state != null && card.unit != null) "${card.state} ${card.unit}"
-        else card.entityId
+        if (card.state != null && card.unit != null) return "${card.state} ${card.unit}"
+        return when (domain) {
+            "light" -> "Licht"
+            "switch" -> "Schalter"
+            "cover" -> "Rollo/Tor"
+            "climate" -> "Klima"
+            else -> card.entityId
+        }
     }
 }

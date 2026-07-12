@@ -52,15 +52,16 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             // Not configured yet — tapping opens the picker.
             mgr.updateAppWidget(
                 appWidgetId,
-                WidgetRender.build(context, appWidgetId, null, "—", configPending(context, appWidgetId)),
+                WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
             )
             return
         }
         val tap = tapPending(context, appWidgetId)
+        val domain = WidgetStore.domain(context, appWidgetId)
         // Immediate render from cache, then async live-state fetch.
         mgr.updateAppWidget(
             appWidgetId,
-            WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), tap),
+            WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
         )
         val pending = goAsync()
         thread {
@@ -72,7 +73,7 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 }
                 mgr.updateAppWidget(
                     appWidgetId,
-                    WidgetRender.build(context, appWidgetId, card, WidgetStore.name(context, appWidgetId), tap),
+                    WidgetRender.build(context, appWidgetId, card, WidgetStore.name(context, appWidgetId), domain, tap),
                 )
             } finally {
                 pending.finish()
