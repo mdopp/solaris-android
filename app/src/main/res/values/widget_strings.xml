@@ -4,8 +4,12 @@
     <string name="widget_device_description">Ein Gerät steuern (Licht, Schalter, Garage …)</string>
 
     <string name="widget_confirm_title">Bestätigen</string>
-    <string name="widget_confirm_msg">%1$s wirklich öffnen?</string>
+    <!-- %1$s = Gerätename, %2$s = Verb (öffnen/schließen). -->
+    <string name="widget_confirm_msg">%1$s wirklich %2$s?</string>
+    <string name="widget_verb_open">öffnen</string>
+    <string name="widget_verb_close">schließen</string>
     <string name="widget_confirm_yes">Öffnen</string>
+    <string name="widget_confirm_close">Schließen</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
     <string name="widget_config_loading">Geräte werden geladen …</string>

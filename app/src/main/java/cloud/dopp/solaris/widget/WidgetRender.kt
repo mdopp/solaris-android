@@ -108,6 +108,12 @@ object WidgetRender {
         // opens the PWA (#27) and the per-domain control buttons do the rest.
         val toggles = togglesOnBodyTap(dom)
         val bodyToggle = op(ctx, appWidgetId, 9, WidgetActionReceiver.OP_TOGGLE)
+        // A sensitive cover (garage/door/gate) confirms IN-APP right away instead of
+        // opening the PWA: the body tap toggles open/close via the confirm dialog (#38).
+        val entityId = card?.entityId ?: WidgetStore.entityId(ctx, appWidgetId)
+        val coverBodyTap = if (sensitive && dom == "cover" && entityId != null)
+            confirmPending(ctx, appWidgetId, 1, entityId, if (on) "cover.close_cover" else "cover.open_cover")
+        else onBodyTap
         if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
             if (toggles) {
                 // Central icon+state area toggles; name opens the PWA.
@@ -115,9 +121,9 @@ object WidgetRender {
                 v.setOnClickPendingIntent(R.id.w_state, bodyToggle)
                 v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
             } else {
-                v.setOnClickPendingIntent(R.id.w_header, onBodyTap)
+                v.setOnClickPendingIntent(R.id.w_header, coverBodyTap)
             }
-            wireControls(ctx, v, appWidgetId, dom)
+            wireControls(ctx, v, appWidgetId, dom, sensitive, entityId)
         } else {
             // SMALL: same wide layout, control row hidden → identical look, no buttons.
             v.setViewVisibility(R.id.w_light_controls, View.GONE)
@@ -128,7 +134,7 @@ object WidgetRender {
                 v.setOnClickPendingIntent(R.id.w_root, bodyToggle)
                 v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
             } else {
-                v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
+                v.setOnClickPendingIntent(R.id.w_root, coverBodyTap)
             }
         }
         return v
@@ -216,7 +222,7 @@ object WidgetRender {
      * non-controllable domains. The switch row (medium/wide only) is optional —
      * older/small layouts omit it, so we guard with [hasSwitchRow].
      */
-    private fun wireControls(ctx: Context, v: RemoteViews, appWidgetId: Int, domain: String) {
+    private fun wireControls(ctx: Context, v: RemoteViews, appWidgetId: Int, domain: String, sensitive: Boolean, entityId: String?) {
         // Default: everything hidden; enable just the row we need below.
         v.setViewVisibility(R.id.w_light_controls, View.GONE)
         v.setViewVisibility(R.id.w_cover_controls, View.GONE)
@@ -229,9 +235,17 @@ object WidgetRender {
             }
             "cover" -> {
                 v.setViewVisibility(R.id.w_cover_controls, View.VISIBLE)
-                v.setOnClickPendingIntent(R.id.w_cover_up, op(ctx, appWidgetId, 3, WidgetActionReceiver.OP_COVER_OPEN))
-                v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
-                v.setOnClickPendingIntent(R.id.w_cover_down, op(ctx, appWidgetId, 5, WidgetActionReceiver.OP_COVER_CLOSE))
+                if (sensitive && entityId != null) {
+                    // Garage/door: open & close ask for confirmation immediately (in-app);
+                    // stop needs none.
+                    v.setOnClickPendingIntent(R.id.w_cover_up, confirmPending(ctx, appWidgetId, 2, entityId, "cover.open_cover"))
+                    v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
+                    v.setOnClickPendingIntent(R.id.w_cover_down, confirmPending(ctx, appWidgetId, 3, entityId, "cover.close_cover"))
+                } else {
+                    v.setOnClickPendingIntent(R.id.w_cover_up, op(ctx, appWidgetId, 3, WidgetActionReceiver.OP_COVER_OPEN))
+                    v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
+                    v.setOnClickPendingIntent(R.id.w_cover_down, op(ctx, appWidgetId, 5, WidgetActionReceiver.OP_COVER_CLOSE))
+                }
             }
             "switch" -> {
                 setSwitchRowVisibility(v, View.VISIBLE)
@@ -253,6 +267,24 @@ object WidgetRender {
             .putExtra(WidgetActionReceiver.EXTRA_OP, op)
         return PendingIntent.getBroadcast(
             ctx, appWidgetId * 10 + code, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * A PendingIntent that opens the [WidgetActionActivity] confirm dialog for a
+     * sensitive device (garage/door) — an immediate in-app "Wirklich öffnen?" that
+     * runs [service] on confirm, instead of the server-403 round-trip or the PWA.
+     * Distinct request-code base so it never collides with the [op] broadcasts.
+     */
+    private fun confirmPending(ctx: Context, appWidgetId: Int, code: Int, entityId: String, service: String): PendingIntent {
+        val i = Intent(ctx, WidgetActionActivity::class.java)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .putExtra(WidgetActionReceiver.EXTRA_ENTITY, entityId)
+            .putExtra(WidgetActionReceiver.EXTRA_SERVICE, service)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            ctx, 500000 + appWidgetId * 10 + code, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
