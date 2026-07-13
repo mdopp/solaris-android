@@ -23,13 +23,13 @@
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="56dp">
+            android:layout_marginTop="32dp">
 
             <ImageView
                 android:layout_width="@dimen/hero_glow_size"
                 android:layout_height="@dimen/hero_glow_size"
-                android:layout_gravity="center_horizontal"
-                android:translationY="-8dp"
+                android:layout_gravity="center"
+                android:translationY="0dp"
                 android:src="@drawable/hero_glow"
                 android:importantForAccessibility="no"
                 android:contentDescription="@null" />
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_gravity="center_horizontal">
+                android:layout_gravity="center">
 
                 <TextView
                     style="@style/Text.Solaris.Hero"

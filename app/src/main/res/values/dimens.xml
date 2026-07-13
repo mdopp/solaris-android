@@ -27,7 +27,7 @@
     <dimen name="text_tile">12sp</dimen>
 
     <!-- Misc -->
-    <dimen name="hero_glow_size">220dp</dimen>
+    <dimen name="hero_glow_size">190dp</dimen>
     <dimen name="tile_icon">26dp</dimen>
     <dimen name="tile_min_height">76dp</dimen>
 
