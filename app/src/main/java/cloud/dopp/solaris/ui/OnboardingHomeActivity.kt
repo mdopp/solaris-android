@@ -11,15 +11,18 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsIntent
+import cloud.dopp.solaris.realtime.RealtimeService
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import cloud.dopp.solaris.R
@@ -48,6 +51,11 @@ class OnboardingHomeActivity : AppCompatActivity() {
         result.contents?.let { handleScanned(it) }
     }
 
+    // Realtime toggle (#48): after the user grants notifications, actually enable.
+    private val notifPermLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { _ -> enableRealtime() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
@@ -75,8 +83,12 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.install_pwa_dismiss).setOnClickListener { dismissPwaHint() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
+            findViewById<Switch>(R.id.realtime_switch)
+                .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
             handleDeepLink(intent)
             render()
+            // If Live-Updates is on and we're paired, make sure the service runs.
+            RealtimeService.ensure(this)
         } catch (e: Throwable) {
             showError("onCreate", e)
         }
@@ -128,6 +140,10 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (connected) {
             findViewById<TextView>(R.id.status).text =
                 getString(R.string.home_connected, ServerStore.host(this) ?: "")
+            // Reflect the persisted Live-Updates state (#48) — a plain click listener
+            // is used elsewhere so this programmatic set doesn't re-fire the toggle.
+            findViewById<Switch>(R.id.realtime_switch).isChecked =
+                ServerStore.realtimeEnabled(this)
         }
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays
@@ -307,11 +323,68 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     private fun logout() {
+        // Stop the realtime service and forget the opt-in — we're unpaired now (#48).
+        RealtimeService.stop(this)
+        ServerStore.setRealtimeEnabled(this, false)
         TokenStore.clear(this)
         ServerStore.clear(this)
         findViewById<EditText>(R.id.server_url).setText("")
         render()
         toast(getString(R.string.home_logged_out))
+    }
+
+    /**
+     * Live-Updates switch (#48). Enabling: on Android 13+ first ensure the
+     * POST_NOTIFICATIONS grant (the foreground service needs a visible notification),
+     * then persist + start the service and prompt the battery-optimisation exemption.
+     * Disabling: persist off + stop the service.
+     */
+    private fun onRealtimeToggled(enabled: Boolean) {
+        if (!enabled) {
+            ServerStore.setRealtimeEnabled(this, false)
+            RealtimeService.stop(this)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            // The result callback finishes the enable (grant or not, we proceed —
+            // the notification just won't show if denied, the stream still runs).
+            notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        enableRealtime()
+    }
+
+    private fun enableRealtime() {
+        ServerStore.setRealtimeEnabled(this, true)
+        RealtimeService.start(this)
+        // Keep the switch visually in sync (a denied prompt can leave it toggled).
+        runCatching { findViewById<Switch>(R.id.realtime_switch).isChecked = true }
+        promptBatteryExemption()
+    }
+
+    /**
+     * Ask the OS to exempt Solaris from battery optimisation so the SSE service
+     * isn't killed (#48). Guarded/try-catch — some OEMs/ROMs don't expose the
+     * intent, and it must never crash the toggle.
+     */
+    private fun promptBatteryExemption() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            if (pm != null && pm.isIgnoringBatteryOptimizations(packageName)) return
+            val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .setData(Uri.parse("package:$packageName"))
+            startActivity(i)
+        } catch (e: Exception) {
+            // Fall back to the general battery-settings screen, else give up silently.
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (_: Exception) {
+            }
+        }
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()

@@ -172,6 +172,47 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
+            <!-- 1b. Live-Updates (#48): opt-in realtime SSE. A compact switch row
+                 with a hint — off by default (persistent notification + battery). -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:background="@drawable/card_solaris"
+                android:padding="18dp"
+                android:layout_marginTop="@dimen/space_md">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="@dimen/space_md">
+
+                    <TextView
+                        style="@style/Text.Solaris.Title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/home_realtime_title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/home_realtime_hint"
+                        android:textColor="@color/solaris_text_muted"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/realtime_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
             <!-- 2. "Widget hinzufügen" card (#37): the primary add surface — 5
                  tappable labeled tiles. Tapping a tile pins that widget type
                  directly; the energy tile opens a Jetzt/Verlauf/Gesamt chooser. -->
