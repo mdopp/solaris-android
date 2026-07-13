@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Camera snapshot widget (#30): resizable, min ~2x2, configured (pick a camera
-     entity). Snapshots are heavy, so the auto-refresh period is moderate (30 min)
-     — the user can pull a fresh frame anytime via the refresh icon. -->
+<!-- Camera trigger widget (#36): small (1x1 target), resizable, NO configuration.
+     A tap opens the PWA cameras view — no per-camera binding, no snapshot loading
+     (mirrors the voice widget). No data to poll → update period 0. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="110dp"
-    android:minHeight="110dp"
-    android:minResizeWidth="110dp"
-    android:minResizeHeight="110dp"
-    android:targetCellWidth="2"
-    android:targetCellHeight="2"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
     android:description="@string/camera_widget_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:configure="cloud.dopp.solaris.widget.CameraWidgetConfigActivity"
     android:initialLayout="@layout/widget_camera"
     android:previewLayout="@layout/widget_camera"
-    android:updatePeriodMillis="1800000" />
+    android:updatePeriodMillis="0" />
