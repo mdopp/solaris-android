@@ -17,8 +17,9 @@
         android:paddingBottom="@dimen/space_xl">
 
         <!-- ── Hero (always visible) — signature blue glow (#37) ─────────────
-             The "Solar[figure]s" wordmark floating in the "Meer des Wissens":
-             a soft radial blue glow sits behind the figure. -->
+             The "Solar[figure]s" wordmark, horizontally centred, floating in the
+             "Meer des Wissens": a soft radial blue glow blooms directly behind the
+             figure so the lockup reads as a balanced, centred brand mark. -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -38,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_gravity="center_vertical|start">
+                android:layout_gravity="center_horizontal">
 
                 <TextView
                     style="@style/Text.Solaris.Hero"
@@ -64,12 +65,12 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Accent underline: a short ServiceBay-blue rule tying the wordmark to
-             the brand colour. -->
+        <!-- Accent underline: a short ServiceBay-blue rule, centred under the
+             wordmark, tying the lockup to the brand colour. -->
         <View
             android:layout_width="52dp"
             android:layout_height="3dp"
-            android:layout_marginStart="2dp"
+            android:layout_gravity="center_horizontal"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="14dp"
             android:background="@color/solaris_accent" />
@@ -78,7 +79,8 @@
             style="@style/Text.Solaris.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="2dp"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal"
             android:layout_marginBottom="@dimen/space_xl"
             android:text="@string/home_claim" />
 
@@ -170,13 +172,9 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- 2. Primary action: add a widget (full 7-type chooser). -->
-            <Button
-                android:id="@+id/add_widget_btn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/home_add_widget" />
-
+            <!-- 2. "Widget hinzufügen" card (#37): the primary add surface — 5
+                 tappable labeled tiles. Tapping a tile pins that widget type
+                 directly; the energy tile opens a Jetzt/Verlauf/Gesamt chooser. -->
             <!-- 3. "Schnell hinzufügen" card (#37): 5 tappable labeled tiles;
                  tapping a tile pins that widget type directly. -->
             <LinearLayout

@@ -54,14 +54,14 @@ class OnboardingHomeActivity : AppCompatActivity() {
             setContentView(R.layout.activity_home)
             findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
             findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
-            findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
-            // Quick-add tiles (#37): tap → pin that widget type directly.
+            // Quick-add tiles (#37): tap → pin that widget type directly. The tiles
+            // are now THE add surface (the standalone add-widget button is gone).
             findViewById<View>(R.id.tile_device).setOnClickListener {
                 pinTile(cloud.dopp.solaris.widget.DeviceWidgetProvider::class.java)
             }
-            findViewById<View>(R.id.tile_energy).setOnClickListener {
-                pinTile(cloud.dopp.solaris.widget.EnergyWidgetProvider::class.java)
-            }
+            // Energy has 3 variants → the tile opens a small chooser so every
+            // energy widget type stays reachable.
+            findViewById<View>(R.id.tile_energy).setOnClickListener { pinEnergyChoice() }
             findViewById<View>(R.id.tile_active).setOnClickListener {
                 pinTile(cloud.dopp.solaris.widget.ActiveDevicesWidgetProvider::class.java)
             }
@@ -239,13 +239,18 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     /**
-     * Offer *every* widget type (#34), not just the device widget: a styled list
-     * (type icon + German name) → pin the picked provider via requestPinAppWidget.
-     * Launchers that don't support pinning get a German toast fallback.
+     * The energy tile (#37) covers three variants — Jetzt / Verlauf / Gesamt —
+     * so tapping it opens a small styled chooser (type icon + German name), just
+     * like the retired full widget-type picker, then pins the picked provider via
+     * requestPinAppWidget. The other four tiles pin their single provider directly.
      */
-    private fun addWidget() {
+    private fun pinEnergyChoice() {
         val mgr = pinManagerOrToast() ?: return
-        val entries = WidgetTypes.ALL
+        val entries = WidgetTypes.ALL.filter {
+            it.provider == cloud.dopp.solaris.widget.EnergyWidgetProvider::class.java ||
+                it.provider == cloud.dopp.solaris.widget.EnergyStatsWidgetProvider::class.java ||
+                it.provider == cloud.dopp.solaris.widget.EnergyTotalsWidgetProvider::class.java
+        }
         val adapter = object : ArrayAdapter<WidgetTypes.Entry>(this, 0, entries) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val row = convertView ?: layoutInflater.inflate(R.layout.item_widget_type, parent, false)
@@ -268,7 +273,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
     /**
      * Return the [AppWidgetManager] iff pinning is supported (API 26+ & launcher
      * supports it), else show the manual-add toast and return null. Shared by the
-     * full chooser [addWidget] and the quick-add [pinTile] (#37).
+     * quick-add tiles [pinTile] and the energy variant chooser [pinEnergyChoice] (#37).
      */
     private fun pinManagerOrToast(): AppWidgetManager? {
         val mgr = getSystemService(AppWidgetManager::class.java)

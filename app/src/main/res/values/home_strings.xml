@@ -13,8 +13,9 @@
     <string name="home_connected">✓ Verbunden mit %1$s</string>
     <string name="home_status_connected">Verbunden</string>
 
-    <!-- Quick-add widget grid (#37): a tap on a tile pins that widget type. -->
-    <string name="home_widgets_teaser_title">Schnell hinzufügen</string>
+    <!-- Quick-add widget grid (#37): now THE primary add surface — a tap on a
+         tile pins that widget type (the energy tile opens a variant chooser). -->
+    <string name="home_widgets_teaser_title">Widget hinzufügen</string>
     <string name="home_widgets_teaser_hint">Tippe einen Typ, um ihn auf dem Startbildschirm hinzuzufügen.</string>
 
     <!-- Short labels for the tappable quick-add tiles. -->
