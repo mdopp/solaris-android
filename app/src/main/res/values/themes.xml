@@ -23,6 +23,17 @@
          activity so the picker floats on a dimmed backdrop). -->
     <style name="Theme.Solaris.Config" parent="Theme.Solaris" />
 
+    <!-- Solaris-styled confirm dialog (garage/door): dark rounded card + accent
+         buttons instead of the plain system AlertDialog. -->
+    <style name="Theme.Solaris.AlertDialog" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/solaris_accent</item>
+        <item name="android:colorBackground">@color/solaris_bg_elevated</item>
+        <item name="android:windowBackground">@drawable/card_solaris</item>
+        <item name="android:textColorPrimary">@color/solaris_text</item>
+        <item name="android:textColorSecondary">@color/solaris_text_muted</item>
+        <item name="android:textColorAlertDialogListItem">@color/solaris_text</item>
+    </style>
+
     <!-- Filled, rounded, accent-blue primary button. -->
     <style name="Widget.Solaris.Button" parent="Widget.AppCompat.Button">
         <item name="android:background">@drawable/btn_solaris</item>
