@@ -270,7 +270,8 @@ object WidgetRender {
     private fun stateLabel(card: Card?): String {
         if (card == null) return "…"
         return when (card.domain) {
-            "light" -> if (card.isOn) card.brightnessPct?.let { "an · $it %" } ?: "an" else "aus"
+            // On + a brightness %: show just the % (the accent colour already says "on").
+            "light" -> if (card.isOn) card.brightnessPct?.let { "$it %" } ?: "an" else "aus"
             "switch" -> if (card.isOn) "an" else "aus"
             "cover" -> card.position?.let { p ->
                 when {
