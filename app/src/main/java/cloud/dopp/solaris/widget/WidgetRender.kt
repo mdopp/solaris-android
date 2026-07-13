@@ -70,10 +70,11 @@ object WidgetRender {
 
         if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, sensitive)
 
+        // WIDE and SMALL share the same wide layout — SMALL just hides the control
+        // row below, so a narrow card looks identical to the wide one minus buttons.
         val layout = when (tier) {
             Tier.MEDIUM -> R.layout.widget_device_medium
-            Tier.WIDE -> R.layout.widget_device_wide
-            else -> R.layout.widget_device_small
+            else -> R.layout.widget_device_wide
         }
         val v = RemoteViews(ctx.packageName, layout)
 
@@ -118,6 +119,10 @@ object WidgetRender {
             }
             wireControls(ctx, v, appWidgetId, dom)
         } else {
+            // SMALL: same wide layout, control row hidden → identical look, no buttons.
+            v.setViewVisibility(R.id.w_light_controls, View.GONE)
+            v.setViewVisibility(R.id.w_cover_controls, View.GONE)
+            v.setViewVisibility(R.id.w_switch_controls, View.GONE)
             if (toggles) {
                 // Small tier: whole card toggles, name opens the PWA.
                 v.setOnClickPendingIntent(R.id.w_root, bodyToggle)
