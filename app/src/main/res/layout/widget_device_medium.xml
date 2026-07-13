@@ -94,33 +94,6 @@
             android:progressBackgroundTint="#26FFFFFF" />
     </LinearLayout>
 
-    <!-- 48h history (#29): line sparkline (numeric) or on/off timeline (binary).
-         Weighted so it takes the slack when shown; collapsed (GONE) when there's
-         no history at all so the card doesn't show a big empty block. -->
-    <ImageView
-        android:id="@+id/w_chart"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:scaleType="fitXY"
-        android:adjustViewBounds="true"
-        android:contentDescription="@null"
-        android:visibility="gone" />
-
-    <!-- Kept for API parity with the large layout; the medium tier collapses
-         instead of showing a hint, so this stays GONE. -->
-    <TextView
-        android:id="@+id/w_chart_hint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center"
-        android:text="@string/device_nohistory"
-        android:textColor="#FF9AA0AE"
-        android:textSize="12sp"
-        android:visibility="gone" />
-
     <!-- Light controls: brightness − / + across the full width -->
     <LinearLayout
         android:id="@+id/w_light_controls"

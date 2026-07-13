@@ -42,25 +42,11 @@ class WidgetSizeTierTest {
         assertEquals(Tier.SMALL, WidgetRender.sizeTier(90, 110)) // tall enough
     }
 
-    @Test fun tinyNeverShowsChart() {
-        assertEquals(false, WidgetRender.showsChart(Tier.TINY))
-    }
-
-    @Test fun bigBoxIsLarge() {
-        // Tall + wide enough to host the 48h chart (#29).
-        assertEquals(Tier.LARGE, WidgetRender.sizeTier(180, 220))
-        assertEquals(Tier.LARGE, WidgetRender.sizeTier(300, 300))
-        // Just below the LARGE height stays MEDIUM.
+    /** #29 reverted: a big/tall box now resolves to MEDIUM (no history chart). */
+    @Test fun bigBoxIsMedium() {
+        assertEquals(Tier.MEDIUM, WidgetRender.sizeTier(180, 220))
+        assertEquals(Tier.MEDIUM, WidgetRender.sizeTier(300, 300))
         assertEquals(Tier.MEDIUM, WidgetRender.sizeTier(300, 200))
-    }
-
-    /** #29 refinement: the history now shows at MEDIUM too, not only LARGE. */
-    @Test fun mediumAndLargeShowChart() {
-        assertEquals(true, WidgetRender.showsChart(Tier.LARGE))
-        assertEquals(true, WidgetRender.showsChart(Tier.MEDIUM))
-        assertEquals(false, WidgetRender.showsChart(Tier.WIDE))
-        assertEquals(false, WidgetRender.showsChart(Tier.SMALL))
-        assertEquals(false, WidgetRender.showsChart(Tier.TINY))
     }
 
     /** #33: lights/switches toggle on a body tap; covers/sensors open the PWA. */

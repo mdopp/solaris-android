@@ -78,28 +78,16 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         } catch (t: Throwable) {
             WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
         }
-        val wantsHistory = WidgetRender.showsChart(WidgetRender.tierFor(context, appWidgetId))
         val pending = goAsync()
         thread {
             try {
                 val api = ApiClient(context.applicationContext)
                 val card = try { api.getCard(entityId) } catch (e: Exception) { null }
-                // 48h history only for the chart-bearing tiers (#29) — skip
-                // otherwise. One fetch drives both the numeric sparkline and, for
-                // binary devices, the raw-state on/off timeline.
-                var history: List<Float>? = null
-                var stateHistory: List<String>? = null
-                if (wantsHistory) {
-                    history = try { api.getEntityHistory(entityId, "48h") } catch (e: Exception) { null }
-                    if (history.isNullOrEmpty()) {
-                        stateHistory = try { api.getEntityStateHistory(entityId, "48h") } catch (e: Exception) { null }
-                    }
-                }
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
                         context, appWidgetId, card,
-                        WidgetStore.name(context, appWidgetId), domain, tap, history, stateHistory,
+                        WidgetStore.name(context, appWidgetId), domain, tap,
                     ),
                 )
             } catch (t: Throwable) {

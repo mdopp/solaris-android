@@ -21,31 +21,22 @@ object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
 
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
-    enum class Tier { TINY, SMALL, WIDE, MEDIUM, LARGE }
+    enum class Tier { TINY, SMALL, WIDE, MEDIUM }
 
     /**
-     * Pick the layout tier from the host-reported min size (dp). A big box gets
-     * the [LARGE] layout (medium controls PLUS a 48h-history chart, #29); a
-     * tall-enough box gets the stacked [MEDIUM] controls; an otherwise
-     * wide-but-flat box (e.g. 4×1) still gets an inline control row via [WIDE];
-     * a mid box falls back to [SMALL] (name + state only); the smallest single
-     * cell (1×1) gets [TINY] — name + one toggle + a docked state bar (#31).
-     * Pure so it can be JVM-tested.
+     * Pick the layout tier from the host-reported min size (dp). A tall-enough
+     * box gets the stacked [MEDIUM] controls; an otherwise wide-but-flat box
+     * (e.g. 4×1) still gets an inline control row via [WIDE]; a mid box falls
+     * back to [SMALL] (name + state only); the smallest single cell (1×1) gets
+     * [TINY] — name + one toggle + a docked state bar (#31). Pure so it can be
+     * JVM-tested.
      */
     fun sizeTier(minW: Int, minH: Int): Tier = when {
-        minW >= 180 && minH >= 220 -> Tier.LARGE
         minW >= 180 && minH >= 110 -> Tier.MEDIUM
         minW >= 250 -> Tier.WIDE
         minW < 110 && minH < 110 -> Tier.TINY
         else -> Tier.SMALL
     }
-
-    /**
-     * True when the tier hosts the 48h-history chart (#29). Now **MEDIUM and
-     * LARGE** — a medium-height card shows the history too (the chart bitmap is
-     * scaled down for the smaller area). Small/wide/tiny stay chart-free.
-     */
-    fun showsChart(tier: Tier): Boolean = tier == Tier.MEDIUM || tier == Tier.LARGE
 
     /**
      * Does a **body/central-area tap** toggle the device on/off for this domain
@@ -68,8 +59,6 @@ object WidgetRender {
         fallbackName: String,
         domain: String,
         onBodyTap: PendingIntent,
-        history: List<Float>? = null,
-        stateHistory: List<String>? = null,
     ): RemoteViews {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
@@ -82,7 +71,6 @@ object WidgetRender {
         if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, sensitive)
 
         val layout = when (tier) {
-            Tier.LARGE -> R.layout.widget_device_large
             Tier.MEDIUM -> R.layout.widget_device_medium
             Tier.WIDE -> R.layout.widget_device_wide
             else -> R.layout.widget_device_small
@@ -119,7 +107,7 @@ object WidgetRender {
         // opens the PWA (#27) and the per-domain control buttons do the rest.
         val toggles = togglesOnBodyTap(dom)
         val bodyToggle = op(ctx, appWidgetId, 9, WidgetActionReceiver.OP_TOGGLE)
-        if (tier == Tier.MEDIUM || tier == Tier.WIDE || tier == Tier.LARGE) {
+        if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
             if (toggles) {
                 // Central icon+state area toggles; name opens the PWA.
                 v.setOnClickPendingIntent(R.id.w_icon, bodyToggle)
@@ -137,14 +125,6 @@ object WidgetRender {
             } else {
                 v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
             }
-        }
-
-        // 48h history — MEDIUM + LARGE (#29). Numeric entities get the line
-        // sparkline; binary devices (light/switch/cover) get an on/off timeline;
-        // when there's genuinely no history the chart area is collapsed so the
-        // card isn't a big empty block. LARGE has a taller area than MEDIUM.
-        if (tier == Tier.LARGE || tier == Tier.MEDIUM) {
-            renderChart(ctx, v, dom, on, history, stateHistory, large = tier == Tier.LARGE)
         }
         return v
     }
@@ -205,56 +185,6 @@ object WidgetRender {
         }
         "light", "switch" -> (if (card?.isOn == true) "◍" else "○") to WidgetActionReceiver.OP_TOGGLE
         else -> "⟳" to WidgetActionReceiver.OP_REFRESH
-    }
-
-    /**
-     * Draw the 48h history on the MEDIUM/LARGE layout (#29). Numeric entities
-     * (dimmable brightness, temperature, power) → the line sparkline; binary
-     * devices (a plain light, a switch, a cover) → an on/off timeline derived
-     * from the raw state history; genuinely no history → **collapse** the area
-     * (hide chart AND hint) so the card falls back to the compact layout rather
-     * than showing a big empty block. The bitmap is smaller for the MEDIUM area.
-     */
-    private fun renderChart(
-        ctx: Context,
-        v: RemoteViews,
-        domain: String,
-        on: Boolean,
-        history: List<Float>?,
-        stateHistory: List<String>?,
-        large: Boolean,
-    ) {
-        // Bitmap size per tier — kept well under ChartRenderer.MAX_EDGE (#32).
-        val w = if (large) 560 else 480
-        val h = if (large) 200 else 120
-
-        if (history != null && history.size >= 2) {
-            val line = if (on) accentFor(domain) else OFF
-            val fill = (line and 0x00FFFFFF) or 0x33000000
-            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.sparkline(w, h, history, line, fill))
-            showChart(v)
-            return
-        }
-        val timeline = stateHistory?.map { ChartRenderer.stateIsOn(it) }
-        if (timeline != null && timeline.size >= 2) {
-            val onColor = accentFor(domain)
-            val offColor = 0x33FFFFFF
-            v.setImageViewBitmap(R.id.w_chart, ChartRenderer.onOffTimeline(w, h, timeline, onColor, offColor))
-            showChart(v)
-            return
-        }
-        // Genuinely no history → collapse (neither chart nor "kein Verlauf" block).
-        collapseChart(v)
-    }
-
-    private fun showChart(v: RemoteViews) {
-        v.setViewVisibility(R.id.w_chart, View.VISIBLE)
-        v.setViewVisibility(R.id.w_chart_hint, View.GONE)
-    }
-
-    private fun collapseChart(v: RemoteViews) {
-        v.setViewVisibility(R.id.w_chart, View.GONE)
-        v.setViewVisibility(R.id.w_chart_hint, View.GONE)
     }
 
     /**
