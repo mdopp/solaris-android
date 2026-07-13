@@ -62,6 +62,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             setContentView(R.layout.activity_home)
             findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
             findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
+            findViewById<TextView>(R.id.request_access_btn).setOnClickListener { requestAccess() }
             // Quick-add tiles (#37): tap → pin that widget type directly. The tiles
             // are now THE add surface (the standalone add-widget button is gone).
             findViewById<View>(R.id.tile_device).setOnClickListener {
@@ -165,6 +166,22 @@ class OnboardingHomeActivity : AppCompatActivity() {
         }
         ServerStore.setBaseUrl(this, url)
         openPairing()
+    }
+
+    /**
+     * Request access (#50): a user without an account opens their server's
+     * request-access page ([SolarisConfig.PORTAL_PATH]) in a Custom Tab. This is
+     * a pre-auth public web flow (ADR 0010) — no token, no /napi. Prefer the
+     * URL just typed into the field, fall back to a previously stored server;
+     * if neither is present, nudge the user to enter the server address first.
+     */
+    private fun requestAccess() {
+        val typed = findViewById<EditText>(R.id.server_url).text.toString().trim()
+        val base = typed.ifBlank { ServerStore.baseUrl(this) ?: "" }.trimEnd('/')
+        if (base.isBlank()) {
+            toast(getString(R.string.home_enter_url)); return
+        }
+        openUrl(Uri.parse(base + SolarisConfig.PORTAL_PATH))
     }
 
     private fun startScan() {

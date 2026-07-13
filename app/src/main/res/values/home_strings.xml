@@ -9,6 +9,11 @@
     <string name="home_reconnect">Bei %1$s anmelden, um die Kopplung abzuschließen.</string>
     <string name="home_connect">Verbinden</string>
     <string name="home_enter_url">Bitte die Server-Adresse eingeben.</string>
+
+    <!-- Request access (#50): pre-auth affordance for users without an account —
+         opens the server's request-access page in a Custom Tab. -->
+    <string name="home_request_access_intro">Noch keinen Zugang?</string>
+    <string name="home_request_access">Zugang anfordern</string>
     <string name="home_status_label">Status</string>
     <string name="home_connected">✓ Verbunden mit %1$s</string>
     <string name="home_status_connected">Verbunden</string>
