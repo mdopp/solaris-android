@@ -53,7 +53,14 @@ class RealtimeService : Service() {
     private val stopping = AtomicBoolean(false)
     @Volatile private var source: EventSource? = null
     @Volatile private var attempt = 0
+    // Diagnostic status shown in the ongoing notification (#48) so we can tell
+    // "not connected" (HTTP error) from "connected but no events" (pinning gap).
+    @Volatile private var status: String = "Verbinde …"
+    @Volatile private var events = 0
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun nowTime(): String =
+        java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.GERMANY).format(java.util.Date())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -98,12 +105,14 @@ class RealtimeService : Service() {
             .header("Accept", "text/event-stream")
             .build()
         runCatching { source?.cancel() }
+        setStatus("Verbinde …")
         source = EventSources.createFactory(client).newEventSource(req, listener)
     }
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(eventSource: EventSource, response: Response) {
             attempt = 0 // healthy connection resets the backoff
+            setStatus("Verbunden · warte auf Ereignisse")
         }
 
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
@@ -114,11 +123,14 @@ class RealtimeService : Service() {
                 val woke = DeviceWidgetProvider.wakeEntity(applicationContext, ev.entityId, ev.card)
                 // A state flip can change the active roster → nudge the overview widgets.
                 ActiveDevicesWidgetProvider.refreshAll(applicationContext)
+                events++
+                setStatus("Verbunden · Update ${nowTime()} (${events})")
                 Unit.also { _ -> woke }
             }
         }
 
         override fun onClosed(eventSource: EventSource) {
+            setStatus("Getrennt — neuer Versuch …")
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
 
@@ -126,15 +138,19 @@ class RealtimeService : Service() {
             when (response?.code) {
                 401 -> {
                     // Token invalid/revoked — don't loop; stop until re-paired/re-enabled.
+                    setStatus("Token abgelehnt (401)")
                     stopSelfClean()
                     return
                 }
                 404 -> {
                     // Endpoint not deployed yet (solarisbay#806) — back off long, don't spam.
+                    setStatus("Endpoint fehlt (404) — Server nicht bereit?")
                     scheduleReconnect(RealtimeProtocol.NOT_DEPLOYED_BACKOFF_MS)
                     return
                 }
             }
+            val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
+            setStatus("Getrennt ($why) — neuer Versuch …")
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
     }
@@ -154,26 +170,39 @@ class RealtimeService : Service() {
         stopSelf()
     }
 
-    private fun startForegroundNotification() {
+    private fun buildNotif(): Notification {
         ensureChannel()
         val tap = PendingIntent.getActivity(
             this, 0,
             Intent(this, OnboardingHomeActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notif: Notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+        return androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(getString(R.string.realtime_notif_title))
-            .setContentText(getString(R.string.realtime_notif_text))
+            .setContentText(status) // diagnostic status (#48)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(status))
             .setOngoing(true)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
             .setContentIntent(tap)
             .setShowWhen(false)
             .build()
+    }
+
+    private fun startForegroundNotification() {
+        val notif = buildNotif()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             startForeground(NOTIF_ID, notif)
+        }
+    }
+
+    /** Update the ongoing notification's text so the user (and we) can see live state. */
+    private fun setStatus(text: String) {
+        status = text
+        runCatching {
+            getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, buildNotif())
         }
     }
 
