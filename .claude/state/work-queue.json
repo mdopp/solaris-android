@@ -243,6 +243,11 @@
       "note": "#29 Nachschärfung (Device-Verlauf) auf batch/design-pass (PR #18), auf 2.9.8/versionCode 34 gebumpt. (1) Verlauf jetzt auch bei MEDIUM (showsChart = MEDIUM|LARGE), Chart-Bitmap kleiner (480x120 vs 560x200), <=640px-Cap gewahrt. (2) An/Aus-Zeitleiste fuer binaere Geraete: ChartRenderer.onOffTimeline + stateIsOn (state->bool). getEntityStateHistory liefert rohe state-Strings (on/off/open/closed) -> Timeline CLIENT-SEITIG ableitbar, KEINE Server-Aenderung noetig. (3) Kein Verlauf -> Flaeche eingeklappt (chart+hint GONE), kein leerer Block. Gate GRUEN (testDebugUnitTest+assembleDebug). JVM-Tests: ChartHistoryTest (stateIsOn, Timeline-Bucketing/Clamp), showsChart-Test angepasst.",
       "ts": "2026-07-12",
       "stage": "builder"
+    },
+    {
+      "note": "#29 REVERTED — der User hat das 48h-Verlaufs-Feature im GERAETE-Widget abgelehnt. Entfernt auf batch/design-pass (PR #18), auf 2.9.9/versionCode 35 gebumpt. WidgetRender: Tier.LARGE + sizeTier-LARGE-Zweig + showsChart() + renderChart/showChart/collapseChart entfernt; build() ohne history/stateHistory-Params; Controls-Sichtbarkeit MEDIUM|WIDE. widget_device_large.xml geloescht; w_chart/w_chart_hint aus widget_device_medium.xml entfernt. DeviceWidgetProvider holt keine Geraete-History mehr (getEntityHistory/getEntityStateHistory-Aufrufe entfernt). Hohe Geraete-Widgets -> MEDIUM (Controls + State, KEIN Chart). WidgetSizeTierTest: LARGE/showsChart-Faelle entfernt (bigBoxIsMedium neu). BEWUSST BELASSEN (harmlos, kompilieren/passen): ChartRenderer.sparkline/stateIsOn/onOffTimeline, ApiClient.getEntityStateHistory, ChartHistoryTest. Die separate Energie-'Verlauf'-Widget (EnergyStatsWidgetProvider + ChartRenderer.multiLine + getEntityHistory) UNANGETASTET. Gate GRUEN: testDebugUnitTest + assembleDebug. Nicht geseal't/gemerged.",
+      "ts": "2026-07-13",
+      "stage": "builder"
     }
   ],
   "_schemas": {
