@@ -26,11 +26,13 @@ class WidgetSizeTierTest {
         // 4×1 on a typical launcher grid: ~270dp wide, ~40dp tall.
         assertEquals(Tier.WIDE, WidgetRender.sizeTier(270, 40))
         assertEquals(Tier.WIDE, WidgetRender.sizeTier(250, 100))
+        assertEquals(Tier.WIDE, WidgetRender.sizeTier(180, 40)) // 3 cells wide flat → controls
+        assertEquals(Tier.WIDE, WidgetRender.sizeTier(170, 40)) // low edge of 3 cells
     }
 
     @Test fun smallStaysSmall() {
         assertEquals(Tier.SMALL, WidgetRender.sizeTier(110, 40))
-        assertEquals(Tier.SMALL, WidgetRender.sizeTier(180, 40)) // wide-ish but < 250
+        assertEquals(Tier.SMALL, WidgetRender.sizeTier(150, 40)) // ~2 cells, too narrow for controls
     }
 
     @Test fun singleCellIsTiny() {

@@ -33,7 +33,7 @@ object WidgetRender {
      */
     fun sizeTier(minW: Int, minH: Int): Tier = when {
         minW >= 180 && minH >= 110 -> Tier.MEDIUM
-        minW >= 250 -> Tier.WIDE
+        minW >= 170 -> Tier.WIDE   // ~3 cells wide (flat) already fits inline controls
         minW < 110 && minH < 110 -> Tier.TINY
         else -> Tier.SMALL
     }
