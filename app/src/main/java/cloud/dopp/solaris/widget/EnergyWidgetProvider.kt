@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.Bundle
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.TokenStore
-import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import kotlin.concurrent.thread
 
 /**
@@ -45,9 +44,11 @@ class EnergyWidgetProvider : AppWidgetProvider() {
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
         val paired = TokenStore.isPaired(context)
-        val tap = tapPending(context, appWidgetId, paired)
+        // Body tap opens the PWA energy view (#27); the icon triggers a refresh (#26).
+        val tap = PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ENERGY)
+        val onRefresh = refreshPending(context, appWidgetId)
         // Immediate render (loading / pair hint), then async fetch.
-        mgr.updateAppWidget(appWidgetId, EnergyRender.build(context, appWidgetId, null, paired, tap))
+        mgr.updateAppWidget(appWidgetId, EnergyRender.build(context, appWidgetId, null, paired, tap, onRefresh))
         if (!paired) return
         val pending = goAsync()
         thread {
@@ -57,23 +58,22 @@ class EnergyWidgetProvider : AppWidgetProvider() {
                 } catch (e: Exception) {
                     null
                 }
-                mgr.updateAppWidget(appWidgetId, EnergyRender.build(context, appWidgetId, energy, true, tap))
+                mgr.updateAppWidget(appWidgetId, EnergyRender.build(context, appWidgetId, energy, true, tap, onRefresh))
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, onRefresh)
             } finally {
                 pending.finish()
             }
         }
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int, paired: Boolean): PendingIntent {
-        val intent = if (paired) {
-            context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?: Intent(context, OnboardingHomeActivity::class.java)
-        } else {
-            Intent(context, OnboardingHomeActivity::class.java)
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return PendingIntent.getActivity(
-            context, appWidgetId, intent,
+    /** Broadcast our own [ACTION_REFRESH] to re-fetch this instance (#26). */
+    private fun refreshPending(context: Context, appWidgetId: Int): PendingIntent {
+        val intent = Intent(context, EnergyWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        return PendingIntent.getBroadcast(
+            context, appWidgetId + 730_000, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

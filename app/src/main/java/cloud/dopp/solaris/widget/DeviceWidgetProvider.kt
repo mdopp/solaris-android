@@ -5,8 +5,10 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.os.Bundle
 import cloud.dopp.solaris.data.ApiClient
+import cloud.dopp.solaris.data.Card
 import kotlin.concurrent.thread
 
 /**
@@ -32,6 +34,8 @@ class DeviceWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, ids: IntArray) {
         ids.forEach { WidgetStore.unbind(context, it) }
+        // The bound set shrank → refresh the native SSE watch-set (#48).
+        cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -47,51 +51,73 @@ class DeviceWidgetProvider : AppWidgetProvider() {
 
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
-        val entityId = WidgetStore.entityId(context, appWidgetId)
-        if (entityId == null) {
-            // Not configured yet — tapping opens the picker.
-            mgr.updateAppWidget(
-                appWidgetId,
-                WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
-            )
+        // A render/data failure must yield a clean fallback, not an uncaught throw
+        // that leaves Android showing "Widget kann nicht geladen werden" (#32).
+        val entityId = try {
+            WidgetStore.entityId(context, appWidgetId)
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
             return
         }
-        val tap = tapPending(context, appWidgetId)
+        if (entityId == null) {
+            // Not configured (or orphaned/unbound) — tapping opens the picker.
+            try {
+                mgr.updateAppWidget(
+                    appWidgetId,
+                    WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
+                )
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
+            }
+            return
+        }
+        val tap = tapPending(context, appWidgetId, entityId)
         val domain = WidgetStore.domain(context, appWidgetId)
         // Immediate render from cache, then async live-state fetch.
-        mgr.updateAppWidget(
-            appWidgetId,
-            WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
-        )
+        try {
+            mgr.updateAppWidget(
+                appWidgetId,
+                WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
+            )
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
+        }
         val pending = goAsync()
         thread {
             try {
-                val card = try {
-                    ApiClient(context.applicationContext).getCard(entityId)
-                } catch (e: Exception) {
-                    null
-                }
+                val api = ApiClient(context.applicationContext)
+                val card = try { api.getCard(entityId) } catch (e: Exception) { null }
                 mgr.updateAppWidget(
                     appWidgetId,
-                    WidgetRender.build(context, appWidgetId, card, WidgetStore.name(context, appWidgetId), domain, tap),
+                    WidgetRender.build(
+                        context, appWidgetId, card,
+                        WidgetStore.name(context, appWidgetId), domain, tap,
+                    ),
                 )
+            } catch (t: Throwable) {
+                // Any render/transaction failure (e.g. oversized bitmap) → clean fallback.
+                WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
             } finally {
                 pending.finish()
             }
         }
     }
 
-    private fun tapPending(context: Context, appWidgetId: Int): PendingIntent {
-        // A broadcast (no Activity) so a tap runs headless without flashing a screen.
-        val i = Intent(context, WidgetActionReceiver::class.java)
-            .setAction(WidgetActionReceiver.ACTION_TAP)
+    /** A tap [PendingIntent] that re-runs this instance's refresh (fallback retry). */
+    private fun safeRefreshTap(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, DeviceWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-            .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE)
         return PendingIntent.getBroadcast(
-            context, appWidgetId, i,
+            context, 900_000 + appWidgetId, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
+
+    private fun tapPending(context: Context, appWidgetId: Int, entityId: String): PendingIntent =
+        // Name/body tap opens this bound entity's card in the PWA Custom Tab
+        // (#27, route confirmed in solarisbay#769).
+        PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.device(entityId))
 
     private fun configPending(context: Context, appWidgetId: Int): PendingIntent {
         val i = Intent(context, WidgetConfigActivity::class.java)
@@ -112,6 +138,50 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 .setAction(ACTION_REFRESH)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             context.sendBroadcast(i)
+        }
+
+        /**
+         * Render one bound instance directly from an already-known [Card] — the
+         * realtime `card_state` push path (#48): no re-fetch, we already have the
+         * fresh state. Mirrors the async branch of [refresh] but skips the network.
+         * Any failure falls back cleanly so a bad push never breaks the widget.
+         */
+        fun renderCard(context: Context, appWidgetId: Int, card: Card) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val entityId = WidgetStore.entityId(context, appWidgetId) ?: return
+            val tap = PwaLauncher.tapPending(
+                context, appWidgetId, PwaLauncher.Routes.device(entityId),
+            )
+            val domain = WidgetStore.domain(context, appWidgetId)
+            try {
+                mgr.updateAppWidget(
+                    appWidgetId,
+                    WidgetRender.build(
+                        context, appWidgetId, card,
+                        WidgetStore.name(context, appWidgetId), domain, tap,
+                    ),
+                )
+            } catch (t: Throwable) {
+                requestRefresh(context, appWidgetId)
+            }
+        }
+
+        /**
+         * Wake every device-widget bound to [entityId] with the pushed [card] (#48).
+         * Iterates this provider's live instances and renders the matching ones from
+         * the payload — no re-fetch. Returns the count updated.
+         */
+        fun wakeEntity(context: Context, entityId: String, card: Card): Int {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, DeviceWidgetProvider::class.java))
+            var n = 0
+            for (id in ids) {
+                if (WidgetStore.entityId(context, id) == entityId) {
+                    renderCard(context, id, card)
+                    n++
+                }
+            }
+            return n
         }
     }
 }

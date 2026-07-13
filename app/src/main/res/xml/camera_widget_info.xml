@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera trigger widget (#36): small (1x1 target), resizable, NO configuration.
+     A tap opens the PWA cameras view — no per-camera binding, no snapshot loading
+     (mirrors the voice widget). No data to poll → update period 0. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:description="@string/camera_widget_description"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_camera"
+    android:previewLayout="@layout/widget_camera"
+    android:updatePeriodMillis="0" />

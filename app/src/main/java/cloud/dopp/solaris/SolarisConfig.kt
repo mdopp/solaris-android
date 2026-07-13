@@ -19,6 +19,14 @@ object SolarisConfig {
     const val PAIR_PATH = "/pair-device"
 
     /**
+     * Request-access landing page on the user's server (#50). The ServiceBay
+     * portal surfaces the "Zugang anfordern" self-service CTA here (LAN-gated,
+     * pre-auth public web flow — no token, ADR 0010). Kept as one constant so
+     * the exact path is easy to tune on-device.
+     */
+    const val PORTAL_PATH = "/portal"
+
+    /**
      * Pairing redirect deep link: `cloud.dopp.solaris://pair#token=…&id=…`
      * (token in the fragment so it never hits proxy logs).
      */

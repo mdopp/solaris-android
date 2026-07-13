@@ -23,6 +23,11 @@ class WidgetActionReceiver : BroadcastReceiver() {
             AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID,
         )
         val op = intent.getStringExtra(EXTRA_OP) ?: OP_TOGGLE
+        // Refresh is a pure re-render (#26) — no entity call, just re-fetch state.
+        if (op == OP_REFRESH) {
+            DeviceWidgetProvider.requestRefresh(context.applicationContext, id)
+            return
+        }
         val entityId = WidgetStore.entityId(context, id) ?: return
         val domain = WidgetStore.domain(context, id)
         val app = context.applicationContext
@@ -91,6 +96,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
         const val EXTRA_SERVICE = "service"
 
         const val OP_TOGGLE = "toggle"
+        const val OP_REFRESH = "refresh"
         const val OP_BRIGHT_UP = "bright_up"
         const val OP_BRIGHT_DOWN = "bright_down"
         const val OP_COVER_OPEN = "cover_open"

@@ -4,8 +4,16 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Realtime SSE foreground service (#48): live-updates opt-in. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Voice/mic widget (#17): device speech-to-text capture. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Android 11+ package visibility: see browsers / Custom Tabs providers. -->
     <queries>
@@ -17,15 +25,23 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
         </intent>
+        <!-- Voice widget (#17): see the system speech recognizer on Android 11+. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <application
         android:name=".SolarisApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/appName"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        android:theme="@style/Theme.Solaris">
 
         <!-- Launcher + onboarding hub. Also captures the pairing deep link
              cloud.dopp.solaris://pair#token=… from the server's /pair-device page. -->
@@ -76,7 +92,7 @@
             android:name=".widget.WidgetConfigActivity"
             android:exported="true"
             android:label="@string/widget_device_label"
-            android:theme="@style/Theme.AppCompat.DayNight">
+            android:theme="@style/Theme.Solaris.Config">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
@@ -93,6 +109,13 @@
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Invisible trampoline: a widget body tap opens the PWA in a Custom Tab (#27). -->
+        <activity
+            android:name=".widget.PwaTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Energy statistics widget (#9): 48h house-consumption sparkline. -->
         <receiver
             android:name=".widget.EnergyStatsWidgetProvider"
@@ -104,6 +127,97 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/energy_stats_widget_info" />
+        </receiver>
+
+        <!-- Active-devices overview widget (#28): which devices are on/open. -->
+        <receiver
+            android:name=".widget.ActiveDevicesWidgetProvider"
+            android:exported="true"
+            android:label="@string/active_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/active_devices_widget_info" />
+        </receiver>
+
+        <!-- Collection service backing the scrollable active-devices ListView (#28). -->
+        <service
+            android:name=".widget.ActiveDevicesRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
+        <!-- Camera snapshot widget (#30): a bound camera's current frame. -->
+        <receiver
+            android:name=".widget.CameraWidgetProvider"
+            android:exported="true"
+            android:label="@string/camera_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/camera_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".widget.CameraWidgetConfigActivity"
+            android:exported="true"
+            android:label="@string/camera_widget_label"
+            android:theme="@style/Theme.Solaris.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Voice/mic widget (#17): tap → speech → auto-sent household chat. -->
+        <receiver
+            android:name=".widget.VoiceWidgetProvider"
+            android:exported="true"
+            android:label="@string/voice_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/voice_widget_info" />
+        </receiver>
+
+        <!-- Invisible speech-capture trampoline for the voice widget (#17). -->
+        <activity
+            android:name=".widget.VoiceTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Energy totals widget (#16): 2x2 kWh totals grid (Gesamt). -->
+        <receiver
+            android:name=".widget.EnergyTotalsWidgetProvider"
+            android:exported="true"
+            android:label="@string/totals_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/energy_totals_widget_info" />
+        </receiver>
+
+        <!-- Realtime SSE client (#48): embedded foreground service that wakes
+             device widgets from card_state pushes. Opt-in, off by default. -->
+        <service
+            android:name=".realtime.RealtimeService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Restart the realtime service after a reboot (only if opted-in). -->
+        <receiver
+            android:name=".realtime.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
     </application>

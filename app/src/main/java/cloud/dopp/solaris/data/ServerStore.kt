@@ -11,6 +11,8 @@ import android.net.Uri
 object ServerStore {
     private const val PREFS = "solaris_server"
     private const val KEY = "base_url"
+    private const val KEY_PWA_HINT_DISMISSED = "pwa_hint_dismissed"
+    private const val KEY_REALTIME = "realtime_enabled"
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -29,6 +31,28 @@ object ServerStore {
 
     fun host(ctx: Context): String? =
         baseUrl(ctx)?.let { runCatching { Uri.parse(it).host }.getOrNull() }
+
+    /**
+     * The "Solaris-App installieren" onboarding hint (#11): the app can't reliably
+     * detect an installed WebAPK, so the user dismisses the card manually and we
+     * remember it so future launches don't show it again.
+     */
+    fun isPwaHintDismissed(ctx: Context): Boolean =
+        p(ctx).getBoolean(KEY_PWA_HINT_DISMISSED, false)
+
+    fun dismissPwaHint(ctx: Context) =
+        p(ctx).edit().putBoolean(KEY_PWA_HINT_DISMISSED, true).apply()
+
+    /**
+     * Live-Updates opt-in (#48): keep an embedded SSE foreground service running
+     * so device-widgets wake instantly on `card_state` pushes. **Default false** —
+     * it costs a persistent notification and a little battery, so the user turns it
+     * on deliberately.
+     */
+    fun realtimeEnabled(ctx: Context): Boolean = p(ctx).getBoolean(KEY_REALTIME, false)
+
+    fun setRealtimeEnabled(ctx: Context, enabled: Boolean) =
+        p(ctx).edit().putBoolean(KEY_REALTIME, enabled).apply()
 
     fun clear(ctx: Context) = p(ctx).edit().remove(KEY).apply()
 }

@@ -26,10 +26,14 @@ class WidgetActionActivity : Activity() {
             finish()
             return
         }
-        AlertDialog.Builder(this)
+        // Confirm wording follows the action (open vs close), derived from the service.
+        val closing = service.contains("close")
+        val verb = getString(if (closing) R.string.widget_verb_close else R.string.widget_verb_open)
+        val positive = if (closing) R.string.widget_confirm_close else R.string.widget_confirm_yes
+        AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
             .setTitle(R.string.widget_confirm_title)
-            .setMessage(getString(R.string.widget_confirm_msg, WidgetStore.name(this, appWidgetId)))
-            .setPositiveButton(R.string.widget_confirm_yes) { _, _ ->
+            .setMessage(getString(R.string.widget_confirm_msg, WidgetStore.name(this, appWidgetId), verb))
+            .setPositiveButton(positive) { _, _ ->
                 thread {
                     try {
                         ApiClient(applicationContext).call(entityId, service, confirmed = true)

@@ -31,6 +31,29 @@ object WidgetStore {
     fun unbind(ctx: Context, id: Int) {
         p(ctx).edit()
             .remove("e_$id").remove("n_$id").remove("d_$id").remove("c_$id")
+            .remove("range_$id")
             .apply()
     }
+
+    /** Per-instance Verlauf history window (24h/7d), persisted across refreshes. */
+    fun range(ctx: Context, id: Int): EnergyRange =
+        EnergyRange.fromKey(p(ctx).getString("range_$id", null))
+
+    fun setRange(ctx: Context, id: Int, range: EnergyRange) {
+        p(ctx).edit().putString("range_$id", range.key).apply()
+    }
+
+    /**
+     * Last-known active-devices list, persisted as JSON so the collection widget's
+     * factory renders **instantly** from cache while the provider re-fetches in the
+     * background (#28 stale-then-fresh). Shared across all active widgets (the list
+     * is the whole household roster, not per-instance).
+     */
+    fun activeCacheJson(ctx: Context): String? = p(ctx).getString(KEY_ACTIVE_CACHE, null)
+
+    fun setActiveCacheJson(ctx: Context, json: String) {
+        p(ctx).edit().putString(KEY_ACTIVE_CACHE, json).apply()
+    }
+
+    private const val KEY_ACTIVE_CACHE = "active_cache_json"
 }

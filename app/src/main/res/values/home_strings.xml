@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="home_claim">Dein Zuhause, klar im Blick.</string>
     <string name="home_connect_hint">Verbinde dich mit deinem Solaris-Server.</string>
     <string name="qr_scan">QR-Code scannen</string>
     <string name="qr_prompt">Solaris-QR-Code scannen</string>
@@ -8,11 +9,66 @@
     <string name="home_reconnect">Bei %1$s anmelden, um die Kopplung abzuschließen.</string>
     <string name="home_connect">Verbinden</string>
     <string name="home_enter_url">Bitte die Server-Adresse eingeben.</string>
+
+    <!-- Request access (#50): pre-auth affordance for users without an account —
+         opens the server's request-access page in a Custom Tab. -->
+    <string name="home_request_access_intro">Noch keinen Zugang?</string>
+    <string name="home_request_access">Zugang anfordern</string>
+    <string name="home_status_label">Status</string>
     <string name="home_connected">✓ Verbunden mit %1$s</string>
+    <string name="home_status_connected">Verbunden</string>
+
+    <!-- Quick-add widget grid (#37): now THE primary add surface — a tap on a
+         tile pins that widget type (the energy tile opens a variant chooser). -->
+    <string name="home_widgets_teaser_title">Widget hinzufügen</string>
+    <string name="home_widgets_teaser_hint">Tippe einen Typ, um ihn auf dem Startbildschirm hinzuzufügen.</string>
+
+    <!-- Short labels for the tappable quick-add tiles. -->
+    <string name="home_tile_device">Gerät</string>
+    <string name="home_tile_energy">Energie</string>
+    <string name="home_tile_active">Aktiv</string>
+    <string name="home_tile_camera">Kamera</string>
+    <string name="home_tile_voice">Sprache</string>
     <string name="home_add_widget">Widget hinzufügen</string>
-    <string name="home_add_widget_manual">Füge das Widget vom Startbildschirm aus hinzu (lang drücken → Widgets).</string>
+    <string name="home_add_widget_manual">Widget über den Homescreen-Editor hinzufügen (lang drücken → Widgets).</string>
+
+    <!-- Widget-type chooser (#34): pick which widget to pin. -->
+    <string name="home_pick_widget_title">Welches Widget?</string>
+    <string name="home_pick_widget_cancel">Abbrechen</string>
+    <string name="widget_type_device">Gerät</string>
+    <string name="widget_type_energy_now">Energie · Jetzt</string>
+    <string name="widget_type_energy_history">Energie · Verlauf</string>
+    <string name="widget_type_energy_totals">Energie · Gesamt</string>
+    <string name="widget_type_active">Aktive Geräte</string>
+    <string name="widget_type_camera">Kamera</string>
+    <string name="widget_type_voice">Sprache</string>
+
+    <!-- Step 2 (#11): install the PWA for chat & notifications. -->
+    <string name="home_install_pwa_title">Solaris-App installieren</string>
+    <string name="home_install_pwa_hint">Für Chat &amp; Benachrichtigungen — im Browser öffnen und „Zum Startbildschirm hinzufügen".</string>
+    <string name="home_install_pwa">Installieren</string>
+    <string name="home_install_pwa_dismiss">Ausblenden</string>
+
     <string name="home_open">Solaris öffnen</string>
     <string name="home_logout">Abmelden</string>
     <string name="home_logged_out">Abgemeldet.</string>
     <string name="home_no_browser">Kein Browser gefunden.</string>
+
+    <!-- Crash-reporter UX (staged): friendly message first, trace on request. -->
+    <string name="crash_title">Fehler beim letzten Start</string>
+    <string name="crash_message">Es ist ein Fehler aufgetreten. Bitte melde ihn, damit wir ihn beheben können.</string>
+    <string name="crash_details">Details</string>
+    <string name="crash_report">Fehler melden</string>
+    <string name="crash_close">Schließen</string>
+    <string name="crash_copy">Kopieren</string>
+    <string name="crash_copied">Kopiert</string>
+    <string name="crash_details_title">Technische Details</string>
+
+    <!-- Live-Updates (#48): realtime SSE toggle + foreground-service notification. -->
+    <string name="home_realtime_title">Live-Updates</string>
+    <string name="home_realtime_hint">Aktualisiert Geräte-Widgets sofort. Dauerhafte Benachrichtigung, etwas mehr Akku.</string>
+    <string name="realtime_channel_name">Live-Updates</string>
+    <string name="realtime_channel_desc">Hält die Verbindung für sofortige Widget-Aktualisierungen.</string>
+    <string name="realtime_notif_title">Live-Updates aktiv</string>
+    <string name="realtime_notif_text">Geräte-Widgets werden sofort aktualisiert.</string>
 </resources>

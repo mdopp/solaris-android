@@ -4,12 +4,49 @@
     <string name="widget_device_description">Ein Gerät steuern (Licht, Schalter, Garage …)</string>
 
     <string name="widget_confirm_title">Bestätigen</string>
-    <string name="widget_confirm_msg">%1$s wirklich öffnen?</string>
+    <!-- %1$s = Gerätename, %2$s = Verb (öffnen/schließen). -->
+    <string name="widget_confirm_msg">%1$s wirklich %2$s?</string>
+    <string name="widget_verb_open">öffnen</string>
+    <string name="widget_verb_close">schließen</string>
     <string name="widget_confirm_yes">Öffnen</string>
+    <string name="widget_confirm_close">Schließen</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
     <string name="widget_config_loading">Geräte werden geladen …</string>
     <string name="widget_config_pick">Gerät wählen:</string>
+    <string name="widget_config_search_hint">Gerät oder Raum suchen …</string>
+    <string name="widget_config_no_match">Keine Treffer.</string>
     <string name="widget_config_empty">Keine steuerbaren Geräte gefunden.</string>
     <string name="widget_config_pair_first">Bitte zuerst das Gerät koppeln.</string>
+
+    <!-- Active-devices overview widget (#28). -->
+    <string name="active_widget_label">Solaris · Aktive Geräte</string>
+    <string name="active_widget_description">Übersicht: welche Geräte gerade an/offen sind</string>
+    <string name="active_title">Aktiv</string>
+    <string name="active_loading">wird geladen …</string>
+    <string name="active_pair">koppeln</string>
+    <string name="active_none">Alles aus</string>
+    <!-- %1$d = Anzahl aktiver Geräte -->
+    <string name="active_count">%1$d an</string>
+    <string name="active_more">+%1$d weitere</string>
+    <!-- Compact overflow for the grouped-by-type chips: %1$d = weitere Typen. -->
+    <string name="active_types_more">+%1$d</string>
+
+    <!-- Large device widget 48h history (#29). -->
+    <string name="device_nohistory">kein Verlauf</string>
+
+    <!-- Camera trigger widget (#36): a tile that opens the PWA camera view. -->
+    <string name="camera_widget_label">Kamera</string>
+    <string name="camera_widget_description">Kachel öffnet die Kamera-Live-Ansicht in der App</string>
+    <string name="camera_config_pick">Kamera wählen:</string>
+    <string name="camera_config_empty">Keine Kameras gefunden.</string>
+    <string name="camera_open_hint">Kamera öffnen</string>
+
+    <!-- Voice/mic widget (#17). -->
+    <string name="voice_widget_label">Solaris · Sprache</string>
+    <string name="voice_widget_description">Per Sprache eine Frage an Solaris stellen</string>
+    <string name="voice_widget_cta">Sprechen</string>
+    <string name="voice_prompt">Sprich mit Solaris …</string>
+    <string name="voice_no_recognizer">Keine Spracherkennung auf diesem Gerät verfügbar.</string>
+    <string name="voice_perm_denied">Mikrofon-Zugriff wird für die Spracheingabe benötigt.</string>
 </resources>

@@ -1,37 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:background="@color/solaris_bg"
+    android:fillViewport="true"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="@dimen/screen_gutter"
+        android:paddingEnd="@dimen/screen_gutter"
+        android:paddingTop="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_xl">
+
+        <!-- ── Hero (always visible) — signature blue glow (#37) ─────────────
+             The "Solar[figure]s" wordmark, horizontally centred, floating in the
+             "Meer des Wissens": a soft radial blue glow blooms directly behind the
+             figure so the lockup reads as a balanced, centred brand mark. -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp">
+
+            <ImageView
+                android:layout_width="@dimen/hero_glow_size"
+                android:layout_height="@dimen/hero_glow_size"
+                android:layout_gravity="center"
+                android:translationY="0dp"
+                android:src="@drawable/hero_glow"
+                android:importantForAccessibility="no"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_gravity="center">
+
+                <TextView
+                    style="@style/Text.Solaris.Hero"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Solar" />
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="39dp"
+                    android:adjustViewBounds="true"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="1dp"
+                    android:layout_marginBottom="2dp"
+                    android:src="@drawable/ic_solaris_figure"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    style="@style/Text.Solaris.Hero"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="s" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Accent underline: a short ServiceBay-blue rule, centred under the
+             wordmark, tying the lockup to the brand colour. -->
+        <View
+            android:layout_width="52dp"
+            android:layout_height="3dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="14dp"
+            android:background="@color/solaris_accent" />
 
         <TextView
+            style="@style/Text.Solaris.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="Solaris"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal"
+            android:layout_marginBottom="@dimen/space_xl"
+            android:text="@string/home_claim" />
 
-        <!-- Not connected: connect to your own server -->
+        <!-- ── Not connected: connect to your own server ─────────────────── -->
         <LinearLayout
             android:id="@+id/connect_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="@drawable/card_solaris"
+            android:padding="22dp">
 
             <TextView
                 android:id="@+id/connect_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/space_lg"
                 android:text="@string/home_connect_hint"
-                android:textSize="16sp" />
+                android:textColor="@color/solaris_text"
+                android:textSize="@dimen/text_body"
+                android:lineSpacingExtra="3sp" />
 
             <Button
                 android:id="@+id/qr_scan_btn"
@@ -42,10 +112,10 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="@dimen/space_lg"
+                android:layout_marginBottom="@dimen/space_sm"
                 android:text="@string/home_or_manual"
-                android:textColor="#FF888890"
+                android:textColor="@color/solaris_text_muted"
                 android:textSize="14sp" />
 
             <EditText
@@ -59,13 +129,42 @@
 
             <Button
                 android:id="@+id/connect_btn"
+                style="@style/Widget.Solaris.Button.Ghost"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/space_md"
                 android:text="@string/home_connect" />
+
+            <!-- Request access (#50): a discreet link-style affordance for users
+                 without an account yet — opens the server's request-access page
+                 in a Custom Tab (pre-auth public web flow, ADR 0010). -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_lg"
+                android:text="@string/home_request_access_intro"
+                android:textColor="@color/solaris_text_muted"
+                android:textSize="13sp"
+                android:gravity="center_horizontal" />
+
+            <TextView
+                android:id="@+id/request_access_btn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:paddingTop="@dimen/space_sm"
+                android:paddingBottom="@dimen/space_sm"
+                android:text="@string/home_request_access"
+                android:textColor="@color/solaris_accent"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold"
+                android:gravity="center_horizontal"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
         </LinearLayout>
 
-        <!-- Connected: status + actions -->
+        <!-- ── Connected: status + actions ───────────────────────────────── -->
         <LinearLayout
             android:id="@+id/connected_section"
             android:layout_width="match_parent"
@@ -73,32 +172,351 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/status"
-                android:layout_width="match_parent"
+            <!-- 1. Status pill: a compact chip with a status dot + host text,
+                 tinted green when connected (wired in the Activity). -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:textSize="16sp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/chip_solaris"
+                android:paddingStart="@dimen/space_md"
+                android:paddingEnd="@dimen/space_md"
+                android:paddingTop="@dimen/space_sm"
+                android:paddingBottom="@dimen/space_sm"
+                android:layout_marginBottom="@dimen/space_lg">
 
-            <Button
-                android:id="@+id/add_widget_btn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/home_add_widget" />
+                <View
+                    android:id="@+id/status_dot"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/status_dot" />
 
-            <Button
-                android:id="@+id/open_btn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/home_open" />
+                <TextView
+                    android:id="@+id/status"
+                    style="@style/Text.Solaris.Title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
 
-            <Button
-                android:id="@+id/logout_btn"
+            <!-- 1b. Live-Updates (#48): opt-in realtime SSE. A compact switch row
+                 with a hint — off by default (persistent notification + battery). -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/home_logout" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:background="@drawable/card_solaris"
+                android:padding="18dp"
+                android:layout_marginTop="@dimen/space_md">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="@dimen/space_md">
+
+                    <TextView
+                        style="@style/Text.Solaris.Title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/home_realtime_title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/home_realtime_hint"
+                        android:textColor="@color/solaris_text_muted"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2sp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/realtime_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <!-- 2. "Widget hinzufügen" card (#37): the primary add surface — 5
+                 tappable labeled tiles. Tapping a tile pins that widget type
+                 directly; the energy tile opens a Jetzt/Verlauf/Gesamt chooser. -->
+            <!-- 3. "Schnell hinzufügen" card (#37): 5 tappable labeled tiles;
+                 tapping a tile pins that widget type directly. -->
+            <LinearLayout
+                android:id="@+id/widgets_teaser_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_solaris"
+                android:padding="20dp"
+                android:layout_marginTop="@dimen/space_md">
+
+                <TextView
+                    style="@style/Text.Solaris.Title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_widgets_teaser_title"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    style="@style/Text.Solaris.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_widgets_teaser_hint"
+                    android:layout_marginBottom="@dimen/space_md" />
+
+                <!-- 5-column grid of equal-weight tappable tiles. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <LinearLayout
+                        android:id="@+id/tile_device"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/space_xs"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:minHeight="@dimen/tile_min_height"
+                        android:paddingTop="@dimen/space_sm"
+                        android:paddingBottom="@dimen/space_sm"
+                        android:background="@drawable/tile_solaris"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/home_tile_device">
+
+                        <ImageView
+                            android:layout_width="@dimen/tile_icon"
+                            android:layout_height="@dimen/tile_icon"
+                            android:src="@drawable/ic_device"
+                            app:tint="@color/solaris_accent"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            style="@style/Text.Solaris.Tile"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/home_tile_device" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tile_energy"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/space_xs"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:minHeight="@dimen/tile_min_height"
+                        android:paddingTop="@dimen/space_sm"
+                        android:paddingBottom="@dimen/space_sm"
+                        android:background="@drawable/tile_solaris"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/home_tile_energy">
+
+                        <ImageView
+                            android:layout_width="@dimen/tile_icon"
+                            android:layout_height="@dimen/tile_icon"
+                            android:src="@drawable/ic_bolt"
+                            app:tint="@color/solaris_accent"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            style="@style/Text.Solaris.Tile"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/home_tile_energy" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tile_active"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/space_xs"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:minHeight="@dimen/tile_min_height"
+                        android:paddingTop="@dimen/space_sm"
+                        android:paddingBottom="@dimen/space_sm"
+                        android:background="@drawable/tile_solaris"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/home_tile_active">
+
+                        <ImageView
+                            android:layout_width="@dimen/tile_icon"
+                            android:layout_height="@dimen/tile_icon"
+                            android:src="@drawable/ic_switch"
+                            app:tint="@color/solaris_accent"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            style="@style/Text.Solaris.Tile"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/home_tile_active" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tile_camera"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/space_xs"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:minHeight="@dimen/tile_min_height"
+                        android:paddingTop="@dimen/space_sm"
+                        android:paddingBottom="@dimen/space_sm"
+                        android:background="@drawable/tile_solaris"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/home_tile_camera">
+
+                        <ImageView
+                            android:layout_width="@dimen/tile_icon"
+                            android:layout_height="@dimen/tile_icon"
+                            android:src="@drawable/ic_camera"
+                            app:tint="@color/solaris_accent"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            style="@style/Text.Solaris.Tile"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/home_tile_camera" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/tile_voice"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:minHeight="@dimen/tile_min_height"
+                        android:paddingTop="@dimen/space_sm"
+                        android:paddingBottom="@dimen/space_sm"
+                        android:background="@drawable/tile_solaris"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:contentDescription="@string/home_tile_voice">
+
+                        <ImageView
+                            android:layout_width="@dimen/tile_icon"
+                            android:layout_height="@dimen/tile_icon"
+                            android:src="@drawable/ic_mic"
+                            app:tint="@color/solaris_accent"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            style="@style/Text.Solaris.Tile"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/home_tile_voice" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 4. Install-PWA card (#11): dismissible; button reworded to
+                 "Installieren". IDs preserved. -->
+            <LinearLayout
+                android:id="@+id/install_pwa_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/card_solaris"
+                android:padding="20dp"
+                android:layout_marginTop="@dimen/space_md">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/home_install_pwa_title"
+                        android:textColor="@color/solaris_text"
+                        android:textStyle="bold"
+                        android:textSize="@dimen/text_title" />
+
+                    <TextView
+                        android:id="@+id/install_pwa_dismiss"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="4dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:text="✕"
+                        android:textColor="@color/solaris_text_muted"
+                        android:textSize="18sp"
+                        android:contentDescription="@string/home_install_pwa_dismiss" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/home_install_pwa_hint"
+                    android:textColor="@color/solaris_text_muted"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="3sp" />
+
+                <Button
+                    android:id="@+id/install_pwa_btn"
+                    style="@style/Widget.Solaris.Button.Ghost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:text="@string/home_install_pwa" />
+            </LinearLayout>
+
+            <!-- 5. Footer action row: open + logout side-by-side, clearly
+                 subordinate to the filled primary CTA. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
+                android:layout_marginTop="@dimen/space_lg">
+
+                <Button
+                    android:id="@+id/open_btn"
+                    style="@style/Widget.Solaris.Button.Ghost"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="@dimen/space_sm"
+                    android:text="@string/home_open" />
+
+                <Button
+                    android:id="@+id/logout_btn"
+                    style="@style/Widget.Solaris.Button.Ghost"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/home_logout" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
