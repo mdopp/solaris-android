@@ -254,17 +254,7 @@ class ApiClient(private val ctx: Context) {
         }
     }
 
-    private fun parseCard(o: JSONObject): Card = Card(
-        entityId = o.optString("entity_id"),
-        name = o.optString("name").ifBlank { o.optString("entity_id") },
-        domain = o.optString("domain").ifBlank { o.optString("entity_id").substringBefore(".") },
-        deviceClass = o.optString("device_class").ifBlank { null },
-        state = o.optString("state").ifBlank { null },
-        unit = o.optString("unit").ifBlank { null },
-        brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
-        position = o.optInt("current_position", -1).takeIf { it in 0..100 },
-        temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
-    )
+    private fun parseCard(o: JSONObject): Card = parseCardJson(o)
 
     /** addable: `{ ok, rooms: [ {room, cards:[ {entity_id, name, domain, device_class} ]} ] }`. */
     private fun parseAddable(root: JSONObject): List<Device> {
@@ -309,6 +299,24 @@ class ApiClient(private val ctx: Context) {
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * Build a [Card] from the server's `card` JSON shape (same shape used by
+         * `/napi/portal/state` and by the realtime `card_state` SSE frame, #48). Pure
+         * (only `org.json`), so the realtime service and JVM tests can call it without
+         * an [ApiClient] instance or the network.
+         */
+        fun parseCardJson(o: JSONObject): Card = Card(
+            entityId = o.optString("entity_id"),
+            name = o.optString("name").ifBlank { o.optString("entity_id") },
+            domain = o.optString("domain").ifBlank { o.optString("entity_id").substringBefore(".") },
+            deviceClass = o.optString("device_class").ifBlank { null },
+            state = o.optString("state").ifBlank { null },
+            unit = o.optString("unit").ifBlank { null },
+            brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
+            position = o.optInt("current_position", -1).takeIf { it in 0..100 },
+            temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
+        )
 
         /** Safe max edge for a camera snapshot pushed into a RemoteViews bundle. */
         const val CAMERA_MAX_EDGE_PX = 640

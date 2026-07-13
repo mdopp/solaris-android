@@ -5,8 +5,10 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
 import android.os.Bundle
 import cloud.dopp.solaris.data.ApiClient
+import cloud.dopp.solaris.data.Card
 import kotlin.concurrent.thread
 
 /**
@@ -134,6 +136,50 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 .setAction(ACTION_REFRESH)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             context.sendBroadcast(i)
+        }
+
+        /**
+         * Render one bound instance directly from an already-known [Card] — the
+         * realtime `card_state` push path (#48): no re-fetch, we already have the
+         * fresh state. Mirrors the async branch of [refresh] but skips the network.
+         * Any failure falls back cleanly so a bad push never breaks the widget.
+         */
+        fun renderCard(context: Context, appWidgetId: Int, card: Card) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val entityId = WidgetStore.entityId(context, appWidgetId) ?: return
+            val tap = PwaLauncher.tapPending(
+                context, appWidgetId, PwaLauncher.Routes.device(entityId),
+            )
+            val domain = WidgetStore.domain(context, appWidgetId)
+            try {
+                mgr.updateAppWidget(
+                    appWidgetId,
+                    WidgetRender.build(
+                        context, appWidgetId, card,
+                        WidgetStore.name(context, appWidgetId), domain, tap,
+                    ),
+                )
+            } catch (t: Throwable) {
+                requestRefresh(context, appWidgetId)
+            }
+        }
+
+        /**
+         * Wake every device-widget bound to [entityId] with the pushed [card] (#48).
+         * Iterates this provider's live instances and renders the matching ones from
+         * the payload — no re-fetch. Returns the count updated.
+         */
+        fun wakeEntity(context: Context, entityId: String, card: Card): Int {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, DeviceWidgetProvider::class.java))
+            var n = 0
+            for (id in ids) {
+                if (WidgetStore.entityId(context, id) == entityId) {
+                    renderCard(context, id, card)
+                    n++
+                }
+            }
+            return n
         }
     }
 }

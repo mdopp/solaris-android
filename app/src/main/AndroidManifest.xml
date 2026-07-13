@@ -4,6 +4,11 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Realtime SSE foreground service (#48): live-updates opt-in. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Voice/mic widget (#17): device speech-to-text capture. -->
@@ -197,6 +202,22 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/energy_totals_widget_info" />
+        </receiver>
+
+        <!-- Realtime SSE client (#48): embedded foreground service that wakes
+             device widgets from card_state pushes. Opt-in, off by default. -->
+        <service
+            android:name=".realtime.RealtimeService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Restart the realtime service after a reboot (only if opted-in). -->
+        <receiver
+            android:name=".realtime.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
     </application>
