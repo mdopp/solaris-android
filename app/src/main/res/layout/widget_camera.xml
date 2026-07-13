@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera trigger tile (#36): no snapshot loading — a camera icon + the bound
+     camera name + a subtle "Kamera öffnen" hint. A tap opens the PWA camera view
+     for the bound entity (mirrors the voice widget's trigger model). RemoteViews-
+     safe (LinearLayout / ImageView / TextView only — no plain <View>). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cam_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_bg"
+    android:padding="10dp">
+
+    <ImageView
+        android:id="@+id/cam_icon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:src="@drawable/ic_camera"
+        android:tint="#FF7E9CFF"
+        android:contentDescription="@string/camera_widget_label" />
+
+    <TextView
+        android:id="@+id/cam_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="@string/camera_widget_label"
+        android:textColor="#FFF2F2F5"
+        android:textStyle="bold"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/cam_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="@string/camera_open_hint"
+        android:textColor="#FF8A939B"
+        android:textSize="12sp" />
+</LinearLayout>

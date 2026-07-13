@@ -18,14 +18,15 @@ import groovy.xml.MarkupBuilder
 
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 def twaManifest = [
     applicationId: 'cloud.dopp.solaris',
     hostName: 'chat.dopp.cloud', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
-    name: 'Solaris', // The application name.
-    launcherName: 'Solaris', // The name shown on the Android Launcher.
+    name: 'Solaris Companion', // The application name (distinct from the "Solaris" PWA).
+    launcherName: 'Solaris Companion', // The name shown on the Android Launcher.
     themeColor: '#0C0C0E', // The color used for the status bar.
     themeColorDark: '#0C0C0E', // The color used for the dark status bar.
     navigationColor: '#070709', // The color used for the navigation bar.
@@ -55,10 +56,12 @@ android {
     namespace "cloud.dopp.solaris"
     defaultConfig {
         applicationId "cloud.dopp.solaris"
-        minSdkVersion 21
+        // Phase 3 raised 21 → 23: EncryptedSharedPreferences (Jetpack Security)
+        // needs the AndroidKeyStore-backed master key from API 23.
+        minSdkVersion 23
         targetSdkVersion 35
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 49
+        versionName "2.11.3"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -147,17 +150,44 @@ android {
 
         
     }
+    signingConfigs {
+        release {
+            // Populated from env (CI secrets / local signed builds). When unset,
+            // assembleRelease produces an unsigned APK — no hardcoded keystore.
+            def ksFile = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ksFile) {
+                storeFile file(ksFile)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: "solaris"
+                keyPassword(System.getenv("ANDROID_KEY_PASSWORD")
+                        ?: System.getenv("ANDROID_KEYSTORE_PASSWORD"))
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled true
+            // Disabled during native development so R8 doesn't strip
+            // reflection-referenced classes. Re-enable with keep rules before Play.
+            minifyEnabled false
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
     lintOptions {
         checkReleaseBuilds false
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 }
 
@@ -204,7 +234,24 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
-        implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
-    
+
+    // --- Native standalone app (widgets + onboarding + pairing) ---
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Custom Tabs for pairing (/pair-device) and "open Solaris".
+    implementation 'androidx.browser:browser:1.8.0'
+    // Encrypted-at-rest storage for the sol_device_… bearer token.
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    // Networking for the widget data/action calls.
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // Server-Sent Events client for the realtime widget-wake service (#48).
+    implementation 'com.squareup.okhttp3:okhttp-sse:4.12.0'
+    // Self-contained QR scanner for onboarding (no Google Play Services).
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+
+    // JVM tests (Robolectric — runs Android components on the JVM, no emulator/VM).
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.13'
+    testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'androidx.test.ext:junit:1.2.1'
 }

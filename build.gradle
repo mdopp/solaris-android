@@ -20,10 +20,13 @@ buildscript {
 
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.9.1'
+        // Kotlin for the Phase-3 native surfaces (widgets/tiles). AGP 8.9 + Gradle
+        // 8.11 pair with Kotlin 2.0.x.
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -33,7 +36,7 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 

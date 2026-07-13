@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voice/mic widget (#17): a centred Solaris-accent mic button + short "Sprechen"
+     label. Tapping the body fires a PendingIntent into VoiceTrampolineActivity,
+     which captures speech and opens the ?ask= chat. RemoteViews-safe (LinearLayout
+     / ImageView / TextView only — no plain <View>). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/voice_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_bg"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/voice_mic"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:background="@drawable/voice_mic_circle"
+        android:padding="12dp"
+        android:src="@drawable/ic_mic"
+        android:tint="#FFFFFFFF"
+        android:contentDescription="@string/voice_widget_label" />
+
+    <TextView
+        android:id="@+id/voice_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="@string/voice_widget_cta"
+        android:textColor="@color/solaris_text"
+        android:textStyle="bold"
+        android:textSize="12sp" />
+</LinearLayout>

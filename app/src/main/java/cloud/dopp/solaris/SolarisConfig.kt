@@ -1,0 +1,47 @@
+package cloud.dopp.solaris
+
+/**
+ * Static app identity + native-API constants. The **server URL is NOT here** —
+ * it is per-install and lives in [cloud.dopp.solaris.data.ServerStore] (the app
+ * is multi-tenant: each user pairs it to their own Solaris server).
+ */
+object SolarisConfig {
+    /** Android application id — the pairing deep-link scheme equals this. */
+    const val PACKAGE = "cloud.dopp.solaris"
+
+    /**
+     * Proxy-bypassed, device-token-only native API prefix (solarisbay#757).
+     * All widget/pairing calls go to `<serverUrl>$NAPI/…`.
+     */
+    const val NAPI = "/napi"
+
+    /** Path of the authenticated pairing page on the user's server. */
+    const val PAIR_PATH = "/pair-device"
+
+    /**
+     * Request-access landing page on the user's server (#50). The ServiceBay
+     * portal surfaces the "Zugang anfordern" self-service CTA here (LAN-gated,
+     * pre-auth public web flow — no token, ADR 0010). Kept as one constant so
+     * the exact path is easy to tune on-device.
+     */
+    const val PORTAL_PATH = "/portal"
+
+    /**
+     * Pairing redirect deep link: `cloud.dopp.solaris://pair#token=…&id=…`
+     * (token in the fragment so it never hits proxy logs).
+     */
+    const val PAIR_SCHEME = "cloud.dopp.solaris"
+    const val PAIR_HOST = "pair"
+    const val PAIR_TOKEN_PARAM = "token"
+
+    /**
+     * QR content the server's "connect phone" page encodes (scanned, not launched
+     * as an intent): `cloud.dopp.solaris://setup?server=<url>&token=<sol_device_…>`.
+     * `server` required, `token` optional (present → instant pair; absent → login).
+     */
+    const val SETUP_HOST = "setup"
+    const val SETUP_SERVER_PARAM = "server"
+
+    /** Prefilled hint in the onboarding server field. */
+    const val DEFAULT_SERVER_HINT = "https://chat.dopp.cloud"
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clean fallback shown when a widget's data/render throws (#32), instead of
+     letting the exception bubble up into Android's "Widget kann nicht geladen
+     werden". A tap re-triggers the provider's refresh. RemoteViews-safe. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/we_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/widget_bg"
+    android:padding="12dp">
+
+    <ImageView
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginBottom="6dp"
+        android:src="@drawable/ic_refresh"
+        android:tint="#FFB0BEC5"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/we_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:text="@string/widget_load_error"
+        android:textColor="#FFB0BEC5"
+        android:textSize="13sp" />
+</LinearLayout>
