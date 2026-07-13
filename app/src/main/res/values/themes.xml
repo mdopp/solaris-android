@@ -54,6 +54,50 @@
         <item name="android:textStyle">normal</item>
     </style>
 
+    <!-- ── Text styles (#37) ────────────────────────────────────────────────
+         A consistent type hierarchy using the tokens from dimens.xml. Plain
+         (non-Widget) styles applied via style="…" on TextViews. -->
+    <style name="Text.Solaris" parent="" />
+
+    <style name="Text.Solaris.Hero">
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textSize">@dimen/text_hero</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="Text.Solaris.Headline">
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.01</item>
+    </style>
+
+    <style name="Text.Solaris.Title">
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Text.Solaris.Body">
+        <item name="android:textColor">@color/solaris_text_muted</item>
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:lineSpacingExtra">3sp</item>
+    </style>
+
+    <style name="Text.Solaris.Label">
+        <item name="android:textColor">@color/solaris_text_muted</item>
+        <item name="android:textSize">@dimen/text_label</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <style name="Text.Solaris.Tile">
+        <item name="android:textColor">@color/solaris_text</item>
+        <item name="android:textSize">@dimen/text_tile</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <!-- Dark, rounded input field. -->
     <style name="Widget.Solaris.EditText" parent="Widget.AppCompat.EditText">
         <item name="android:background">@drawable/field_solaris</item>

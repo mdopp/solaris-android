@@ -55,6 +55,22 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.qr_scan_btn).setOnClickListener { startScan() }
             findViewById<Button>(R.id.connect_btn).setOnClickListener { onConnect() }
             findViewById<Button>(R.id.add_widget_btn).setOnClickListener { addWidget() }
+            // Quick-add tiles (#37): tap → pin that widget type directly.
+            findViewById<View>(R.id.tile_device).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.DeviceWidgetProvider::class.java)
+            }
+            findViewById<View>(R.id.tile_energy).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.EnergyWidgetProvider::class.java)
+            }
+            findViewById<View>(R.id.tile_active).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.ActiveDevicesWidgetProvider::class.java)
+            }
+            findViewById<View>(R.id.tile_camera).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.CameraWidgetProvider::class.java)
+            }
+            findViewById<View>(R.id.tile_voice).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.VoiceWidgetProvider::class.java)
+            }
             findViewById<Button>(R.id.install_pwa_btn).setOnClickListener { installPwa() }
             findViewById<TextView>(R.id.install_pwa_dismiss).setOnClickListener { dismissPwaHint() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
@@ -104,13 +120,14 @@ class OnboardingHomeActivity : AppCompatActivity() {
             } else {
                 getString(R.string.home_connect_hint)
             }
+        // Ampel: green dot when connected, muted grey otherwise (#37) — set for
+        // both states, outside the connected branch.
+        findViewById<View>(R.id.status_dot).background?.setTint(
+            getColor(if (connected) R.color.energy_supply else R.color.solaris_text_faint),
+        )
         if (connected) {
             findViewById<TextView>(R.id.status).text =
                 getString(R.string.home_connected, ServerStore.host(this) ?: "")
-            // Ampel: green dot when connected, muted grey otherwise (#37).
-            findViewById<View>(R.id.status_dot).background?.setTint(
-                getColor(R.color.energy_supply),
-            )
         }
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays
@@ -227,13 +244,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
      * Launchers that don't support pinning get a German toast fallback.
      */
     private fun addWidget() {
-        val mgr = getSystemService(AppWidgetManager::class.java)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-            mgr == null || !mgr.isRequestPinAppWidgetSupported
-        ) {
-            toast(getString(R.string.home_add_widget_manual))
-            return
-        }
+        val mgr = pinManagerOrToast() ?: return
         val entries = WidgetTypes.ALL
         val adapter = object : ArrayAdapter<WidgetTypes.Entry>(this, 0, entries) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
@@ -252,6 +263,28 @@ class OnboardingHomeActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.home_pick_widget_cancel, null)
             .show()
+    }
+
+    /**
+     * Return the [AppWidgetManager] iff pinning is supported (API 26+ & launcher
+     * supports it), else show the manual-add toast and return null. Shared by the
+     * full chooser [addWidget] and the quick-add [pinTile] (#37).
+     */
+    private fun pinManagerOrToast(): AppWidgetManager? {
+        val mgr = getSystemService(AppWidgetManager::class.java)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            mgr == null || !mgr.isRequestPinAppWidgetSupported
+        ) {
+            toast(getString(R.string.home_add_widget_manual))
+            return null
+        }
+        return mgr
+    }
+
+    /** Quick-add (#37): pin one specific widget type via requestPinAppWidget. */
+    private fun pinTile(provider: Class<*>) {
+        val mgr = pinManagerOrToast() ?: return
+        mgr.requestPinAppWidget(ComponentName(this, provider), null, null)
     }
 
     /**

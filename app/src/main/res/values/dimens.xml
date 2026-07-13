@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Design tokens (#37): a single source of truth for radii, spacing and type
+     scale across the app screens, so the home overhaul reads as one system.
+     NOTE: widget_bg.xml keeps its own 22dp radius — it's shared with the real
+     home-screen widgets and is deliberately NOT tokenised here. -->
+<resources>
+
+    <!-- Corner radii -->
+    <dimen name="radius_sm">12dp</dimen>   <!-- fields, chips, tiles -->
+    <dimen name="radius_md">16dp</dimen>   <!-- buttons -->
+    <dimen name="radius_lg">20dp</dimen>   <!-- cards -->
+
+    <!-- Spacing scale -->
+    <dimen name="space_xs">8dp</dimen>
+    <dimen name="space_sm">12dp</dimen>
+    <dimen name="space_md">16dp</dimen>
+    <dimen name="space_lg">24dp</dimen>
+    <dimen name="space_xl">32dp</dimen>
+    <dimen name="screen_gutter">24dp</dimen>
+
+    <!-- Type scale -->
+    <dimen name="text_hero">40sp</dimen>
+    <dimen name="text_headline">22sp</dimen>
+    <dimen name="text_title">17sp</dimen>
+    <dimen name="text_body">15sp</dimen>
+    <dimen name="text_label">13sp</dimen>
+    <dimen name="text_tile">12sp</dimen>
+
+    <!-- Misc -->
+    <dimen name="hero_glow_size">220dp</dimen>
+    <dimen name="tile_icon">26dp</dimen>
+    <dimen name="tile_min_height">76dp</dimen>
+
+</resources>
