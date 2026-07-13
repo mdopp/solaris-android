@@ -34,6 +34,8 @@ class DeviceWidgetProvider : AppWidgetProvider() {
 
     override fun onDeleted(context: Context, ids: IntArray) {
         ids.forEach { WidgetStore.unbind(context, it) }
+        // The bound set shrank → refresh the native SSE watch-set (#48).
+        cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {

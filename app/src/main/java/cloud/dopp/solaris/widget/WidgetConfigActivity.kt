@@ -212,6 +212,8 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun pick(d: Device) {
         WidgetStore.bind(this, appWidgetId, d.entityId, d.name, d.domain, d.deviceClass)
         DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+        // Refresh the native SSE watch-set now that one more entity is bound (#48).
+        cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(applicationContext)
         setResult(
             RESULT_OK,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),

@@ -85,6 +85,29 @@ class ApiClient(private val ctx: Context) {
         }
     }
 
+    /**
+     * Register this device's **native watch-set** (#48 Option B, contract
+     * solarisbay#810) via `POST /napi/portal/watch` with body
+     * `{"entity_ids":[…]}`. The server's `ha_watch` then emits `card_state` for
+     * exactly these entities over the existing `/napi/portal/events` SSE, without
+     * touching the user's web favorites.
+     *
+     * **Best-effort:** returns true only on a 2xx; a **404** (endpoint not
+     * deployed yet) or any error → false. Never throws — a failed watch-set post
+     * must never affect the widgets or the realtime service. No-ops (false) if
+     * there's no server/token configured.
+     */
+    fun postWatch(entityIds: List<String>): Boolean {
+        return try {
+            val body = watchBody(entityIds).toString().toRequestBody(JSON)
+            http.newCall(authed("/portal/watch").post(body).build()).execute().use { resp ->
+                resp.isSuccessful
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     /** The house energy picture via `/napi/portal/energy` (the flow legs). */
     fun getEnergy(): Energy? {
         http.newCall(authed("/portal/energy").get().build()).execute().use { resp ->
@@ -317,6 +340,13 @@ class ApiClient(private val ctx: Context) {
             position = o.optInt("current_position", -1).takeIf { it in 0..100 },
             temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
         )
+
+        /**
+         * Build the `POST /napi/portal/watch` body: `{"entity_ids":[…]}` (#48).
+         * Pure (`org.json` only) so it is JVM-unit-testable without a client.
+         */
+        fun watchBody(entityIds: List<String>): JSONObject =
+            JSONObject().put("entity_ids", org.json.JSONArray(entityIds))
 
         /** Safe max edge for a camera snapshot pushed into a RemoteViews bundle. */
         const val CAMERA_MAX_EDGE_PX = 640

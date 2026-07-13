@@ -113,6 +113,10 @@ class RealtimeService : Service() {
         override fun onOpen(eventSource: EventSource, response: Response) {
             attempt = 0 // healthy connection resets the backoff
             setStatus("Verbunden · warte auf Ereignisse")
+            // Connection healthy → register the device-widget watch-set (#48
+            // Option B, solarisbay#810) and keep re-posting to refresh its TTL.
+            // Off-thread + best-effort; a failed post never affects the service.
+            scheduleWatchPost()
         }
 
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
@@ -152,6 +156,26 @@ class RealtimeService : Service() {
             val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
             setStatus("Getrennt ($why) — neuer Versuch …")
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
+        }
+    }
+
+    /**
+     * (Re)start the periodic watch-set post (#48): register the current set now,
+     * then re-post every [WATCH_REPOST_MS] to refresh the server's TTL as long as
+     * the service stays eligible/running. Idempotent — clears any prior schedule
+     * first (a reconnect just re-arms it). Cancelled in onDestroy/stopSelfClean.
+     */
+    private fun scheduleWatchPost() {
+        handler.removeCallbacks(watchPoster)
+        WatchSet.postCurrentAsync(applicationContext) // register immediately
+        handler.postDelayed(watchPoster, WATCH_REPOST_MS)
+    }
+
+    private val watchPoster = object : Runnable {
+        override fun run() {
+            if (stopping.get() || !eligible()) return
+            WatchSet.postCurrentAsync(applicationContext)
+            handler.postDelayed(this, WATCH_REPOST_MS)
         }
     }
 
@@ -235,6 +259,9 @@ class RealtimeService : Service() {
     companion object {
         private const val CHANNEL_ID = "solaris_realtime"
         private const val NOTIF_ID = 4801
+
+        /** Re-post the watch-set every ~20 min to refresh the server-side TTL (#48). */
+        private const val WATCH_REPOST_MS = 20L * 60L * 1000L
 
         /** Start the service iff opt-in && paired; else make sure it's stopped. */
         fun ensure(context: Context) {
