@@ -41,7 +41,4 @@ object SolarisConfig {
      */
     const val SETUP_HOST = "setup"
     const val SETUP_SERVER_PARAM = "server"
-
-    /** Prefilled hint in the onboarding server field. */
-    const val DEFAULT_SERVER_HINT = "https://chat.dopp.cloud"
 }

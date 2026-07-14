@@ -124,8 +124,11 @@ class OnboardingHomeActivity : AppCompatActivity() {
         findViewById<View>(R.id.connected_section).visibility = if (connected) View.VISIBLE else View.GONE
 
         val urlField = findViewById<EditText>(R.id.server_url)
+        // Only prefill an already-configured server; a fresh install stays blank so
+        // the generic layout hint ("https://dein-server") shows — multi-tenant, no
+        // hardcoded chat.dopp.cloud (#52).
         if (urlField.text.isNullOrBlank()) {
-            urlField.setText(ServerStore.baseUrl(this) ?: SolarisConfig.DEFAULT_SERVER_HINT)
+            ServerStore.baseUrl(this)?.let { urlField.setText(it) }
         }
         findViewById<TextView>(R.id.connect_hint).text =
             if (ServerStore.isConfigured(this) && !TokenStore.isPaired(this)) {
