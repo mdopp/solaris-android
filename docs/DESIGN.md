@@ -62,8 +62,9 @@ Kacheln, die nur eine Aktion auslösen, folgen **einem** Muster:
 - **Steuertasten füllen die Breite** (gewichtsbasiert, `layout_weight`), damit bei
   **keiner** Größe ein Button abgeschnitten wird — **nie** feste dp-Breiten, die
   überlaufen (sonst wird z.B. der ▼-Button rechts geclippt).
-- **1×1 (TINY):** das **Domänen-Icon** (z.B. Lampe) zeigen, **nicht** den Namen —
-  der bricht/trunkiert („Sofalich/t"). Ein Toggle + Zustandsbalken unten wie gehabt.
+- **1×1 (TINY):** **Name behalten** (einzeilig, oben, ellipsiert) + der **Toggle
+  ist ein tippbares, zustandsgetöntes Domänen-Icon** (kein Button-Kasten, kein „○") —
+  Tap = Primäraktion, Name-Tap = PWA. Zustandsbalken unten wie gehabt (#57).
 - **Nicht mögliche Aktionen ausgrauen:** eine Cover am Anschlag → die unmögliche
   Richtung ist deaktiviert/gedämpft (offen ⇒ ▲ grau & inert, zu ⇒ ▼ grau & inert).
   Ein grauer Button löst nichts aus.

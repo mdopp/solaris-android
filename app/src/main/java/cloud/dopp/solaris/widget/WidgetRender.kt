@@ -25,6 +25,15 @@ object WidgetRender {
     enum class Tier { TINY, SMALL, WIDE, MEDIUM }
 
     /**
+     * Load outcome for the state placeholder (#58): while a card is still `null`
+     * the state field must say *why*, not a cryptic "…". [LOADING] = first fetch in
+     * flight; [FAILED] = the fetch (with retries) gave nothing → hint to refresh;
+     * [UNCONFIGURED] = no bound entity (fresh/orphaned after reinstall) → hint to
+     * set it up; [LOADED] = a card is present, real state shown.
+     */
+    enum class Load { LOADING, LOADED, FAILED, UNCONFIGURED }
+
+    /**
      * Pick the layout tier from the host-reported min size (dp). A tall-enough
      * box gets the stacked [MEDIUM] controls; an otherwise wide-but-flat box
      * (e.g. 4×1) still gets an inline control row via [WIDE]; a mid box falls
@@ -60,6 +69,7 @@ object WidgetRender {
         fallbackName: String,
         domain: String,
         onBodyTap: PendingIntent,
+        load: Load = Load.LOADED,
     ): RemoteViews {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
@@ -84,7 +94,7 @@ object WidgetRender {
         v.setImageViewResource(R.id.w_icon, iconFor(dom))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
-        v.setTextViewText(R.id.w_state, stateLabel(card))
+        v.setTextViewText(R.id.w_state, stateLabel(card, load))
         v.setTextColor(R.id.w_state, accent)
 
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
@@ -142,11 +152,11 @@ object WidgetRender {
     }
 
     /**
-     * The 1×1 (single-cell) device widget (#31, revised by #55): the **domain
-     * icon** in place of the name (the name wraps/truncates to "Sofalich/t" at this
-     * size), a **single toggle** button showing ▲/▼ (cover) or on/off glyph, and
-     * the **state as a full-width bottom bar** (position / brightness). The toggle
-     * runs the domain's primary action; the icon tap still opens the PWA.
+     * The 1×1 (single-cell) device widget (#31 → #55 → #57): the **name** is kept
+     * (top, single line, ellipsized), the **toggle is a tappable state-tinted domain
+     * icon** with no button chrome (tap = the domain's primary action), and the
+     * **state is a full-width bottom bar** (position / brightness). Tapping the name
+     * opens the PWA; tapping the icon toggles.
      */
     private fun buildTiny(
         ctx: Context,
@@ -161,20 +171,18 @@ object WidgetRender {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
         val accent = if (on) accentFor(dom) else OFF
 
-        // Domain icon (#55) instead of the wrapping name; tinted by the active accent.
-        v.setImageViewResource(R.id.w_icon, iconFor(dom))
-        v.setInt(R.id.w_icon, "setColorFilter", accent)
+        // Name kept (#57); tapping it opens the PWA (#27).
+        v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
+        v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
         v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
 
-        // Single toggle glyph + the primary action for the domain.
-        val (glyph, op) = tinyToggle(dom, card)
-        v.setTextViewText(R.id.w_tiny_toggle, glyph)
-        v.setTextColor(R.id.w_tiny_toggle, accent)
-        v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, op))
-
-        // Icon tap → PWA (#27).
-        v.setOnClickPendingIntent(R.id.w_icon, onBodyTap)
+        // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
+        // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
+        // tap runs the domain's primary action (toggle / open↔close by state).
+        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom))
+        v.setInt(R.id.w_tiny_toggle, "setColorFilter", accent)
+        v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, tinyToggleOp(dom, card)))
 
         // State docked as a bottom bar (position / brightness).
         val level = card?.level
@@ -188,18 +196,15 @@ object WidgetRender {
     }
 
     /**
-     * The tiny-tier single toggle: a glyph + the op that performs the domain's
-     * primary action. Cover toggles open/close by current state (▲ when closed,
-     * ▼ when open); light/switch toggle on↔off.
+     * The tiny-tier toggle-icon's primary action (#57): the tappable icon runs this
+     * op. Cover toggles open/close by current state; light/switch toggle on↔off;
+     * anything else re-fetches.
      */
-    private fun tinyToggle(domain: String, card: Card?): Pair<String, String> = when (domain) {
-        "cover" -> {
-            val open = card?.isOn == true
-            if (open) "▼" to WidgetActionReceiver.OP_COVER_CLOSE
-            else "▲" to WidgetActionReceiver.OP_COVER_OPEN
-        }
-        "light", "switch" -> (if (card?.isOn == true) "◍" else "○") to WidgetActionReceiver.OP_TOGGLE
-        else -> "⟳" to WidgetActionReceiver.OP_REFRESH
+    private fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
+        "cover" -> if (card?.isOn == true) WidgetActionReceiver.OP_COVER_CLOSE
+                   else WidgetActionReceiver.OP_COVER_OPEN
+        "light", "switch" -> WidgetActionReceiver.OP_TOGGLE
+        else -> WidgetActionReceiver.OP_REFRESH
     }
 
     /**
@@ -329,8 +334,12 @@ object WidgetRender {
         else -> 0xFFFFC107.toInt()
     }
 
-    private fun stateLabel(card: Card?): String {
-        if (card == null) return "…"
+    private fun stateLabel(card: Card?, load: Load = Load.LOADED): String {
+        if (card == null) return when (load) {
+            Load.UNCONFIGURED -> "einrichten"
+            Load.FAILED -> "↻ tippen"
+            else -> "lädt…"
+        }
         return when (card.domain) {
             // On + a brightness %: show just the % (the accent colour already says "on").
             "light" -> if (card.isOn) card.brightnessPct?.let { "$it %" } ?: "an" else "aus"

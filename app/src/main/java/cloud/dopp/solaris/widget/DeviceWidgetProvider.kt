@@ -60,11 +60,15 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             return
         }
         if (entityId == null) {
-            // Not configured (or orphaned/unbound) — tapping opens the picker.
+            // Not configured (or orphaned/unbound after a reinstall) — tapping opens
+            // the picker; the state field says "einrichten" instead of a cryptic "…".
             try {
                 mgr.updateAppWidget(
                     appWidgetId,
-                    WidgetRender.build(context, appWidgetId, null, "—", "", configPending(context, appWidgetId)),
+                    WidgetRender.build(
+                        context, appWidgetId, null, "—", "",
+                        configPending(context, appWidgetId), WidgetRender.Load.UNCONFIGURED,
+                    ),
                 )
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
@@ -73,11 +77,14 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         }
         val tap = tapPending(context, appWidgetId, entityId)
         val domain = WidgetStore.domain(context, appWidgetId)
-        // Immediate render from cache, then async live-state fetch.
+        // Immediate render from cache with a "lädt…" placeholder, then async fetch.
         try {
             mgr.updateAppWidget(
                 appWidgetId,
-                WidgetRender.build(context, appWidgetId, null, WidgetStore.name(context, appWidgetId), domain, tap),
+                WidgetRender.build(
+                    context, appWidgetId, null, WidgetStore.name(context, appWidgetId),
+                    domain, tap, WidgetRender.Load.LOADING,
+                ),
             )
         } catch (t: Throwable) {
             WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
@@ -86,12 +93,24 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         thread {
             try {
                 val api = ApiClient(context.applicationContext)
-                val card = try { api.getCard(entityId) } catch (e: Exception) { null }
+                // Reliable first load (#58): retry a failed/empty fetch a few times
+                // (transient net / token warm-up / cold start) instead of getting
+                // stuck on the placeholder. Bounded so we stay inside goAsync's window.
+                var card: Card? = null
+                var attempt = 0
+                while (card == null && attempt < 3) {
+                    card = try { api.getCard(entityId) } catch (e: Exception) { null }
+                    if (card == null) {
+                        attempt++
+                        if (attempt < 3) try { Thread.sleep(1200) } catch (ie: InterruptedException) { break }
+                    }
+                }
+                val load = if (card != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
                         context, appWidgetId, card,
-                        WidgetStore.name(context, appWidgetId), domain, tap,
+                        WidgetStore.name(context, appWidgetId), domain, tap, load,
                     ),
                 )
             } catch (t: Throwable) {
