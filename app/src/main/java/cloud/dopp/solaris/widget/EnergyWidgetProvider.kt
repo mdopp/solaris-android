@@ -62,7 +62,7 @@ class EnergyWidgetProvider : AppWidgetProvider() {
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, onRefresh)
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

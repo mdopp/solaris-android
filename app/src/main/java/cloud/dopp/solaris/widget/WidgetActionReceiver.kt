@@ -59,7 +59,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 // network/other — keep the last rendered state
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

@@ -98,7 +98,7 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 // Any render/transaction failure (e.g. oversized bitmap) → clean fallback.
                 WidgetFallback.show(context, appWidgetId, safeRefreshTap(context, appWidgetId))
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

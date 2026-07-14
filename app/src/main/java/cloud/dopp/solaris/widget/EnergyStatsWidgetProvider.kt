@@ -95,7 +95,7 @@ class EnergyStatsWidgetProvider : AppWidgetProvider() {
                 // Render/transaction failure (e.g. oversized chart bitmap) → clean fallback (#32).
                 WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }
