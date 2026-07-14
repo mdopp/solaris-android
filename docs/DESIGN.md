@@ -58,6 +58,17 @@ Kacheln, die nur eine Aktion auslösen, folgen **einem** Muster:
 > unterscheiden sich. Ein gemeinsames Kreis-Drawable (`tile_accent_circle`) und
 > ein gemeinsames Kachel-Layout verwenden.
 
+## Geräte-Widgets (Licht/Schalter/Cover)
+- **Steuertasten füllen die Breite** (gewichtsbasiert, `layout_weight`), damit bei
+  **keiner** Größe ein Button abgeschnitten wird — **nie** feste dp-Breiten, die
+  überlaufen (sonst wird z.B. der ▼-Button rechts geclippt).
+- **1×1 (TINY):** das **Domänen-Icon** (z.B. Lampe) zeigen, **nicht** den Namen —
+  der bricht/trunkiert („Sofalich/t"). Ein Toggle + Zustandsbalken unten wie gehabt.
+- **Nicht mögliche Aktionen ausgrauen:** eine Cover am Anschlag → die unmögliche
+  Richtung ist deaktiviert/gedämpft (offen ⇒ ▲ grau & inert, zu ⇒ ▼ grau & inert).
+  Ein grauer Button löst nichts aus.
+- Zustand als Balken/Prozent unten; Akzent = Domänenfarbe im aktiven Zustand.
+
 ## App-Screens
 Siehe Home-Screen (`activity_home.xml`): Hero mit Wortmark „Solar[Figur]s" +
 Akzent-Glow, Status-Pill, ein filled Primär, Ghost-Sekundäraktionen. Konsistente
