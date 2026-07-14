@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_version_placeholder">Version</string>
+    <string name="app_version_fmt">Version %1$s</string>
     <string name="home_claim">Dein Zuhause, klar im Blick.</string>
     <string name="home_connect_hint">Verbinde dich mit deinem Solaris-Server.</string>
     <string name="qr_scan">QR-Code scannen</string>

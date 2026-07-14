@@ -518,5 +518,16 @@
                     android:text="@string/home_logout" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Installed app version — so it's clear what's running. -->
+        <TextView
+            android:id="@+id/app_version"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:gravity="center"
+            android:text="@string/app_version_placeholder"
+            android:textColor="@color/solaris_text_faint"
+            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
