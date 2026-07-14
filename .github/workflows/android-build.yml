@@ -21,6 +21,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Needed so the tag build can create a GitHub Release and attach the
+    # signed APK/AAB (softprops/action-gh-release). Without it the attach step
+    # fails with "Resource not accessible by integration".
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
