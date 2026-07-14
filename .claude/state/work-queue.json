@@ -1,7 +1,47 @@
 {
   "_comment": "Shared work queue for the solaris-android autoloop. Single source of truth between Planner/Builder/Verify. Labels are mirrored FROM this file, never the reverse.",
   "repo": "mdopp/solaris-android",
-  "queue": [],
+  "queue": [
+    {
+      "id": "u_crash",
+      "kind": "issue",
+      "issues": [49],
+      "theme": "Crash-Fix: NPE auf BroadcastReceiver$PendingResult.finish()",
+      "region": "app/src/main/java/cloud/dopp/solaris/widget/DeviceWidgetProvider.kt",
+      "scope": "DeviceWidgetProvider.refresh() ruft goAsync() und im finally pending.finish(). Auf 2.11.0/Pixel 10/Android 16 crasht refresh$lambda (der thread{}-Block) mit NPE, weil pending == null ist.",
+      "acceptance": "refresh() crasht nicht mehr, wenn goAsync() null liefert; Widget-Update laeuft weiter (Fetch+Render), pending.finish() nur wenn non-null. Kein NPE mehr in Crash-Reporter. testDebugUnitTest + assembleDebug gruen.",
+      "gate": "verify",
+      "security": false,
+      "status": "planned",
+      "notes": "ROOT CAUSE (hoch-wahrscheinlich): pending.finish() wird auf einer NULL PendingResult aufgerufen. goAsync() liefert nur waehrend einer LIVE Broadcast-Dispatch (in onReceive) eine non-null PendingResult; bei den DIREKTEN refresh()-Aufrufen aus onUpdate()/onAppWidgetOptionsChanged() (und dem Framework-getriebenen Erst-Update) ist KEIN Broadcast im Flug -> goAsync() gibt null zurueck -> finally { pending.finish() } NPEt im thread{} (Stack: refresh$lambda). FIX: val pending = goAsync() nullable machen (val pending: PendingResult? = try { goAsync() } catch(_:Throwable){ null }) und im finally pending?.finish(). Damit funktioniert refresh() sowohl im Broadcast-Pfad (onReceive/ACTION_REFRESH) als auch im Direkt-Pfad (onUpdate). Zeilenversatz beachten: Report ist v2.11.0, Head ist spaeter; die betroffene Stelle ist der goAsync()/pending.finish()-Block (aktuell Zeilen 85-102). Gleiche Muster in anderen Providern pruefen (EnergyWidgetProvider/EnergyStatsWidgetProvider/EnergyTotalsWidgetProvider/ActiveDevicesWidgetProvider/CameraWidgetProvider) — falls sie goAsync()+pending.finish() ausserhalb reiner onReceive-Broadcasts nutzen, gleich mit-haerten (defensiv, kein Verhaltenswechsel). Optional JVM/Robolectric-Guard, aber goAsync()-null ist schwer headless zu triggern; Kernfix ist der Null-Guard."
+    },
+    {
+      "id": "u_dopp",
+      "kind": "cluster",
+      "issues": [52, 53],
+      "theme": "Multi-Tenant/Cleanup: alle toten chat.dopp.cloud-Reste raus",
+      "region": "app/src/main/java/cloud/dopp/solaris/onboarding/OnboardingHomeActivity.kt, app/build.gradle, app/src/main/res/values/strings.xml, twa-manifest.json, SolarisConfig",
+      "scope": "#52: OnboardingHomeActivity.kt (~Z.128) befuellt urlField mit ServerStore.baseUrl ?: SolarisConfig.DEFAULT_SERVER_HINT (=https://chat.dopp.cloud). #53: tote TWA-dopp.cloud-Referenzen in build.gradle (hostName, webManifestUrl/launchUrl/assetStatements/providerAuthority/enableNotification resValues), strings.xml (assetStatements-String), twa-manifest.json (host/iconUrl/maskableIconUrl/webManifestUrl).",
+      "acceptance": "#52: Frische Installation zeigt LEERES Server-Feld (nur generischer Layout-Hint 'https://dein-server'); nur wenn ServerStore.baseUrl gesetzt ist, wird es eingetragen; DEFAULT_SERVER_HINT entfernt (oder leer/generisch). #53: grep -rn dopp.cloud app/ liefert nur noch Test-Fixtures (+ ggf. ServerStore-Beispielkommentar), kein toter TWA-Cruft. WICHTIG: twaManifest.name/launcherName (speist appName 'Solaris Companion') NICHT kaputt machen — nur dopp.cloud-Felder entfernen. Build gruen.",
+      "gate": "verify",
+      "security": false,
+      "status": "planned",
+      "notes": "Ein Cluster, weil beide 'dopp.cloud'-Bereich. Erst grep -rn 'dopp.cloud' app/ build.gradle twa-manifest.json um die exakten Fundstellen + welche resValues wirklich unreferenziert sind zu belegen (nichts Genutztes loeschen). #52 ist der user-sichtbare Teil (gate:verify — leeres Feld auf frischer Installation on-device pruefen); #53 ist reiner Dead-Code-Cleanup."
+    },
+    {
+      "id": "u_widgets",
+      "kind": "cluster",
+      "issues": [54, 55],
+      "theme": "Widget-Design-Pass: Ausloeser-Kacheln vereinheitlichen + Geraete-Widget-Flaws",
+      "region": "app/src/main/res/layout/widget_camera.xml, widget_voice.xml, widget_device_wide.xml, widget_device_tiny.xml, app/src/main/res/drawable/ (tile_accent_circle aus voice_mic_circle), WidgetRender (wireControls)",
+      "scope": "#54: Kamera- und Sprechen-Kacheln auf EIN Muster (docs/DESIGN.md 'Ausloeser-Kacheln'): gefuellter Solaris-Akzent-Kreis #3B82F6 mit weissem Glyph, 52dp, zentriert; einzeiliges bold-Label (Text.Solaris.Tile, maxLines=1); gemeinsames Kreis-Drawable (tile_accent_circle aus voice_mic_circle verallgemeinert) + gemeinsames Kachel-Layout. widget_camera.xml: Icon-Farbe #7E9CFF->Akzent, 'Kamera oeffnen'-Zeile entfernen. widget_voice.xml angleichen. #55: (1) widget_device_wide.xml w_cover_up/stop/down + Licht -/+ von festen 50dp auf layout_width=0dp+layout_weight=1 (kein Clip); (2) widget_device_tiny.xml: bei TINY Domaenen-Icon w_icon (z.B. ic_light) statt w_name zeigen; (3) WidgetRender/wireControls: Cover am Anschlag ausgrauen — position>=99 => Hoch(▲) gedaempft+inert, position<=1 => Runter(▼) gedaempft+inert (Tint gedaempft + PendingIntent weglassen bzw. setBoolean setEnabled false).",
+      "acceptance": "#54: Kamera und Sprechen strukturell identisch (nur Icon+Wort unterschiedlich), nichts abgeschnitten, Akzent-Kreis statt flachem #7E9CFF-Glyph. #55: kein abgeschnittener Button in irgendeiner Breite; 1x1-Licht zeigt Lampen-Icon (nicht Namen); ▲/▼ gedaempft+wirkungslos wenn Cover schon am Anschlag. RemoteViews-sicher (kein nacktes <View>). testDebugUnitTest + assembleDebug gruen.",
+      "gate": "verify",
+      "security": false,
+      "status": "built",
+      "notes": "Ein Cluster: beide Widget-Layout/Render-Arbeit, ueberlappende Dateien (widget_device_*, widget_camera/voice, WidgetRender), zusammen auf EINEM Branch bauen. wireControls-Ausgrau-Logik am besten in einen pure Helper (z.B. WidgetRender.coverDir enable-Flags aus card.position) extrahieren -> JVM-testbar wie togglesOnBodyTap/isSensitiveDevice. Design-Referenz docs/DESIGN.md Abschnitte 'Ausloeser-Kacheln' + 'Geraete-Widgets'."
+    }
+  ],
   "batch": {
     "branch": "batch/design-pass",
     "units": [
@@ -273,6 +313,11 @@
     {
       "note": "#48 WATCH-SET (Option B, solarisbay#810) auf batch/design-pass (PR #18), auf 2.11.2/versionCode 48 gebumpt. App registriert die an Geraete-Widgets gebundenen Entity-IDs als nativen Watch-Set beim Server: POST {base}/napi/portal/watch, Bearer sol_device_-Token + JSON {\"entity_ids\":[...]} -> ha_watch emittiert card_state fuer genau diese Entities ueber die bestehende /napi/portal/events SSE, OHNE Web-Favoriten. NEU: ApiClient.postWatch(entityIds): Boolean (POST /portal/watch, true nur bei 2xx; 404/Fehler->false; schluckt Exceptions, wirft NIE; No-op wenn kein Token/baseUrl) + companion watchBody(entityIds): JSONObject (pure, {\"entity_ids\":[...]}, JVM-testbar). realtime/WatchSet.kt (object): currentEntities(ctx) = fuer jede appWidgetId von DeviceWidgetProvider WidgetStore.entityId, non-null/blank, distinct (nur per-Entity Geraete-Widgets; camera/voice/active/energy binden keine einzelne HA-Entity -> ausgelassen); postCurrentAsync(ctx) postet best-effort auf Background-Thread NUR wenn paired+configured, schluckt Fehler. REGISTRIERT AN: (a) SSE-Connect — RealtimeService.listener.onOpen ruft scheduleWatchPost() (sofort + handler.postDelayed watchPoster alle 20 min re-post zur TTL-Auffrischung solange eligible; via removeCallbacksAndMessages(null) in onDestroy/stopSelfClean gecancelt); (b) Widget-Add — WidgetConfigActivity.pick() nach bind+requestRefresh; (c) Widget-Remove — DeviceWidgetProvider.onDeleted nach unbind. Alle guarded (nur wenn paired) + off-main-thread + wrapped. Tut nichts Nuetzliches bis solarisbay#810 live (404->false, ignoriert). Gate GRUEN: assembleDebug + testDebugUnitTest. JVM-Test WatchBodyTest (Robolectric fuer org.json, 3 Tests): Reihenfolge, leere Liste->leeres Array (Key immer da), exakte JSON-Serialisierung. Zwei Commits (feat(realtime) #48, chore(release) 2.11.2). Haengt an solarisbay#810. Gepusht -> PR #18. Nicht geseal't/gemerged.",
       "ts": "2026-07-13",
+      "stage": "builder"
+    },
+    {
+      "note": "#54 + #55 (Widget-Design-Pass) gebaut auf batch/fixes (stacked auf #49-Crashfix + #52/#53-Cleanup). #54 (Ausloeser-Kacheln vereinheitlicht per docs/DESIGN.md): voice_mic_circle.xml -> tile_accent_circle.xml verallgemeinert (git mv, gemeinsames accent-Kreis-Drawable). widget_camera.xml + widget_voice.xml jetzt STRUKTURELL IDENTISCH — gefuellter Solaris-Akzent-Kreis (@drawable/tile_accent_circle) 52dp, weisses Glyph (#FFFFFFFF), padding 12dp; einzeiliges bold-Label @color/solaris_text 13sp maxLines=1; gleiches root-padding 12dp + marginTop 8dp. Kamera: Glyph-Farbe #7E9CFF->weiss ueber Akzent-Kreis, zweite 'Kamera oeffnen'-Zeile (cam_hint) ENTFERNT. cam_name/cam_root-IDs erhalten (CameraWidgetProvider bindet sie weiter). #55 (Geraete-Widget-Flaws): (1) widget_device_wide.xml Licht -/+, Cover ▲/■/▼, Switch-Toggle von festen 50dp/96dp auf layout_width=0dp + layout_weight (Container gewichtet, Buttons weight=1) -> kein Clip bei schmalen Breiten. (2) widget_device_tiny.xml zeigt bei TINY das Domaenen-Icon (w_icon ImageView statt w_name TextView); WidgetRender.buildTiny setzt setImageViewResource(iconFor(dom)) + accent-Tint, Icon-Tap oeffnet PWA. (3) WidgetRender.wireControls: neue pure Helper coverUpEnabled(pos)/coverDownEnabled(pos) (>=99 -> up inert, <=1 -> down inert, null bleibt aktiv); wireCoverButton graut die unmoegliche Richtung (OFF-Tint + setBoolean setEnabled false + PendingIntent null) und laesst die verfuegbare Richtung + Stop aktiv; wireControls bekam card-Param. Kein plain <View>. Gate GRUEN: assembleDebug + testDebugUnitTest (WidgetSizeTierTest +coverDirectionDisabledAtTheStop). Kein Emulator — Struktur/Logik verifiziert, User sideloaded. device_test owed (#54 Kamera+Sprechen identisch, nichts abgeschnitten; #55 kein geclippter Button, 1x1 zeigt Lampen-Icon, ▲/▼ gedaempft+inert am Anschlag). Zwei Commits (feat(widget) #54, fix(widget) #55). Gepusht -> batch/fixes. Nicht geseal't/gemerged.",
+      "ts": "2026-07-14",
       "stage": "builder"
     }
   ],
