@@ -12,11 +12,18 @@
 name: android-build
 
 on:
+  # A PR to main compile-checks the change; the merge is NOT rebuilt (it's the
+  # same commit the PR already validated). Release-signing runs on a v* tag only.
   push:
-    branches: [main]
     tags: ['v*']
   pull_request:
     branches: [main]
+
+# Supersede in-flight runs for the same ref (e.g. a quick re-push) instead of
+# stacking duplicate builds.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -38,8 +45,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # Compile check on every push/PR.
+      # Compile check for PRs. Skipped on a tag run — the signed release build
+      # below already compiles, so there's no point assembling debug too.
       - name: Build debug
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: ./gradlew :app:assembleDebug --stacktrace
 
       # Signed release only on a tag, and only when the keystore secret exists.
