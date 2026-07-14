@@ -96,11 +96,13 @@
                 android:textStyle="bold"
                 android:textSize="15sp" />
 
-            <!-- Light controls: brightness − / + -->
+            <!-- Light controls: brightness − / + — weighted so the buttons always
+                 fit the row width and never clip (#55). -->
             <LinearLayout
                 android:id="@+id/w_light_controls"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1.4"
                 android:layout_marginStart="10dp"
                 android:orientation="horizontal"
                 android:baselineAligned="false"
@@ -108,9 +110,10 @@
 
                 <Button
                     android:id="@+id/w_bright_down"
-                    android:layout_width="50dp"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="−"
                     android:textColor="#FFF2F2F5"
@@ -118,19 +121,22 @@
 
                 <Button
                     android:id="@+id/w_bright_up"
-                    android:layout_width="50dp"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
+                    android:layout_weight="1"
                     android:background="@drawable/widget_btn_bg"
                     android:text="+"
                     android:textColor="#FFF2F2F5"
                     android:textSize="22sp" />
             </LinearLayout>
 
-            <!-- Cover controls: up / stop / down -->
+            <!-- Cover controls: up / stop / down — weighted so all three buttons
+                 always fit the row width and never clip (#55). -->
             <LinearLayout
                 android:id="@+id/w_cover_controls"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="2"
                 android:layout_marginStart="10dp"
                 android:orientation="horizontal"
                 android:baselineAligned="false"
@@ -138,9 +144,10 @@
 
                 <Button
                     android:id="@+id/w_cover_up"
-                    android:layout_width="50dp"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="▲"
                     android:textColor="#FF7E9CFF"
@@ -148,9 +155,10 @@
 
                 <Button
                     android:id="@+id/w_cover_stop"
-                    android:layout_width="50dp"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="■"
                     android:textColor="#FFF2F2F5"
@@ -158,19 +166,22 @@
 
                 <Button
                     android:id="@+id/w_cover_down"
-                    android:layout_width="50dp"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
+                    android:layout_weight="1"
                     android:background="@drawable/widget_btn_bg"
                     android:text="▼"
                     android:textColor="#FF7E9CFF"
                     android:textSize="18sp" />
             </LinearLayout>
 
-            <!-- Switch control: single toggle -->
+            <!-- Switch control: single toggle — weighted so it fills the row and
+                 never clips at narrow widths (#55). -->
             <LinearLayout
                 android:id="@+id/w_switch_controls"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1.4"
                 android:layout_marginStart="10dp"
                 android:orientation="horizontal"
                 android:baselineAligned="false"
@@ -178,11 +189,11 @@
 
                 <Button
                     android:id="@+id/w_switch_toggle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="46dp"
-                    android:minWidth="96dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
+                    android:layout_weight="1"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="Umschalten"
                     android:textColor="#FFF2F2F5"
