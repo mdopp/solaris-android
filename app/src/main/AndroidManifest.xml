@@ -167,6 +167,7 @@
             android:name=".ui.CameraCaptureActivity"
             android:exported="false"
             android:label="@string/camera_capture_title"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.Solaris" />
 
         <activity

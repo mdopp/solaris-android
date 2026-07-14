@@ -37,6 +37,23 @@
             android:text="@string/camera_capture_none"
             style="@style/Text.Solaris.Title" />
 
+        <!-- Mini gallery (#62): thumbnails of every captured page; each can be
+             deleted or reordered. Hidden until there's at least one page. -->
+        <HorizontalScrollView
+            android:id="@+id/cap_gallery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/cap_gallery_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
         <Button
             android:id="@+id/cap_take"
             android:layout_width="match_parent"

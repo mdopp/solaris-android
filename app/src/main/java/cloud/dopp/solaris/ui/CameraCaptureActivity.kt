@@ -9,8 +9,13 @@ import android.graphics.Color
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
@@ -48,7 +53,10 @@ class CameraCaptureActivity : AppCompatActivity() {
     private lateinit var pdfSwitch: Switch
     private lateinit var uploadBtn: Button
     private lateinit var clearBtn: Button
+    private lateinit var takeBtn: Button
     private lateinit var progress: ProgressBar
+    private lateinit var gallery: HorizontalScrollView
+    private lateinit var galleryRow: LinearLayout
 
     // Largest edge we scale captures to for PDF/upload — keeps size/memory sane
     // while staying legible for documents.
@@ -82,18 +90,26 @@ class CameraCaptureActivity : AppCompatActivity() {
         pdfSwitch = findViewById(R.id.cap_pdf)
         uploadBtn = findViewById(R.id.cap_upload)
         clearBtn = findViewById(R.id.cap_clear)
+        takeBtn = findViewById(R.id.cap_take)
         progress = findViewById(R.id.cap_progress)
+        gallery = findViewById(R.id.cap_gallery)
+        galleryRow = findViewById(R.id.cap_gallery_row)
 
         // Prefill the filename with a sortable date/time stamp; the user edits the
         // suffix. e.g. "2026-07-14_1830_".
         filenameField.setText(SimpleDateFormat("yyyy-MM-dd_HHmm_", Locale.GERMANY).format(Date()))
         filenameField.setSelection(filenameField.text.length)
 
-        findViewById<Button>(R.id.cap_take).setOnClickListener { onTake() }
+        takeBtn.setOnClickListener { onTake() }
         clearBtn.setOnClickListener { clearPages() }
         uploadBtn.setOnClickListener { onUpload() }
 
         refresh()
+
+        // Open the camera straight away on a fresh start (#62) — no extra tap for
+        // the first shot. Only on the first create, so returning from a capture or
+        // rotating doesn't re-launch it.
+        if (savedInstanceState == null && pages.isEmpty()) onTake()
     }
 
     private fun onTake() {
@@ -129,10 +145,60 @@ class CameraCaptureActivity : AppCompatActivity() {
             1 -> getString(R.string.camera_capture_one)
             else -> getString(R.string.camera_capture_many, n)
         }
-        clearBtn.visibility = if (n > 0) Button.VISIBLE else Button.GONE
+        clearBtn.visibility = if (n > 0) View.VISIBLE else View.GONE
         uploadBtn.isEnabled = n > 0
         // A PDF only makes sense as a "combine" for the series; still allowed for one.
         pdfSwitch.isEnabled = n > 0
+        takeBtn.text = getString(
+            if (n > 0) R.string.camera_capture_take_more else R.string.camera_capture_take,
+        )
+        rebuildGallery()
+    }
+
+    /** Rebuild the thumbnail gallery (#62) from [pages], wiring delete + reorder. */
+    private fun rebuildGallery() {
+        galleryRow.removeAllViews()
+        gallery.visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
+        val inflater = LayoutInflater.from(this)
+        pages.forEachIndexed { index, file ->
+            val item = inflater.inflate(R.layout.camera_page_item, galleryRow, false)
+            item.findViewById<ImageView>(R.id.page_thumb).setImageBitmap(decodeThumb(file))
+            item.findViewById<TextView>(R.id.page_no).text = (index + 1).toString()
+            item.findViewById<TextView>(R.id.page_delete).setOnClickListener { deletePage(index) }
+            item.findViewById<TextView>(R.id.page_left).apply {
+                isEnabled = index > 0
+                alpha = if (index > 0) 1f else 0.3f
+                setOnClickListener { movePage(index, index - 1) }
+            }
+            item.findViewById<TextView>(R.id.page_right).apply {
+                isEnabled = index < pages.size - 1
+                alpha = if (index < pages.size - 1) 1f else 0.3f
+                setOnClickListener { movePage(index, index + 1) }
+            }
+            galleryRow.addView(item)
+        }
+    }
+
+    private fun deletePage(index: Int) {
+        if (index !in pages.indices) return
+        pages.removeAt(index).delete()
+        refresh()
+    }
+
+    private fun movePage(from: Int, to: Int) {
+        if (from !in pages.indices || to !in pages.indices) return
+        pages.add(to, pages.removeAt(from))
+        refresh()
+    }
+
+    /** A small centre-cropped thumbnail (≤300px) for the gallery. */
+    private fun decodeThumb(f: File): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(f.absolutePath, bounds)
+        val longer = maxOf(bounds.outWidth, bounds.outHeight)
+        var sample = 1
+        while (longer > 0 && longer / (sample * 2) >= 300) sample *= 2
+        return BitmapFactory.decodeFile(f.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
     }
 
     private fun onUpload() {

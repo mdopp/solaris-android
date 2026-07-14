@@ -9,6 +9,7 @@
     <string name="camera_capture_many">%d Seiten aufgenommen</string>
 
     <string name="camera_capture_take">Foto aufnehmen</string>
+    <string name="camera_capture_take_more">Weiteres Foto</string>
     <string name="camera_capture_clear">Verwerfen</string>
     <string name="camera_capture_filename">Dateiname</string>
     <string name="camera_capture_as_pdf">Als mehrseitiges PDF hochladen</string>
