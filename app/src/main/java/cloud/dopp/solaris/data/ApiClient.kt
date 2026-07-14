@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import cloud.dopp.solaris.SolarisConfig
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -30,6 +31,8 @@ class ApiClient(private val ctx: Context) {
     private val http = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
+        // Uploads (camera #36) can be a few MB; give the write side room.
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     private fun base(): String =
@@ -105,6 +108,33 @@ class ApiClient(private val ctx: Context) {
             }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Upload one captured file (image or PDF) to the token-authed
+     * `POST /napi/upload` endpoint (camera feature #36, server contract
+     * solarisbay#826) as `multipart/form-data` with a `file` part and the
+     * user-chosen `filename`.
+     *
+     * Returns the HTTP status code so the UI can tell "uploaded" (2xx) from
+     * "endpoint not deployed yet" (404, still solarisbay#826) from other errors;
+     * a transport failure (no server/token/network) returns 0. Blocking — call
+     * off the main thread.
+     */
+    fun uploadFile(bytes: ByteArray, filename: String, mime: String): Int {
+        return try {
+            val part = bytes.toRequestBody(mime.toMediaType())
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("filename", filename)
+                .addFormDataPart("file", filename, part)
+                .build()
+            http.newCall(authed("/upload").post(body).build()).execute().use { resp ->
+                resp.code
+            }
+        } catch (e: Exception) {
+            0
         }
     }
 

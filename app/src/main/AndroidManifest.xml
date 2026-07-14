@@ -161,6 +161,14 @@
                 android:resource="@xml/camera_widget_info" />
         </receiver>
 
+        <!-- Native camera capture + upload screen (#36): opened by the camera
+             trigger widget; takes photos, optionally builds a PDF, uploads to /napi. -->
+        <activity
+            android:name=".ui.CameraCaptureActivity"
+            android:exported="false"
+            android:label="@string/camera_capture_title"
+            android:theme="@style/Theme.Solaris" />
+
         <activity
             android:name=".widget.CameraWidgetConfigActivity"
             android:exported="true"
@@ -219,6 +227,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Share captured photos with the system camera app for ACTION_IMAGE_CAPTURE
+             (#36). Authority mirrors the fileprovider used by FileProvider.getUriForFile. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
 
     </application>
 </manifest>

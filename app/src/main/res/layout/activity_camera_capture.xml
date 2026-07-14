@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native camera capture + upload (#36): take one or a series of photos, name the
+     file (date/time prefilled), optionally combine into a multi-page PDF, and
+     upload to the paired Solaris server (/napi/upload, solarisbay#826). -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/solaris_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/screen_gutter">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:text="@string/camera_capture_title"
+            style="@style/Text.Solaris.Headline" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:text="@string/camera_capture_hint"
+            style="@style/Text.Solaris.Body" />
+
+        <!-- Captured pages counter. -->
+        <TextView
+            android:id="@+id/cap_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:text="@string/camera_capture_none"
+            style="@style/Text.Solaris.Title" />
+
+        <Button
+            android:id="@+id/cap_take"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:background="@drawable/btn_solaris"
+            android:drawableStart="@drawable/ic_camera"
+            android:drawablePadding="@dimen/space_sm"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:text="@string/camera_capture_take"
+            android:textColor="@color/solaris_text"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/cap_clear"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_sm"
+            android:background="@drawable/btn_solaris_ghost"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:text="@string/camera_capture_clear"
+            android:textColor="@color/solaris_text_muted"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <!-- Filename (date/time prefilled, editable). -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:text="@string/camera_capture_filename"
+            style="@style/Text.Solaris.Label" />
+
+        <EditText
+            android:id="@+id/cap_filename"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:background="@drawable/field_solaris"
+            android:padding="@dimen/space_md"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="@color/solaris_text"
+            android:textColorHint="@color/solaris_text_faint"
+            android:hint="@string/camera_capture_filename" />
+
+        <!-- Combine to a single multi-page PDF. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/camera_capture_as_pdf"
+                style="@style/Text.Solaris.Body" />
+
+            <Switch
+                android:id="@+id/cap_pdf"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/cap_upload"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:background="@drawable/btn_solaris"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:text="@string/camera_capture_upload"
+            android:textColor="@color/solaris_text"
+            android:textAllCaps="false"
+            android:enabled="false" />
+
+        <ProgressBar
+            android:id="@+id/cap_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/cap_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_sm"
+            android:text=""
+            style="@style/Text.Solaris.Body" />
+    </LinearLayout>
+</ScrollView>
