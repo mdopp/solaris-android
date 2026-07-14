@@ -31,6 +31,13 @@ object PwaLauncher {
         const val ROOT = "/"
 
         /**
+         * ServiceBay widgets (#42/#43/#44/#45) tap → the ServiceBay view in the
+         * PWA. Exact deep-link still to be confirmed server-side; opens the PWA
+         * root for now so the tap always lands somewhere sensible.
+         */
+        const val SERVICEBAY = "/"
+
+        /**
          * A single device's card view (confirmed solarisbay#769) — a tap on a
          * device widget's name, or an active-devices row, opens exactly that
          * entity's card.

@@ -1,0 +1,109 @@
+package cloud.dopp.solaris.widget
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.RemoteViews
+import cloud.dopp.solaris.R
+import cloud.dopp.solaris.data.SbApiClient
+import cloud.dopp.solaris.data.SbHome
+import kotlin.concurrent.thread
+
+/**
+ * ServiceBay **overview** widget (#42): a home-summary card showing services
+ * up (+ failed/down), pending approvals and pending updates, from Solaris'
+ * aggregated `/napi/servicebay/home` (BFF, ADR 0010). Read-only — a tap opens the
+ * PWA. Config-less (like the camera/voice tiles); the bound Solaris server + token
+ * are enough.
+ */
+class SbOverviewWidgetProvider : AppWidgetProvider() {
+
+    override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
+        ids.forEach { refresh(context, it) }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        mgr: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?,
+    ) = refresh(context, appWidgetId)
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == ACTION_REFRESH) {
+            val id = intent.getIntExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID,
+            )
+            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) refresh(context, id)
+        }
+    }
+
+    private fun refresh(context: Context, appWidgetId: Int) {
+        val mgr = AppWidgetManager.getInstance(context)
+        val tap = PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.SERVICEBAY)
+        // Immediate render (placeholders "—"), then async live fetch.
+        try {
+            mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, null, tap))
+        } catch (t: Throwable) {
+            WidgetFallback.show(context, appWidgetId, tap)
+            return
+        }
+        val pending = goAsync()
+        thread {
+            try {
+                val home = try { SbApiClient(context.applicationContext).getHome() } catch (e: Exception) { null }
+                mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, home, tap))
+            } catch (t: Throwable) {
+                WidgetFallback.show(context, appWidgetId, tap)
+            } finally {
+                pending?.finish()
+            }
+        }
+    }
+
+    private fun render(context: Context, appWidgetId: Int, home: SbHome?, tap: PendingIntent): RemoteViews {
+        val v = RemoteViews(context.packageName, R.layout.widget_sb_overview)
+        v.setOnClickPendingIntent(R.id.sb_root, tap)
+        v.setOnClickPendingIntent(R.id.sb_refresh, refreshPending(context, appWidgetId))
+        if (home == null) {
+            v.setTextViewText(R.id.sb_services, "—")
+            v.setTextViewText(R.id.sb_approvals, "—")
+            v.setTextViewText(R.id.sb_updates, "—")
+            v.setViewVisibility(R.id.sb_services_bad, View.GONE)
+            return v
+        }
+        v.setTextViewText(R.id.sb_services, home.servicesUp.toString())
+        v.setTextViewText(R.id.sb_approvals, home.pendingApprovals.toString())
+        v.setTextViewText(R.id.sb_updates, home.pendingUpdates.toString())
+        val bad = home.servicesFailed + home.servicesDown
+        if (bad > 0) {
+            v.setViewVisibility(R.id.sb_services_bad, View.VISIBLE)
+            v.setTextViewText(
+                R.id.sb_services_bad,
+                context.getString(R.string.sb_overview_bad, bad),
+            )
+        } else {
+            v.setViewVisibility(R.id.sb_services_bad, View.GONE)
+        }
+        return v
+    }
+
+    private fun refreshPending(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, SbOverviewWidgetProvider::class.java)
+            .setAction(ACTION_REFRESH)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        return PendingIntent.getBroadcast(
+            context, 320_000 + appWidgetId, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    companion object {
+        const val ACTION_REFRESH = "cloud.dopp.solaris.widget.SB_OVERVIEW_REFRESH"
+    }
+}

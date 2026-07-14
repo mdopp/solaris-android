@@ -212,6 +212,19 @@
                 android:resource="@xml/energy_totals_widget_info" />
         </receiver>
 
+        <!-- ServiceBay overview widget (#42): home-summary from /napi/servicebay/home. -->
+        <receiver
+            android:name=".widget.SbOverviewWidgetProvider"
+            android:exported="true"
+            android:label="@string/sb_overview_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sb_overview_widget_info" />
+        </receiver>
+
         <!-- Realtime SSE client (#48): embedded foreground service that wakes
              device widgets from card_state pushes. Opt-in, off by default. -->
         <service

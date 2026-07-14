@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ServiceBay widgets (#40 epic: #42/#43/#44/#45). -->
+<resources>
+    <string name="sb_overview_label">ServiceBay-Übersicht</string>
+    <string name="sb_overview_description">Dienste, Freigaben und Updates auf einen Blick.</string>
+    <string name="sb_overview_title">ServiceBay</string>
+    <string name="sb_overview_services">Dienste</string>
+    <string name="sb_overview_approvals">Freigaben</string>
+    <string name="sb_overview_updates">Updates</string>
+    <string name="sb_overview_bad">%d ⚠</string>
+</resources>
