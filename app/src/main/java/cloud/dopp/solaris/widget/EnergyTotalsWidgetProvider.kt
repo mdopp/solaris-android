@@ -86,7 +86,7 @@ class EnergyTotalsWidgetProvider : AppWidgetProvider() {
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, refreshPending(context, appWidgetId))
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tiny device widget (1×1, #31): no icon — the NAME (2 lines) sits at the top,
-     a single primary toggle fills the middle (▲/▼ for covers, on/off glyph for
-     lights/switches), and the state (position / brightness) is docked as a
-     full-width bar flush to the bottom edge. RemoteViews-safe (LinearLayout +
-     weights only). -->
+<!-- Tiny device widget (1×1, #31 → #55 → #57): keep the NAME (top, single line,
+     ellipsized — the user wants it) and make the TOGGLE a tappable state-tinted
+     domain ICON with NO button chrome (#57). Tap the icon = the domain's primary
+     action (toggle / open-close); tap the name = open the PWA. The state
+     (position / brightness) is docked as a full-width bar at the bottom edge.
+     RemoteViews-safe (LinearLayout / ImageView / TextView / ProgressBar — no
+     plain <View>, no Button box). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
@@ -11,33 +13,34 @@
     android:orientation="vertical"
     android:background="@drawable/widget_bg">
 
-    <!-- Name row: name (2 lines, tap = open PWA) + a lock badge (#38) for
+    <!-- Name row: the device name (tap = open PWA) + a lock badge (#38) for
          sensitive devices needing a confirm. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:baselineAligned="false"
         android:paddingStart="10dp"
         android:paddingEnd="10dp"
-        android:paddingTop="9dp">
+        android:paddingTop="8dp">
 
         <TextView
             android:id="@+id/w_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:maxLines="2"
-            android:ellipsize="end"
-            android:text="Wohnzimmer"
-            android:textColor="#FFF2F2F5"
+            android:text="—"
+            android:textColor="#F2F2F5"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:textSize="13sp" />
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <ImageView
             android:id="@+id/w_lock"
-            android:layout_width="15dp"
-            android:layout_height="15dp"
+            android:layout_width="13dp"
+            android:layout_height="13dp"
             android:layout_marginStart="4dp"
             android:src="@drawable/ic_lock"
             android:tint="#FFB0BEC5"
@@ -45,20 +48,20 @@
             android:contentDescription="@string/widget_lock" />
     </LinearLayout>
 
-    <!-- Single primary toggle, weighted to fill the middle. -->
-    <Button
+    <!-- Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
+         Fills the middle; tap runs the domain's primary action. -->
+    <ImageView
         android:id="@+id/w_tiny_toggle"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="4dp"
         android:layout_marginBottom="6dp"
-        android:background="@drawable/widget_btn_bg"
-        android:text="○"
-        android:textColor="#FFFFC107"
-        android:textSize="22sp" />
+        android:padding="6dp"
+        android:src="@drawable/ic_light"
+        android:tint="#FFFFC107"
+        android:scaleType="fitCenter"
+        android:contentDescription="@null" />
 
     <!-- State bar: docked flush to the very bottom edge, full width. -->
     <ProgressBar

@@ -19,9 +19,19 @@ import java.util.Locale
  */
 object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
+    private const val COVER_ACCENT = 0xFF7E9CFF.toInt()
 
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
     enum class Tier { TINY, SMALL, WIDE, MEDIUM }
+
+    /**
+     * Load outcome for the state placeholder (#58): while a card is still `null`
+     * the state field must say *why*, not a cryptic "…". [LOADING] = first fetch in
+     * flight; [FAILED] = the fetch (with retries) gave nothing → hint to refresh;
+     * [UNCONFIGURED] = no bound entity (fresh/orphaned after reinstall) → hint to
+     * set it up; [LOADED] = a card is present, real state shown.
+     */
+    enum class Load { LOADING, LOADED, FAILED, UNCONFIGURED }
 
     /**
      * Pick the layout tier from the host-reported min size (dp). A tall-enough
@@ -59,6 +69,7 @@ object WidgetRender {
         fallbackName: String,
         domain: String,
         onBodyTap: PendingIntent,
+        load: Load = Load.LOADED,
     ): RemoteViews {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
@@ -83,7 +94,7 @@ object WidgetRender {
         v.setImageViewResource(R.id.w_icon, iconFor(dom))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
-        v.setTextViewText(R.id.w_state, stateLabel(card))
+        v.setTextViewText(R.id.w_state, stateLabel(card, load))
         v.setTextColor(R.id.w_state, accent)
 
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
@@ -123,7 +134,7 @@ object WidgetRender {
             } else {
                 v.setOnClickPendingIntent(R.id.w_header, coverBodyTap)
             }
-            wireControls(ctx, v, appWidgetId, dom, sensitive, entityId)
+            wireControls(ctx, v, appWidgetId, dom, sensitive, entityId, card)
         } else {
             // SMALL: same wide layout, control row hidden → identical look, no buttons.
             v.setViewVisibility(R.id.w_light_controls, View.GONE)
@@ -141,10 +152,11 @@ object WidgetRender {
     }
 
     /**
-     * The 1×1 (single-cell) device widget (#31): the **name** in place of the
-     * icon (2 lines), a **single toggle** button showing ▲/▼ (cover) or on/off
-     * glyph, and the **state as a full-width bottom bar** (position / brightness).
-     * The toggle runs the domain's primary action; body tap still opens the PWA.
+     * The 1×1 (single-cell) device widget (#31 → #55 → #57): the **name** is kept
+     * (top, single line, ellipsized), the **toggle is a tappable state-tinted domain
+     * icon** with no button chrome (tap = the domain's primary action), and the
+     * **state is a full-width bottom bar** (position / brightness). Tapping the name
+     * opens the PWA; tapping the icon toggles.
      */
     private fun buildTiny(
         ctx: Context,
@@ -159,18 +171,18 @@ object WidgetRender {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
         val accent = if (on) accentFor(dom) else OFF
 
+        // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
+        v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
         v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
 
-        // Single toggle glyph + the primary action for the domain.
-        val (glyph, op) = tinyToggle(dom, card)
-        v.setTextViewText(R.id.w_tiny_toggle, glyph)
-        v.setTextColor(R.id.w_tiny_toggle, accent)
-        v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, op))
-
-        // Body (name) tap → PWA (#27).
-        v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
+        // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
+        // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
+        // tap runs the domain's primary action (toggle / open↔close by state).
+        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom))
+        v.setInt(R.id.w_tiny_toggle, "setColorFilter", accent)
+        v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, tinyToggleOp(dom, card)))
 
         // State docked as a bottom bar (position / brightness).
         val level = card?.level
@@ -184,18 +196,15 @@ object WidgetRender {
     }
 
     /**
-     * The tiny-tier single toggle: a glyph + the op that performs the domain's
-     * primary action. Cover toggles open/close by current state (▲ when closed,
-     * ▼ when open); light/switch toggle on↔off.
+     * The tiny-tier toggle-icon's primary action (#57): the tappable icon runs this
+     * op. Cover toggles open/close by current state; light/switch toggle on↔off;
+     * anything else re-fetches.
      */
-    private fun tinyToggle(domain: String, card: Card?): Pair<String, String> = when (domain) {
-        "cover" -> {
-            val open = card?.isOn == true
-            if (open) "▼" to WidgetActionReceiver.OP_COVER_CLOSE
-            else "▲" to WidgetActionReceiver.OP_COVER_OPEN
-        }
-        "light", "switch" -> (if (card?.isOn == true) "◍" else "○") to WidgetActionReceiver.OP_TOGGLE
-        else -> "⟳" to WidgetActionReceiver.OP_REFRESH
+    private fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
+        "cover" -> if (card?.isOn == true) WidgetActionReceiver.OP_COVER_CLOSE
+                   else WidgetActionReceiver.OP_COVER_OPEN
+        "light", "switch" -> WidgetActionReceiver.OP_TOGGLE
+        else -> WidgetActionReceiver.OP_REFRESH
     }
 
     /**
@@ -222,7 +231,7 @@ object WidgetRender {
      * non-controllable domains. The switch row (medium/wide only) is optional —
      * older/small layouts omit it, so we guard with [hasSwitchRow].
      */
-    private fun wireControls(ctx: Context, v: RemoteViews, appWidgetId: Int, domain: String, sensitive: Boolean, entityId: String?) {
+    private fun wireControls(ctx: Context, v: RemoteViews, appWidgetId: Int, domain: String, sensitive: Boolean, entityId: String?, card: Card?) {
         // Default: everything hidden; enable just the row we need below.
         v.setViewVisibility(R.id.w_light_controls, View.GONE)
         v.setViewVisibility(R.id.w_cover_controls, View.GONE)
@@ -235,17 +244,20 @@ object WidgetRender {
             }
             "cover" -> {
                 v.setViewVisibility(R.id.w_cover_controls, View.VISIBLE)
-                if (sensitive && entityId != null) {
-                    // Garage/door: open & close ask for confirmation immediately (in-app);
-                    // stop needs none.
-                    v.setOnClickPendingIntent(R.id.w_cover_up, confirmPending(ctx, appWidgetId, 2, entityId, "cover.open_cover"))
-                    v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
-                    v.setOnClickPendingIntent(R.id.w_cover_down, confirmPending(ctx, appWidgetId, 3, entityId, "cover.close_cover"))
-                } else {
-                    v.setOnClickPendingIntent(R.id.w_cover_up, op(ctx, appWidgetId, 3, WidgetActionReceiver.OP_COVER_OPEN))
-                    v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
-                    v.setOnClickPendingIntent(R.id.w_cover_down, op(ctx, appWidgetId, 5, WidgetActionReceiver.OP_COVER_CLOSE))
-                }
+                // Grey out the impossible direction at the stop (#55): fully open ⇒ ▲
+                // is muted + inert; fully closed ⇒ ▼ is muted + inert. Stop stays live.
+                val pos = card?.position
+                val upEnabled = coverUpEnabled(pos)
+                val downEnabled = coverDownEnabled(pos)
+                val upIntent = if (sensitive && entityId != null)
+                    confirmPending(ctx, appWidgetId, 2, entityId, "cover.open_cover")
+                else op(ctx, appWidgetId, 3, WidgetActionReceiver.OP_COVER_OPEN)
+                val downIntent = if (sensitive && entityId != null)
+                    confirmPending(ctx, appWidgetId, 3, entityId, "cover.close_cover")
+                else op(ctx, appWidgetId, 5, WidgetActionReceiver.OP_COVER_CLOSE)
+                wireCoverButton(v, R.id.w_cover_up, upEnabled, upIntent, COVER_ACCENT)
+                v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
+                wireCoverButton(v, R.id.w_cover_down, downEnabled, downIntent, COVER_ACCENT)
             }
             "switch" -> {
                 setSwitchRowVisibility(v, View.VISIBLE)
@@ -254,6 +266,29 @@ object WidgetRender {
             // sensors / other domains: no control row — the state + bar fill the card.
         }
     }
+
+    /**
+     * Wire one cover direction button (#55): when [enabled] it gets the accent
+     * tint + its action; when disabled it is muted ([OFF]) AND its PendingIntent is
+     * cleared (setEnabled(false)) so a tap does nothing.
+     */
+    private fun wireCoverButton(v: RemoteViews, id: Int, enabled: Boolean, intent: PendingIntent, accent: Int) {
+        v.setBoolean(id, "setEnabled", enabled)
+        v.setTextColor(id, if (enabled) accent else OFF)
+        v.setOnClickPendingIntent(id, if (enabled) intent else null)
+    }
+
+    /**
+     * Can a cover still open (▲ active)? False only when fully open
+     * (`position >= 99`); unknown position (null) stays enabled. Pure → JVM-testable.
+     */
+    fun coverUpEnabled(position: Int?): Boolean = position == null || position < 99
+
+    /**
+     * Can a cover still close (▼ active)? False only when fully closed
+     * (`position <= 1`); unknown position (null) stays enabled. Pure → JVM-testable.
+     */
+    fun coverDownEnabled(position: Int?): Boolean = position == null || position > 1
 
     /** Toggle the switch row where the layout has one (medium/wide); no-op otherwise. */
     private fun setSwitchRowVisibility(v: RemoteViews, vis: Int) {
@@ -299,8 +334,12 @@ object WidgetRender {
         else -> 0xFFFFC107.toInt()
     }
 
-    private fun stateLabel(card: Card?): String {
-        if (card == null) return "…"
+    private fun stateLabel(card: Card?, load: Load = Load.LOADED): String {
+        if (card == null) return when (load) {
+            Load.UNCONFIGURED -> "einrichten"
+            Load.FAILED -> "↻ tippen"
+            else -> "lädt…"
+        }
         return when (card.domain) {
             // On + a brightness %: show just the % (the accent colour already says "on").
             "light" -> if (card.isOn) card.brightnessPct?.let { "$it %" } ?: "an" else "aus"

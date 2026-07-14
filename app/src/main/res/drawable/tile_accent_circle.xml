@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Solaris-accent filled circle behind the mic glyph (voice widget #17). -->
+<!-- Shared filled Solaris-accent circle behind a trigger-tile glyph (#54).
+     Used by every "öffnet X" tile (camera, voice, …) so they read identically —
+     an accent-gradient oval signalling "antippen". Generalised from the old
+     voice_mic_circle. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <gradient

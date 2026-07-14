@@ -61,6 +61,26 @@ class WidgetSizeTierTest {
         assertEquals(false, WidgetRender.togglesOnBodyTap(""))
     }
 
+    /** #55: at a cover's stop the impossible direction is disabled (grey + inert). */
+    @Test fun coverDirectionDisabledAtTheStop() {
+        // Fully open (>=99): up is dead, down is live.
+        assertEquals(false, WidgetRender.coverUpEnabled(100))
+        assertEquals(false, WidgetRender.coverUpEnabled(99))
+        assertEquals(true, WidgetRender.coverDownEnabled(100))
+        // Fully closed (<=1): down is dead, up is live.
+        assertEquals(false, WidgetRender.coverDownEnabled(0))
+        assertEquals(false, WidgetRender.coverDownEnabled(1))
+        assertEquals(true, WidgetRender.coverUpEnabled(0))
+        // Mid travel: both directions live.
+        assertEquals(true, WidgetRender.coverUpEnabled(50))
+        assertEquals(true, WidgetRender.coverDownEnabled(50))
+        assertEquals(true, WidgetRender.coverUpEnabled(98))
+        assertEquals(true, WidgetRender.coverDownEnabled(2))
+        // Unknown position (null): both stay enabled (don't dead-lock on missing data).
+        assertEquals(true, WidgetRender.coverUpEnabled(null))
+        assertEquals(true, WidgetRender.coverDownEnabled(null))
+    }
+
     /** #38: only garage/door/gate covers are lock-gated (need a confirm). */
     @Test fun onlySensitiveCoverClassesNeedTheLockBadge() {
         assertEquals(true, cloud.dopp.solaris.data.isSensitiveDevice("cover", "garage"))
