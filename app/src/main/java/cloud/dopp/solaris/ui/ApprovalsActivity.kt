@@ -1,0 +1,88 @@
+package cloud.dopp.solaris.ui
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import cloud.dopp.solaris.R
+import cloud.dopp.solaris.data.SbApiClient
+import cloud.dopp.solaris.data.SbApproval
+import cloud.dopp.solaris.widget.PwaLauncher
+import kotlin.concurrent.thread
+
+/**
+ * In-app list of pending ServiceBay approvals (#43), read from Solaris'
+ * aggregated `/napi/servicebay/approvals`. Read-only: each row opens the PWA to
+ * actually approve/reject, because the verdict needs the admin's Authelia session
+ * (only the Custom Tab has it) — a device-token verdict is forbidden by design
+ * (#2249). Reached from the ServiceBay overview widget's approvals count and
+ * (once built) from the approval notification.
+ */
+class ApprovalsActivity : AppCompatActivity() {
+
+    private lateinit var listView: LinearLayout
+    private lateinit var status: TextView
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_approvals)
+        listView = findViewById(R.id.approvals_list)
+        status = findViewById(R.id.approvals_status)
+        findViewById<TextView>(R.id.approvals_refresh).setOnClickListener { load() }
+        load()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Coming back from acting in the PWA should reflect the new state.
+        load()
+    }
+
+    private fun load() {
+        status.visibility = View.VISIBLE
+        status.text = getString(R.string.approvals_loading)
+        thread {
+            val approvals = try {
+                SbApiClient(applicationContext).listApprovals()
+            } catch (e: Exception) {
+                null
+            }
+            runOnUiThread { render(approvals) }
+        }
+    }
+
+    private fun render(approvals: List<SbApproval>?) {
+        // Clear every row except the status line (the first child).
+        if (listView.childCount > 1) listView.removeViews(1, listView.childCount - 1)
+        when {
+            approvals == null -> {
+                status.visibility = View.VISIBLE
+                status.text = getString(R.string.approvals_error)
+                return
+            }
+            approvals.isEmpty() -> {
+                status.visibility = View.VISIBLE
+                status.text = getString(R.string.approvals_empty)
+                return
+            }
+        }
+        status.visibility = View.GONE
+        val inflater = LayoutInflater.from(this)
+        approvals!!.forEach { a ->
+            val row = inflater.inflate(R.layout.item_approval_row, listView, false)
+            row.findViewById<TextView>(R.id.ap_title).text = a.title.ifBlank { a.id }
+            row.findViewById<TextView>(R.id.ap_service).text = a.service
+            row.findViewById<TextView>(R.id.ap_desc).apply {
+                text = a.description
+                visibility = if (a.description.isBlank()) View.GONE else View.VISIBLE
+            }
+            row.setOnClickListener {
+                // Open the PWA to act (Authelia session lives in the Custom Tab).
+                PwaLauncher.open(this, PwaLauncher.Routes.SERVICEBAY)
+            }
+            listView.addView(row)
+        }
+    }
+}

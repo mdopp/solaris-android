@@ -79,9 +79,14 @@ class SbApiClient(private val ctx: Context) {
         }
     }
 
-    /** `GET /napi/servicebay/approvals` → the pending-approval feed (empty on failure). */
-    fun listApprovals(): List<SbApproval> {
-        val arr = get("/approvals")?.optJSONArray("approvals") ?: return emptyList()
+    /**
+     * `GET /napi/servicebay/approvals` → the pending-approval feed. Null on a
+     * request failure (so the list screen can say "couldn't load" vs "none"),
+     * empty only when there genuinely are none.
+     */
+    fun listApprovals(): List<SbApproval>? {
+        val root = get("/approvals") ?: return null
+        val arr = root.optJSONArray("approvals") ?: return emptyList()
         return (0 until arr.length()).mapNotNull { i ->
             arr.optJSONObject(i)?.let {
                 SbApproval(

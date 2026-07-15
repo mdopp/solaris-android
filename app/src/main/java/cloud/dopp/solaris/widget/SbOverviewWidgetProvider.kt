@@ -11,6 +11,7 @@ import android.widget.RemoteViews
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.SbApiClient
 import cloud.dopp.solaris.data.SbHome
+import cloud.dopp.solaris.ui.ApprovalsActivity
 import kotlin.concurrent.thread
 
 /**
@@ -70,6 +71,8 @@ class SbOverviewWidgetProvider : AppWidgetProvider() {
         val v = RemoteViews(context.packageName, R.layout.widget_sb_overview)
         v.setOnClickPendingIntent(R.id.sb_root, tap)
         v.setOnClickPendingIntent(R.id.sb_refresh, refreshPending(context, appWidgetId))
+        // The approvals count opens the in-app approvals list (#43).
+        v.setOnClickPendingIntent(R.id.sb_approvals, approvalsPending(context, appWidgetId))
         if (home == null) {
             v.setTextViewText(R.id.sb_services, "—")
             v.setTextViewText(R.id.sb_approvals, "—")
@@ -99,6 +102,15 @@ class SbOverviewWidgetProvider : AppWidgetProvider() {
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         return PendingIntent.getBroadcast(
             context, 320_000 + appWidgetId, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun approvalsPending(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, ApprovalsActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            context, 321_000 + appWidgetId, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

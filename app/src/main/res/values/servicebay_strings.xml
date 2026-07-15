@@ -15,4 +15,10 @@
     <string name="sb_health_ok">healthy</string>
     <string name="sb_health_warn">warning</string>
     <string name="sb_health_fail">failure</string>
+
+    <string name="approvals_title">Freigaben</string>
+    <string name="approvals_loading">Lädt…</string>
+    <string name="approvals_empty">Keine offenen Freigaben.</string>
+    <string name="approvals_error">Konnte nicht geladen werden. ↻</string>
+    <string name="approvals_open_to_act">Zum Bestätigen öffnen →</string>
 </resources>

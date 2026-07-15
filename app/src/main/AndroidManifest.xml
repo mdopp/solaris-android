@@ -213,6 +213,13 @@
                 android:resource="@xml/energy_totals_widget_info" />
         </receiver>
 
+        <!-- In-app pending-approvals list (#43): read-only feed; rows open the PWA to act. -->
+        <activity
+            android:name=".ui.ApprovalsActivity"
+            android:exported="false"
+            android:label="@string/approvals_title"
+            android:theme="@style/Theme.Solaris" />
+
         <!-- ServiceBay overview widget (#42): home-summary from /napi/servicebay/home. -->
         <receiver
             android:name=".widget.SbOverviewWidgetProvider"
