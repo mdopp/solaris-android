@@ -73,4 +73,8 @@
     <string name="realtime_channel_desc">Hält die Verbindung für sofortige Widget-Aktualisierungen.</string>
     <string name="realtime_notif_title">Live-Updates aktiv</string>
     <string name="realtime_notif_text">Geräte-Widgets werden sofort aktualisiert.</string>
+    <string name="approval_channel_name">Freigaben</string>
+    <string name="approval_channel_desc">Meldung bei neuen ServiceBay-Freigaben.</string>
+    <string name="approval_notif_title">Neue Freigabe</string>
+    <string name="approval_notif_generic">Eine ServiceBay-Freigabe wartet.</string>
 </resources>

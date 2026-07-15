@@ -14,6 +14,7 @@ import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
+import cloud.dopp.solaris.ui.ApprovalsActivity
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import cloud.dopp.solaris.widget.ActiveDevicesWidgetProvider
 import cloud.dopp.solaris.widget.DeviceWidgetProvider
@@ -120,16 +121,22 @@ class RealtimeService : Service() {
         }
 
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
-            if (type != RealtimeProtocol.EVENT_CARD_STATE) return
             // A bad frame must never crash the service.
-            runCatching {
-                val ev = RealtimeProtocol.parseCardState(data) ?: return
-                val woke = DeviceWidgetProvider.wakeEntity(applicationContext, ev.entityId, ev.card)
-                // A state flip can change the active roster → nudge the overview widgets.
-                ActiveDevicesWidgetProvider.refreshAll(applicationContext)
-                events++
-                setStatus("Verbunden · Update ${nowTime()} (${events})")
-                Unit.also { _ -> woke }
+            when (type) {
+                RealtimeProtocol.EVENT_CARD_STATE -> runCatching {
+                    val ev = RealtimeProtocol.parseCardState(data) ?: return
+                    DeviceWidgetProvider.wakeEntity(applicationContext, ev.entityId, ev.card)
+                    // A state flip can change the active roster → nudge the overview widgets.
+                    ActiveDevicesWidgetProvider.refreshAll(applicationContext)
+                    events++
+                    setStatus("Verbunden · Update ${nowTime()} (${events})")
+                }
+                RealtimeProtocol.EVENT_SERVICEBAY -> runCatching {
+                    // A new ServiceBay approval (#43) → alert the admin. The verdict
+                    // itself happens in the PWA (needs the Authelia session).
+                    val ev = RealtimeProtocol.parseServicebay(data) ?: return
+                    postApprovalNotif(ev)
+                }
             }
         }
 
@@ -213,6 +220,48 @@ class RealtimeService : Service() {
             .build()
     }
 
+    /**
+     * Post a heads-up notification for a new ServiceBay approval (#43). Tapping it
+     * opens the in-app approvals list; the actual approve/reject happens in the PWA
+     * (Authelia session). Uses a separate DEFAULT-importance channel so it alerts,
+     * unlike the silent ongoing service notification. No-op without POST_NOTIFICATIONS
+     * (API 33+); never crashes the service.
+     */
+    private fun postApprovalNotif(ev: RealtimeProtocol.ApprovalEvent) {
+        ensureApprovalChannel()
+        val tap = PendingIntent.getActivity(
+            this, ev.id.hashCode(),
+            Intent(this, ApprovalsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val body = ev.summary.ifBlank { getString(R.string.approval_notif_generic) }
+        val notif = androidx.core.app.NotificationCompat.Builder(this, APPROVAL_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(getString(R.string.approval_notif_title))
+            .setContentText(body)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(tap)
+            .build()
+        runCatching {
+            getSystemService(NotificationManager::class.java)
+                ?.notify(APPROVAL_NOTIF_BASE + (ev.id.hashCode() and 0xffff), notif)
+        }
+    }
+
+    private fun ensureApprovalChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        if (nm.getNotificationChannel(APPROVAL_CHANNEL_ID) != null) return
+        val ch = NotificationChannel(
+            APPROVAL_CHANNEL_ID,
+            getString(R.string.approval_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply { description = getString(R.string.approval_channel_desc) }
+        nm.createNotificationChannel(ch)
+    }
+
     private fun startForegroundNotification() {
         val notif = buildNotif()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -259,6 +308,10 @@ class RealtimeService : Service() {
     companion object {
         private const val CHANNEL_ID = "solaris_realtime"
         private const val NOTIF_ID = 4801
+
+        // Separate DEFAULT-importance channel + id space for approval alerts (#43).
+        private const val APPROVAL_CHANNEL_ID = "solaris_approvals"
+        private const val APPROVAL_NOTIF_BASE = 4900
 
         /** Re-post the watch-set every ~20 min to refresh the server-side TTL (#48). */
         private const val WATCH_REPOST_MS = 20L * 60L * 1000L

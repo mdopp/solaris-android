@@ -53,6 +53,24 @@ class RealtimeProtocolTest {
     }
 
     @Test
+    fun parsesServicebayApprovalFrame() {
+        val ev = RealtimeProtocol.parseServicebay(
+            """{"id":"a13b382c","kind":"container_update","summary":"Update nginx?"}""",
+        )!!
+        assertEquals("a13b382c", ev.id)
+        assertEquals("container_update", ev.kind)
+        assertEquals("Update nginx?", ev.summary)
+    }
+
+    @Test
+    fun servicebayNullWhenNoId() {
+        assertNull(RealtimeProtocol.parseServicebay(null))
+        assertNull(RealtimeProtocol.parseServicebay(""))
+        assertNull(RealtimeProtocol.parseServicebay("not json"))
+        assertNull(RealtimeProtocol.parseServicebay("""{"summary":"no id"}"""))
+    }
+
+    @Test
     fun backoffGrowsExponentiallyThenCaps() {
         assertEquals(2_000L, RealtimeProtocol.backoffMillis(0))
         assertEquals(4_000L, RealtimeProtocol.backoffMillis(1))
