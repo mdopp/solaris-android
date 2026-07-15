@@ -79,9 +79,10 @@
     <string name="approval_notif_generic">Eine ServiceBay-Freigabe wartet.</string>
 
     <!-- Live-Updates: screen-off backstop poll interval control. -->
-    <string name="realtime_interval_label">Im Ruhemodus prüfen: alle %1$d Min</string>
-    <string name="realtime_interval_off">Im Ruhemodus prüfen: aus</string>
-    <string name="realtime_interval_title">Prüf-Intervall (Bildschirm aus)</string>
+    <string name="realtime_interval_label">Im Ruhemodus: alle %1$d Min</string>
+    <string name="realtime_interval_sec">Im Ruhemodus: alle %1$d Sek (bleibt live)</string>
+    <string name="realtime_interval_off">Im Ruhemodus: aus</string>
+    <string name="realtime_interval_title">Reaktion bei Bildschirm aus</string>
     <plurals name="approvals_pending">
         <item quantity="one">%d Freigabe wartet</item>
         <item quantity="other">%d Freigaben warten</item>

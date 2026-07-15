@@ -118,14 +118,24 @@ class RealtimeService : Service() {
     }
 
     private fun onScreenOff() {
-        // Drop the live stream; the backstop poll (if configured > 0) takes over.
+        val secs = ServerStore.pollSeconds(this)
+        if (secs in 1..59) {
+            // Sub-minute responsiveness is only real by keeping the SSE open — an
+            // alarm can't fire that fast in Doze. So < 1 min = stay live (more battery).
+            RealtimePoll.cancel(this)
+            if (source == null) connect() else setStatus("Live-Updates aktiv")
+            return
+        }
+        // 0 or ≥ 1 min: drop the live stream to save battery.
         runCatching { source?.cancel() }
         source = null
-        val minutes = ServerStore.pollMinutes(this)
-        setStatus(
-            if (minutes > 0) "Ruhemodus · prüft alle ${minutes} Min" else "Ruhemodus · Bildschirm aus",
-        )
-        RealtimePoll.schedule(this)
+        if (secs <= 0) {
+            RealtimePoll.cancel(this)
+            setStatus("Ruhemodus · Bildschirm aus")
+        } else {
+            setStatus("Ruhemodus · prüft alle ${secs / 60} Min")
+            RealtimePoll.schedule(this)
+        }
     }
 
     override fun onDestroy() {
@@ -160,7 +170,7 @@ class RealtimeService : Service() {
     private val listener = object : EventSourceListener() {
         override fun onOpen(eventSource: EventSource, response: Response) {
             attempt = 0 // healthy connection resets the backoff
-            setStatus("Verbunden · warte auf Ereignisse")
+            setStatus("Live-Updates aktiv")
             // Connection healthy → register the device-widget watch-set (#48
             // Option B, solarisbay#810) and keep re-posting to refresh its TTL.
             // Off-thread + best-effort; a failed post never affects the service.
@@ -176,7 +186,9 @@ class RealtimeService : Service() {
                     // A state flip can change the active roster → nudge the overview widgets.
                     ActiveDevicesWidgetProvider.refreshAll(applicationContext)
                     events++
-                    setStatus("Verbunden · Update ${nowTime()} (${events})")
+                    // Deliberately NO per-event notification update — the ongoing
+                    // notification stays calm ("Live-Updates aktiv"); constant re-posts
+                    // are unhealthy. State transitions still update it.
                 }
                 RealtimeProtocol.EVENT_SERVICEBAY -> runCatching {
                     // A new ServiceBay approval (#43) → alert the admin. The verdict
@@ -320,7 +332,13 @@ class RealtimeService : Service() {
     }
 
     /** Update the ongoing notification's text so the user (and we) can see live state. */
+    /**
+     * Update the ongoing notification — but only when the text actually CHANGES, so
+     * the notification isn't re-posted on every incoming event (that churn is what
+     * we want to avoid). Called on real state transitions, not per event.
+     */
     private fun setStatus(text: String) {
+        if (text == status) return
         status = text
         runCatching {
             getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, buildNotif())

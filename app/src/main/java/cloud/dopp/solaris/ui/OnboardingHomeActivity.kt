@@ -395,7 +395,14 @@ class OnboardingHomeActivity : AppCompatActivity() {
         promptBatteryExemption()
     }
 
-    /** Show the screen-off poll interval (only while Live-Updates is on). */
+    /** Human label for a screen-off interval in seconds (0=off, <60=sec, else min). */
+    private fun intervalLabel(seconds: Int): String = when {
+        seconds <= 0 -> getString(R.string.realtime_interval_off)
+        seconds < 60 -> getString(R.string.realtime_interval_sec, seconds)
+        else -> getString(R.string.realtime_interval_label, seconds / 60)
+    }
+
+    /** Show the screen-off responsiveness (only while Live-Updates is on). */
     private fun renderPollInterval() {
         val tv = findViewById<TextView>(R.id.realtime_interval)
         if (!ServerStore.realtimeEnabled(this)) {
@@ -403,23 +410,18 @@ class OnboardingHomeActivity : AppCompatActivity() {
             return
         }
         tv.visibility = View.VISIBLE
-        val m = ServerStore.pollMinutes(this)
-        tv.text = if (m > 0) getString(R.string.realtime_interval_label, m)
-        else getString(R.string.realtime_interval_off)
+        tv.text = intervalLabel(ServerStore.pollSeconds(this))
     }
 
-    /** Pick the screen-off backstop poll interval (0 = off). Applies next sleep. */
+    /** Pick the screen-off responsiveness (0=off; <60s stays live; ≥60s polls). */
     private fun pickPollInterval() {
-        val minutes = intArrayOf(0, 2, 4, 10, 30, 60)
-        val labels = minutes.map {
-            if (it == 0) getString(R.string.realtime_interval_off)
-            else getString(R.string.realtime_interval_label, it)
-        }.toTypedArray()
+        val seconds = intArrayOf(0, 1, 5, 10, 30, 60, 120, 240, 600, 1800, 3600)
+        val labels = seconds.map { intervalLabel(it) }.toTypedArray()
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(R.string.realtime_interval_title)
             .setItems(labels) { _, which ->
-                ServerStore.setPollMinutes(this, minutes[which])
-                // Re-evaluate now so a change while asleep/awake takes effect promptly.
+                ServerStore.setPollSeconds(this, seconds[which])
+                // Re-evaluate now so a change takes effect promptly (awake or asleep).
                 if (ServerStore.realtimeEnabled(this)) RealtimeService.start(this)
                 renderPollInterval()
             }

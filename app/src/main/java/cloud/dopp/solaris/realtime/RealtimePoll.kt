@@ -47,10 +47,10 @@ object RealtimePoll {
      */
     fun schedule(context: Context) {
         val ctx = context.applicationContext
-        val minutes = ServerStore.pollMinutes(ctx)
-        if (minutes <= 0) { cancel(ctx); return }
+        val seconds = ServerStore.pollSeconds(ctx)
+        if (seconds <= 0) { cancel(ctx); return }
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
-        val at = System.currentTimeMillis() + minutes * 60_000L
+        val at = System.currentTimeMillis() + seconds * 1000L
         runCatching { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, alarmPi(ctx)) }
     }
 
