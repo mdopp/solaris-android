@@ -59,9 +59,14 @@ class SbApiClient(private val ctx: Context) {
         )
     }
 
-    /** `GET /napi/servicebay/services` → the service list (empty on failure). */
-    fun listServices(): List<SbService> {
-        val arr = get("/services")?.optJSONArray("services") ?: return emptyList()
+    /**
+     * `GET /napi/servicebay/services` → the service list. Returns null on a request
+     * failure (so a widget keeps its last cache instead of blanking), an empty list
+     * only when the response genuinely has none.
+     */
+    fun listServices(): List<SbService>? {
+        val root = get("/services") ?: return null
+        val arr = root.optJSONArray("services") ?: return emptyList()
         return (0 until arr.length()).mapNotNull { i ->
             arr.optJSONObject(i)?.let {
                 SbService(

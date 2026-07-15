@@ -8,4 +8,11 @@
     <string name="sb_overview_approvals">Freigaben</string>
     <string name="sb_overview_updates">Updates</string>
     <string name="sb_overview_bad">%d ⚠</string>
+
+    <string name="sb_services_label">ServiceBay-Dienste</string>
+    <string name="sb_services_description">Dienst-Status auf einen Blick: healthy / warning / failure.</string>
+    <string name="sb_services_title">Dienste</string>
+    <string name="sb_health_ok">healthy</string>
+    <string name="sb_health_warn">warning</string>
+    <string name="sb_health_fail">failure</string>
 </resources>

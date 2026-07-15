@@ -226,6 +226,19 @@
                 android:resource="@xml/sb_overview_widget_info" />
         </receiver>
 
+        <!-- ServiceBay service-status summary widget (#44): healthy/warning/failure. -->
+        <receiver
+            android:name=".widget.SbServicesWidgetProvider"
+            android:exported="true"
+            android:label="@string/sb_services_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sb_services_widget_info" />
+        </receiver>
+
         <!-- Realtime SSE client (#48): embedded foreground service that wakes
              device widgets from card_state pushes. Opt-in, off by default. -->
         <service
