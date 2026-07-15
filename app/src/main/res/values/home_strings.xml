@@ -77,4 +77,13 @@
     <string name="approval_channel_desc">Meldung bei neuen ServiceBay-Freigaben.</string>
     <string name="approval_notif_title">Neue Freigabe</string>
     <string name="approval_notif_generic">Eine ServiceBay-Freigabe wartet.</string>
+
+    <!-- Live-Updates: screen-off backstop poll interval control. -->
+    <string name="realtime_interval_label">Im Ruhemodus prüfen: alle %1$d Min</string>
+    <string name="realtime_interval_off">Im Ruhemodus prüfen: aus</string>
+    <string name="realtime_interval_title">Prüf-Intervall (Bildschirm aus)</string>
+    <plurals name="approvals_pending">
+        <item quantity="one">%d Freigabe wartet</item>
+        <item quantity="other">%d Freigaben warten</item>
+    </plurals>
 </resources>

@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Screen-off backstop poll (#48): hold CPU briefly for the network check. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Voice/mic widget (#17): device speech-to-text capture. -->
@@ -252,6 +254,11 @@
             android:name=".realtime.RealtimeService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Screen-off backstop poll alarm target (#48). -->
+        <receiver
+            android:name=".realtime.RealtimeIdleReceiver"
+            android:exported="false" />
 
         <!-- Restart the realtime service after a reboot (only if opted-in). -->
         <receiver

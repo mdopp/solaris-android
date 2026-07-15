@@ -86,6 +86,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
             findViewById<Switch>(R.id.realtime_switch)
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
+            findViewById<TextView>(R.id.realtime_interval).setOnClickListener { pickPollInterval() }
             findViewById<TextView>(R.id.app_version).text =
                 getString(R.string.app_version_fmt, appVersionName())
             handleDeepLink(intent)
@@ -150,6 +151,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             // is used elsewhere so this programmatic set doesn't re-fire the toggle.
             findViewById<Switch>(R.id.realtime_switch).isChecked =
                 ServerStore.realtimeEnabled(this)
+            renderPollInterval()
         }
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays
@@ -367,6 +369,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             ServerStore.setRealtimeEnabled(this, false)
             RealtimeService.stop(this)
             RealtimeService.cancelRescue(this)
+            renderPollInterval()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -388,7 +391,40 @@ class OnboardingHomeActivity : AppCompatActivity() {
         RealtimeService.scheduleRescue(this)
         // Keep the switch visually in sync (a denied prompt can leave it toggled).
         runCatching { findViewById<Switch>(R.id.realtime_switch).isChecked = true }
+        renderPollInterval()
         promptBatteryExemption()
+    }
+
+    /** Show the screen-off poll interval (only while Live-Updates is on). */
+    private fun renderPollInterval() {
+        val tv = findViewById<TextView>(R.id.realtime_interval)
+        if (!ServerStore.realtimeEnabled(this)) {
+            tv.visibility = View.GONE
+            return
+        }
+        tv.visibility = View.VISIBLE
+        val m = ServerStore.pollMinutes(this)
+        tv.text = if (m > 0) getString(R.string.realtime_interval_label, m)
+        else getString(R.string.realtime_interval_off)
+    }
+
+    /** Pick the screen-off backstop poll interval (0 = off). Applies next sleep. */
+    private fun pickPollInterval() {
+        val minutes = intArrayOf(0, 2, 4, 10, 30, 60)
+        val labels = minutes.map {
+            if (it == 0) getString(R.string.realtime_interval_off)
+            else getString(R.string.realtime_interval_label, it)
+        }.toTypedArray()
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.realtime_interval_title)
+            .setItems(labels) { _, which ->
+                ServerStore.setPollMinutes(this, minutes[which])
+                // Re-evaluate now so a change while asleep/awake takes effect promptly.
+                if (ServerStore.realtimeEnabled(this)) RealtimeService.start(this)
+                renderPollInterval()
+            }
+            .setNegativeButton(R.string.home_pick_widget_cancel, null)
+            .show()
     }
 
     /**

@@ -13,6 +13,7 @@ object ServerStore {
     private const val KEY = "base_url"
     private const val KEY_PWA_HINT_DISMISSED = "pwa_hint_dismissed"
     private const val KEY_REALTIME = "realtime_enabled"
+    private const val KEY_POLL_MIN = "realtime_poll_minutes"
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -53,6 +54,16 @@ object ServerStore {
 
     fun setRealtimeEnabled(ctx: Context, enabled: Boolean) =
         p(ctx).edit().putBoolean(KEY_REALTIME, enabled).apply()
+
+    /**
+     * Screen-off backstop poll interval in minutes (#48). Default 4; 0 = disable the
+     * poll entirely (pure screen-on live, nothing while asleep). Clamped to a sane
+     * range so a bad value can't hammer or never fire.
+     */
+    fun pollMinutes(ctx: Context): Int = p(ctx).getInt(KEY_POLL_MIN, 4)
+
+    fun setPollMinutes(ctx: Context, minutes: Int) =
+        p(ctx).edit().putInt(KEY_POLL_MIN, minutes.coerceIn(0, 240)).apply()
 
     fun clear(ctx: Context) = p(ctx).edit().remove(KEY).apply()
 }

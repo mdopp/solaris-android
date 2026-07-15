@@ -233,6 +233,20 @@
                         android:textColor="@color/solaris_text_muted"
                         android:textSize="13sp"
                         android:lineSpacingExtra="2sp" />
+
+                    <!-- Screen-off backstop poll interval — tap to change (#48). -->
+                    <TextView
+                        android:id="@+id/realtime_interval"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/realtime_interval_off"
+                        android:textColor="@color/solaris_accent"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <Switch

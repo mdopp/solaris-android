@@ -5,10 +5,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.PowerManager
 import android.os.IBinder
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisConfig
@@ -65,26 +68,70 @@ class RealtimeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    // Screen-aware (#48): hold the live SSE only while the screen is on; when it's
+    // off, drop the connection (battery/Doze) and let the ~N-min backstop poll run.
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> onScreenOn()
+                Intent.ACTION_SCREEN_OFF -> onScreenOff()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         startForegroundNotification()
+        runCatching {
+            registerReceiver(
+                screenReceiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_ON)
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_USER_PRESENT)
+                },
+            )
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Re-assert foreground on every (re)start; then (re)connect if still eligible.
+        // Re-assert foreground on every (re)start; then act on the current screen
+        // state — live SSE if on, backstop poll if off.
         startForegroundNotification()
         if (!eligible()) {
             stopSelfClean()
             return START_NOT_STICKY
         }
         stopping.set(false)
-        connect()
+        if (isInteractive()) connect() else onScreenOff()
         return START_STICKY
+    }
+
+    private fun isInteractive(): Boolean =
+        getSystemService(PowerManager::class.java)?.isInteractive ?: true
+
+    private fun onScreenOn() {
+        RealtimePoll.cancel(this)
+        stopping.set(false)
+        setStatus("Bildschirm an · verbinde …")
+        connect()
+    }
+
+    private fun onScreenOff() {
+        // Drop the live stream; the backstop poll (if configured > 0) takes over.
+        runCatching { source?.cancel() }
+        source = null
+        val minutes = ServerStore.pollMinutes(this)
+        setStatus(
+            if (minutes > 0) "Ruhemodus · prüft alle ${minutes} Min" else "Ruhemodus · Bildschirm aus",
+        )
+        RealtimePoll.schedule(this)
     }
 
     override fun onDestroy() {
         stopping.set(true)
         handler.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(screenReceiver) }
         runCatching { source?.cancel() }
         source = null
         super.onDestroy()
@@ -197,6 +244,7 @@ class RealtimeService : Service() {
         handler.removeCallbacksAndMessages(null)
         runCatching { source?.cancel() }
         source = null
+        RealtimePoll.cancel(this)
         stopForegroundCompat()
         stopSelf()
     }
@@ -343,6 +391,7 @@ class RealtimeService : Service() {
 
         fun stop(context: Context) {
             val ctx = context.applicationContext
+            RealtimePoll.cancel(ctx)
             runCatching { ctx.stopService(Intent(ctx, RealtimeService::class.java)) }
         }
 
