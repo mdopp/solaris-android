@@ -262,6 +262,18 @@
             </intent-filter>
         </receiver>
 
+        <!-- UnifiedPush: the distributor broadcasts endpoint + encrypted push here (#push). -->
+        <receiver
+            android:name=".push.SolarisMessagingReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
+                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
+                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Share captured photos with the system camera app for ACTION_IMAGE_CAPTURE
              (#36). Authority mirrors the fileprovider used by FileProvider.getUriForFile. -->
         <provider

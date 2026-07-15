@@ -151,6 +151,13 @@ class DeviceWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_REFRESH = "cloud.dopp.solaris.widget.REFRESH"
 
+        /** Re-fetch every bound device widget (#push: a card_state push has no card). */
+        fun refreshAll(context: Context) {
+            val ids = AppWidgetManager.getInstance(context)
+                .getAppWidgetIds(ComponentName(context, DeviceWidgetProvider::class.java))
+            ids.forEach { requestRefresh(context, it) }
+        }
+
         /** Ask a bound instance to re-fetch and re-render (explicit self-broadcast). */
         fun requestRefresh(context: Context, appWidgetId: Int) {
             val i = Intent(context, DeviceWidgetProvider::class.java)

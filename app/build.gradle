@@ -60,8 +60,8 @@ android {
         // needs the AndroidKeyStore-backed master key from API 23.
         minSdkVersion 23
         targetSdkVersion 35
-        versionCode 56
-        versionName "2.16.0"
+        versionCode 57
+        versionName "2.17.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -245,6 +245,9 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp-sse:4.12.0'
     // Self-contained QR scanner for onboarding (no Google Play Services).
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+    // UnifiedPush connector (#push): true background push via a distributor
+    // (self-hosted ntfy etc.), no Google/FCM. The app decrypts the Web Push itself.
+    implementation 'org.unifiedpush.android:connector:2.5.0'
 
     // JVM tests (Robolectric — runs Android components on the JVM, no emulator/VM).
     testImplementation 'junit:junit:4.13.2'

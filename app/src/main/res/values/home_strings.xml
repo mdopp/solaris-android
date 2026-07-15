@@ -77,4 +77,7 @@
     <string name="approval_channel_desc">Meldung bei neuen ServiceBay-Freigaben.</string>
     <string name="approval_notif_title">Neue Freigabe</string>
     <string name="approval_notif_generic">Eine ServiceBay-Freigabe wartet.</string>
+    <string name="push_channel_name">Push-Benachrichtigungen</string>
+    <string name="push_channel_desc">Hintergrund-Meldungen (Freigaben, Erinnerungen) über UnifiedPush.</string>
+    <string name="push_no_distributor">Kein UnifiedPush-Distributor gefunden — installiere z.B. ntfy für Hintergrund-Push.</string>
 </resources>

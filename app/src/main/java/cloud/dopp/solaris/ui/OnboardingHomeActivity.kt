@@ -365,6 +365,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (!enabled) {
             ServerStore.setRealtimeEnabled(this, false)
             RealtimeService.stop(this)
+            cloud.dopp.solaris.push.PushController.disable(this)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -382,6 +383,12 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun enableRealtime() {
         ServerStore.setRealtimeEnabled(this, true)
         RealtimeService.start(this)
+        // Also register for true background push (#push) via a UnifiedPush
+        // distributor. The SSE covers foreground; the server pushes only when
+        // backgrounded. No distributor installed → hint the user (SSE still runs).
+        if (!cloud.dopp.solaris.push.PushController.enable(this)) {
+            android.widget.Toast.makeText(this, R.string.push_no_distributor, android.widget.Toast.LENGTH_LONG).show()
+        }
         // Keep the switch visually in sync (a denied prompt can leave it toggled).
         runCatching { findViewById<Switch>(R.id.realtime_switch).isChecked = true }
         promptBatteryExemption()
