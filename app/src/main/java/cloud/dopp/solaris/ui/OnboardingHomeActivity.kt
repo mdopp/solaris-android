@@ -347,6 +347,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun logout() {
         // Stop the realtime service and forget the opt-in — we're unpaired now (#48).
         RealtimeService.stop(this)
+        RealtimeService.cancelRescue(this)
         ServerStore.setRealtimeEnabled(this, false)
         TokenStore.clear(this)
         ServerStore.clear(this)
@@ -365,6 +366,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (!enabled) {
             ServerStore.setRealtimeEnabled(this, false)
             RealtimeService.stop(this)
+            RealtimeService.cancelRescue(this)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -382,6 +384,8 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun enableRealtime() {
         ServerStore.setRealtimeEnabled(this, true)
         RealtimeService.start(this)
+        // Periodic backstop: revive the service if an OEM kills it (#48).
+        RealtimeService.scheduleRescue(this)
         // Keep the switch visually in sync (a denied prompt can leave it toggled).
         runCatching { findViewById<Switch>(R.id.realtime_switch).isChecked = true }
         promptBatteryExemption()

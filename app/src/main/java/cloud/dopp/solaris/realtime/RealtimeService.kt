@@ -345,5 +345,36 @@ class RealtimeService : Service() {
             val ctx = context.applicationContext
             runCatching { ctx.stopService(Intent(ctx, RealtimeService::class.java)) }
         }
+
+        private const val RESCUE_WORK = "solaris_realtime_rescue"
+
+        /**
+         * Schedule the periodic rescue worker (#48) — a WorkManager backstop that
+         * revives the service after an OEM kill. Unique + KEEP so repeated calls are
+         * idempotent; survives reboots. Called when Live-Updates is enabled.
+         */
+        fun scheduleRescue(context: Context) {
+            val req = androidx.work.PeriodicWorkRequestBuilder<RealtimeRescueWorker>(
+                15, java.util.concurrent.TimeUnit.MINUTES,
+            ).setConstraints(
+                androidx.work.Constraints.Builder()
+                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                    .build(),
+            ).build()
+            runCatching {
+                androidx.work.WorkManager.getInstance(context.applicationContext)
+                    .enqueueUniquePeriodicWork(
+                        RESCUE_WORK, androidx.work.ExistingPeriodicWorkPolicy.KEEP, req,
+                    )
+            }
+        }
+
+        /** Cancel the rescue worker — called when Live-Updates is disabled. */
+        fun cancelRescue(context: Context) {
+            runCatching {
+                androidx.work.WorkManager.getInstance(context.applicationContext)
+                    .cancelUniqueWork(RESCUE_WORK)
+            }
+        }
     }
 }

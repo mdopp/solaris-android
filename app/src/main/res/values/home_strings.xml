@@ -68,7 +68,7 @@
 
     <!-- Live-Updates (#48): realtime SSE toggle + foreground-service notification. -->
     <string name="home_realtime_title">Live-Updates</string>
-    <string name="home_realtime_hint">Aktualisiert Geräte-Widgets sofort. Dauerhafte Benachrichtigung, etwas mehr Akku.</string>
+    <string name="home_realtime_hint">Direkte Verbindung zu Solaris: weckt Geräte-Widgets und zeigt Freigabe-Meldungen — auch im Hintergrund. Dauerhafte Benachrichtigung, etwas mehr Akku.</string>
     <string name="realtime_channel_name">Live-Updates</string>
     <string name="realtime_channel_desc">Hält die Verbindung für sofortige Widget-Aktualisierungen.</string>
     <string name="realtime_notif_title">Live-Updates aktiv</string>
