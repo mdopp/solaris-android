@@ -86,6 +86,8 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
             findViewById<Switch>(R.id.realtime_switch)
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
+            findViewById<TextView>(R.id.app_version).text =
+                getString(R.string.app_version_fmt, appVersionName())
             handleDeepLink(intent)
             render()
             // If Live-Updates is on and we're paired, make sure the service runs.

@@ -14,8 +14,31 @@ object RealtimeProtocol {
     /** The SSE event kind we act on; every other kind (chat/done/…) is ignored. */
     const val EVENT_CARD_STATE = "card_state"
 
+    /** ServiceBay approval event (companion-api.md): `data:{id,kind,summary}`. */
+    const val EVENT_SERVICEBAY = "servicebay"
+
     /** A parsed `card_state` frame: which entity, and its fresh card. */
     data class CardStateEvent(val entityId: String, val card: Card)
+
+    /** A parsed `servicebay` approval frame. */
+    data class ApprovalEvent(val id: String, val kind: String, val summary: String)
+
+    /**
+     * Parse a `servicebay` frame's `data` payload (`{"id","kind","summary"}`) into
+     * an [ApprovalEvent]. Returns null on malformed JSON or a missing `id` — the
+     * caller treats null as "nothing to notify", never a crash.
+     */
+    fun parseServicebay(data: String?): ApprovalEvent? {
+        if (data.isNullOrBlank()) return null
+        return try {
+            val o = JSONObject(data)
+            val id = o.optString("id")
+            if (id.isBlank()) return null
+            ApprovalEvent(id, o.optString("kind"), o.optString("summary"))
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     /**
      * Parse a `card_state` frame's `data` payload

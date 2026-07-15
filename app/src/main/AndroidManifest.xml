@@ -161,6 +161,15 @@
                 android:resource="@xml/camera_widget_info" />
         </receiver>
 
+        <!-- Native camera capture + upload screen (#36): opened by the camera
+             trigger widget; takes photos, optionally builds a PDF, uploads to /napi. -->
+        <activity
+            android:name=".ui.CameraCaptureActivity"
+            android:exported="false"
+            android:label="@string/camera_capture_title"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.Solaris" />
+
         <activity
             android:name=".widget.CameraWidgetConfigActivity"
             android:exported="true"
@@ -204,6 +213,39 @@
                 android:resource="@xml/energy_totals_widget_info" />
         </receiver>
 
+        <!-- In-app pending-approvals list (#43): read-only feed; rows open the PWA to act. -->
+        <activity
+            android:name=".ui.ApprovalsActivity"
+            android:exported="false"
+            android:label="@string/approvals_title"
+            android:theme="@style/Theme.Solaris" />
+
+        <!-- ServiceBay overview widget (#42): home-summary from /napi/servicebay/home. -->
+        <receiver
+            android:name=".widget.SbOverviewWidgetProvider"
+            android:exported="true"
+            android:label="@string/sb_overview_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sb_overview_widget_info" />
+        </receiver>
+
+        <!-- ServiceBay service-status summary widget (#44): healthy/warning/failure. -->
+        <receiver
+            android:name=".widget.SbServicesWidgetProvider"
+            android:exported="true"
+            android:label="@string/sb_services_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sb_services_widget_info" />
+        </receiver>
+
         <!-- Realtime SSE client (#48): embedded foreground service that wakes
              device widgets from card_state pushes. Opt-in, off by default. -->
         <service
@@ -219,6 +261,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Share captured photos with the system camera app for ACTION_IMAGE_CAPTURE
+             (#36). Authority mirrors the fileprovider used by FileProvider.getUriForFile. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
 
     </application>
 </manifest>
