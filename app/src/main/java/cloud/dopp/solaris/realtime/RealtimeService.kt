@@ -113,7 +113,7 @@ class RealtimeService : Service() {
     private fun onScreenOn() {
         RealtimePoll.cancel(this)
         stopping.set(false)
-        setStatus("Bildschirm an · verbinde …")
+        // No transient status flip — onOpen will settle it to "Live-Updates aktiv".
         connect()
     }
 
@@ -163,8 +163,18 @@ class RealtimeService : Service() {
             .header("Accept", "text/event-stream")
             .build()
         runCatching { source?.cancel() }
-        setStatus("Verbinde …")
+        // No "Verbinde …" flip here — a quick reconnect shouldn't disturb the calm
+        // "Live-Updates aktiv" notification. onOpen confirms; a sustained outage flags.
         source = EventSources.createFactory(client).newEventSource(req, listener)
+    }
+
+    /**
+     * Surface a connection problem on the ongoing notification — but only after a
+     * SUSTAINED outage (a few failed retries), so brief blips/reconnects don't
+     * disturb the otherwise-silent "active" state. When healthy nothing shows.
+     */
+    private fun flagDisconnect() {
+        if (attempt >= 2) setStatus("Keine Verbindung zu Solaris – neuer Versuch …")
     }
 
     private val listener = object : EventSourceListener() {
@@ -200,7 +210,7 @@ class RealtimeService : Service() {
         }
 
         override fun onClosed(eventSource: EventSource) {
-            setStatus("Getrennt — neuer Versuch …")
+            flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
 
@@ -219,8 +229,7 @@ class RealtimeService : Service() {
                     return
                 }
             }
-            val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
-            setStatus("Getrennt ($why) — neuer Versuch …")
+            flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
     }
@@ -270,9 +279,8 @@ class RealtimeService : Service() {
         )
         return androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.realtime_notif_title))
-            .setContentText(status) // diagnostic status (#48)
-            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(status))
+            .setContentTitle(getString(R.string.appName))
+            .setContentText(status)
             .setOngoing(true)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
             .setContentIntent(tap)
