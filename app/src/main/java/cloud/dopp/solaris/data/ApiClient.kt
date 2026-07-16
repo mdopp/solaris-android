@@ -369,6 +369,9 @@ class ApiClient(private val ctx: Context) {
             brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
             position = o.optInt("current_position", -1).takeIf { it in 0..100 },
             temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
+            // Server-forwarded HA `last_updated` (epoch-ms) — the ordering stamp for
+            // the staleness guard. Absent on legacy servers → null → guard inert.
+            updatedAtMs = o.optLong("updated_at_ms", -1L).takeIf { it >= 0 },
         )
 
         /**

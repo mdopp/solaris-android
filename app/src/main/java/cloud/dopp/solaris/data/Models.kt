@@ -17,6 +17,13 @@ data class Card(
     val brightness: Int? = null,   // 0-255 (light)
     val position: Int? = null,     // 0-100 (cover)
     val temperature: Double? = null, // climate current temperature
+    // Source-authoritative ordering stamp: the HA entity's `last_updated` in
+    // epoch-ms, forwarded by the server as `updated_at_ms`. Monotonic per entity
+    // (HA is the single authority), so it orders concurrent updates from any
+    // device correctly — unlike client wall-clock or SSE receive-time. Null when
+    // the server doesn't send it (legacy): the staleness guard then passes
+    // everything through unchanged. See [StateEpochGuard].
+    val updatedAtMs: Long? = null,
 ) {
     /** Best-effort "active" reading across the supported domains. */
     val isOn: Boolean
