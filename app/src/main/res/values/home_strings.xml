@@ -2,6 +2,10 @@
 <resources>
     <string name="app_version_placeholder">Version</string>
     <string name="app_version_fmt">Version %1$s</string>
+    <string name="diag_title">Diagnose</string>
+    <string name="diag_copy">Kopieren</string>
+    <string name="diag_clear">Leeren</string>
+    <string name="diag_copied">Kopiert</string>
     <string name="home_claim">Dein Zuhause, klar im Blick.</string>
     <string name="home_connect_hint">Verbinde dich mit deinem Solaris-Server.</string>
     <string name="qr_scan">QR-Code scannen</string>

@@ -87,8 +87,12 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Switch>(R.id.realtime_switch)
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
             findViewById<TextView>(R.id.realtime_interval).setOnClickListener { pickPollInterval() }
-            findViewById<TextView>(R.id.app_version).text =
-                getString(R.string.app_version_fmt, appVersionName())
+            findViewById<TextView>(R.id.app_version).apply {
+                text = getString(R.string.app_version_fmt, appVersionName())
+                setOnClickListener {
+                    startActivity(android.content.Intent(this@OnboardingHomeActivity, DiagnosticsActivity::class.java))
+                }
+            }
             handleDeepLink(intent)
             render()
             // If Live-Updates is on and we're paired, make sure the service runs.

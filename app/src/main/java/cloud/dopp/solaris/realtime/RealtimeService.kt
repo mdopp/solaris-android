@@ -81,7 +81,12 @@ class RealtimeService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForegroundNotification()
+        // If the platform refuses foreground (background start not allowed), bail
+        // cleanly rather than risk a did-not-start-in-time crash.
+        if (!startForegroundNotification()) {
+            stopSelf()
+            return
+        }
         runCatching {
             registerReceiver(
                 screenReceiver,
@@ -95,9 +100,12 @@ class RealtimeService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Re-assert foreground on every (re)start; then act on the current screen
-        // state — live SSE if on, backstop poll if off.
-        startForegroundNotification()
+        // Re-assert foreground on every (re)start; if the platform refuses (bg start
+        // on Android 12+ without exemption), stop cleanly — never crash.
+        if (!startForegroundNotification()) {
+            runCatching { stopSelf() }
+            return START_NOT_STICKY
+        }
         if (!eligible()) {
             stopSelfClean()
             return START_NOT_STICKY
@@ -113,6 +121,7 @@ class RealtimeService : Service() {
     private fun onScreenOn() {
         RealtimePoll.cancel(this)
         stopping.set(false)
+        RealtimeLog.add(this, "Bildschirm an")
         // No transient status flip — onOpen will settle it to "Live-Updates aktiv".
         connect()
     }
@@ -123,6 +132,7 @@ class RealtimeService : Service() {
             // Sub-minute responsiveness is only real by keeping the SSE open — an
             // alarm can't fire that fast in Doze. So < 1 min = stay live (more battery).
             RealtimePoll.cancel(this)
+            RealtimeLog.add(this, "Bildschirm aus · bleibt live (${secs}s)")
             if (source == null) connect() else setStatus("Live-Updates aktiv")
             return
         }
@@ -131,8 +141,10 @@ class RealtimeService : Service() {
         source = null
         if (secs <= 0) {
             RealtimePoll.cancel(this)
+            RealtimeLog.add(this, "Bildschirm aus · Ruhemodus (aus)")
             setStatus("Ruhemodus · Bildschirm aus")
         } else {
+            RealtimeLog.add(this, "Bildschirm aus · Poll alle ${secs / 60} Min")
             setStatus("Ruhemodus · prüft alle ${secs / 60} Min")
             RealtimePoll.schedule(this)
         }
@@ -181,6 +193,7 @@ class RealtimeService : Service() {
         override fun onOpen(eventSource: EventSource, response: Response) {
             attempt = 0 // healthy connection resets the backoff
             setStatus("Live-Updates aktiv")
+            RealtimeLog.add(applicationContext, "verbunden")
             // Connection healthy → register the device-widget watch-set (#48
             // Option B, solarisbay#810) and keep re-posting to refresh its TTL.
             // Off-thread + best-effort; a failed post never affects the service.
@@ -210,6 +223,7 @@ class RealtimeService : Service() {
         }
 
         override fun onClosed(eventSource: EventSource) {
+            RealtimeLog.add(applicationContext, "getrennt (Stream geschlossen)")
             flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
@@ -219,16 +233,20 @@ class RealtimeService : Service() {
                 401 -> {
                     // Token invalid/revoked — don't loop; stop until re-paired/re-enabled.
                     setStatus("Token abgelehnt (401)")
+                    RealtimeLog.add(applicationContext, "Token abgelehnt (401) — gestoppt")
                     stopSelfClean()
                     return
                 }
                 404 -> {
                     // Endpoint not deployed yet (solarisbay#806) — back off long, don't spam.
                     setStatus("Endpoint fehlt (404) — Server nicht bereit?")
+                    RealtimeLog.add(applicationContext, "Endpoint fehlt (404)")
                     scheduleReconnect(RealtimeProtocol.NOT_DEPLOYED_BACKOFF_MS)
                     return
                 }
             }
+            val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
+            RealtimeLog.add(applicationContext, "getrennt ($why)")
             flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
@@ -330,12 +348,25 @@ class RealtimeService : Service() {
         nm.createNotificationChannel(ch)
     }
 
-    private fun startForegroundNotification() {
-        val notif = buildNotif()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIF_ID, notif)
+    /**
+     * Go foreground. Returns false if the platform refuses — e.g.
+     * `ForegroundServiceStartNotAllowedException` when a background component
+     * (WorkManager rescue / idle-poll alarm) tries to (re)start the service on
+     * Android 12+ without an exemption, or an FGS-type/permission issue. MUST be
+     * caught: an unguarded throw here was crashing the app repeatedly ("keeps
+     * stopping"). On refusal the caller stops the service cleanly instead.
+     */
+    private fun startForegroundNotification(): Boolean {
+        return try {
+            val notif = buildNotif()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIF_ID, notif)
+            }
+            true
+        } catch (t: Throwable) {
+            false
         }
     }
 

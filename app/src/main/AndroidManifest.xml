@@ -215,6 +215,13 @@
                 android:resource="@xml/energy_totals_widget_info" />
         </receiver>
 
+        <!-- Diagnostics (#48): version + last crash + connection log. -->
+        <activity
+            android:name=".ui.DiagnosticsActivity"
+            android:exported="false"
+            android:label="@string/diag_title"
+            android:theme="@style/Theme.Solaris" />
+
         <!-- In-app pending-approvals list (#43): read-only feed; rows open the PWA to act. -->
         <activity
             android:name=".ui.ApprovalsActivity"

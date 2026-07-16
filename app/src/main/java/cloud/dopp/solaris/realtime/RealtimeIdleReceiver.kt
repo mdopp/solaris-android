@@ -22,9 +22,11 @@ class RealtimeIdleReceiver : BroadcastReceiver() {
         thread {
             try {
                 RealtimePoll.run(app)
+            } catch (t: Throwable) {
+                // A backstop poll must never crash the app.
             } finally {
                 runCatching { if (wl?.isHeld == true) wl.release() }
-                pending.finish()
+                runCatching { pending.finish() }
             }
         }
     }
