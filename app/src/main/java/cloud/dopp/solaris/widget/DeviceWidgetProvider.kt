@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.os.Bundle
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.Card
+import cloud.dopp.solaris.data.StateEpochGuard
 import kotlin.concurrent.thread
 
 /**
@@ -105,11 +106,17 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                         if (attempt < 3) try { Thread.sleep(1200) } catch (ie: InterruptedException) { break }
                     }
                 }
-                val load = if (card != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
+                // Order the fetched snapshot against any newer state already
+                // applied via the realtime push: a post-toggle re-fetch can return
+                // a state older than a card_state that landed meanwhile, so render
+                // the guard's winner (the fetched card if fresh, else the newer
+                // remembered one) — never a stale overwrite (multi-device race).
+                val resolved = card?.let { StateEpochGuard.resolve(it) }
+                val load = if (resolved != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
-                        context, appWidgetId, card,
+                        context, appWidgetId, resolved,
                         WidgetStore.name(context, appWidgetId), domain, tap, load,
                     ),
                 )
@@ -191,6 +198,10 @@ class DeviceWidgetProvider : AppWidgetProvider() {
          * the payload — no re-fetch. Returns the count updated.
          */
         fun wakeEntity(context: Context, entityId: String, card: Card): Int {
+            // Reject a stale/out-of-order push: if a newer state was already
+            // applied for this entity, resolve() returns that (a different object)
+            // and we skip the re-render that would flip the widget back (#race).
+            if (StateEpochGuard.resolve(card) !== card) return 0
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, DeviceWidgetProvider::class.java))
             var n = 0
