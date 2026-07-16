@@ -359,10 +359,14 @@ class RealtimeService : Service() {
     private fun startForegroundNotification(): Boolean {
         return try {
             val notif = buildNotif()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-            } else {
-                startForeground(NOTIF_ID, notif)
+            when {
+                // Android 14+ caps dataSync at ~6h/24h → use specialUse (no cap) for
+                // this long-lived push connection.
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                    startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                    startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                else -> startForeground(NOTIF_ID, notif)
             }
             true
         } catch (t: Throwable) {

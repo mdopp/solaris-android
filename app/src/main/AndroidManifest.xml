@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Realtime SSE foreground service (#48): live-updates opt-in. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14 caps the dataSync FGS type at ~6h/24h → use specialUse (no cap)
+         for the long-lived realtime push connection; dataSync kept for API 29–33. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -260,7 +263,11 @@
         <service
             android:name=".realtime.RealtimeService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse|dataSync">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Long-lived push/SSE connection to the user's own Solaris server for live widget + approval updates." />
+        </service>
 
         <!-- Screen-off backstop poll alarm target (#48). -->
         <receiver
