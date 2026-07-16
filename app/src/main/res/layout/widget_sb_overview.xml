@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_bg"
-    android:padding="14dp">
+    android:padding="10dp">
 
     <!-- Header: title + refresh. -->
     <LinearLayout
@@ -62,7 +62,7 @@
                 android:layout_height="wrap_content"
                 android:text="—"
                 android:textColor="@color/energy_supply"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -70,7 +70,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/sb_overview_services"
                 android:textColor="@color/solaris_text_muted"
-                android:textSize="12sp" />
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <TextView
                 android:id="@+id/sb_services_bad"
@@ -96,7 +98,7 @@
                 android:layout_height="wrap_content"
                 android:text="—"
                 android:textColor="@color/solaris_text"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -104,7 +106,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/sb_overview_approvals"
                 android:textColor="@color/solaris_text_muted"
-                android:textSize="12sp" />
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
 
         <!-- Updates. -->
@@ -121,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:text="—"
                 android:textColor="@color/solaris_text"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -129,7 +133,9 @@
                 android:layout_height="wrap_content"
                 android:text="@string/sb_overview_updates"
                 android:textColor="@color/solaris_text_muted"
-                android:textSize="12sp" />
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

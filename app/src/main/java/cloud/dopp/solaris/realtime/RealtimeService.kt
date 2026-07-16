@@ -5,10 +5,13 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.PowerManager
 import android.os.IBinder
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisConfig
@@ -65,26 +68,92 @@ class RealtimeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    // Screen-aware (#48): hold the live SSE only while the screen is on; when it's
+    // off, drop the connection (battery/Doze) and let the ~N-min backstop poll run.
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> onScreenOn()
+                Intent.ACTION_SCREEN_OFF -> onScreenOff()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
-        startForegroundNotification()
+        // If the platform refuses foreground (background start not allowed), bail
+        // cleanly rather than risk a did-not-start-in-time crash.
+        if (!startForegroundNotification()) {
+            stopSelf()
+            return
+        }
+        runCatching {
+            registerReceiver(
+                screenReceiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_ON)
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_USER_PRESENT)
+                },
+            )
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Re-assert foreground on every (re)start; then (re)connect if still eligible.
-        startForegroundNotification()
+        // Re-assert foreground on every (re)start; if the platform refuses (bg start
+        // on Android 12+ without exemption), stop cleanly — never crash.
+        if (!startForegroundNotification()) {
+            runCatching { stopSelf() }
+            return START_NOT_STICKY
+        }
         if (!eligible()) {
             stopSelfClean()
             return START_NOT_STICKY
         }
         stopping.set(false)
-        connect()
+        if (isInteractive()) connect() else onScreenOff()
         return START_STICKY
+    }
+
+    private fun isInteractive(): Boolean =
+        getSystemService(PowerManager::class.java)?.isInteractive ?: true
+
+    private fun onScreenOn() {
+        RealtimePoll.cancel(this)
+        stopping.set(false)
+        RealtimeLog.add(this, "Bildschirm an")
+        // No transient status flip — onOpen will settle it to "Live-Updates aktiv".
+        connect()
+    }
+
+    private fun onScreenOff() {
+        val secs = ServerStore.pollSeconds(this)
+        if (secs in 1..59) {
+            // Sub-minute responsiveness is only real by keeping the SSE open — an
+            // alarm can't fire that fast in Doze. So < 1 min = stay live (more battery).
+            RealtimePoll.cancel(this)
+            RealtimeLog.add(this, "Bildschirm aus · bleibt live (${secs}s)")
+            if (source == null) connect() else setStatus("Live-Updates aktiv")
+            return
+        }
+        // 0 or ≥ 1 min: drop the live stream to save battery.
+        runCatching { source?.cancel() }
+        source = null
+        if (secs <= 0) {
+            RealtimePoll.cancel(this)
+            RealtimeLog.add(this, "Bildschirm aus · Ruhemodus (aus)")
+            setStatus("Ruhemodus · Bildschirm aus")
+        } else {
+            RealtimeLog.add(this, "Bildschirm aus · Poll alle ${secs / 60} Min")
+            setStatus("Ruhemodus · prüft alle ${secs / 60} Min")
+            RealtimePoll.schedule(this)
+        }
     }
 
     override fun onDestroy() {
         stopping.set(true)
         handler.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(screenReceiver) }
         runCatching { source?.cancel() }
         source = null
         super.onDestroy()
@@ -106,14 +175,25 @@ class RealtimeService : Service() {
             .header("Accept", "text/event-stream")
             .build()
         runCatching { source?.cancel() }
-        setStatus("Verbinde …")
+        // No "Verbinde …" flip here — a quick reconnect shouldn't disturb the calm
+        // "Live-Updates aktiv" notification. onOpen confirms; a sustained outage flags.
         source = EventSources.createFactory(client).newEventSource(req, listener)
+    }
+
+    /**
+     * Surface a connection problem on the ongoing notification — but only after a
+     * SUSTAINED outage (a few failed retries), so brief blips/reconnects don't
+     * disturb the otherwise-silent "active" state. When healthy nothing shows.
+     */
+    private fun flagDisconnect() {
+        if (attempt >= 2) setStatus("Keine Verbindung zu Solaris – neuer Versuch …")
     }
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(eventSource: EventSource, response: Response) {
             attempt = 0 // healthy connection resets the backoff
-            setStatus("Verbunden · warte auf Ereignisse")
+            setStatus("Live-Updates aktiv")
+            RealtimeLog.add(applicationContext, "verbunden")
             // Connection healthy → register the device-widget watch-set (#48
             // Option B, solarisbay#810) and keep re-posting to refresh its TTL.
             // Off-thread + best-effort; a failed post never affects the service.
@@ -129,7 +209,9 @@ class RealtimeService : Service() {
                     // A state flip can change the active roster → nudge the overview widgets.
                     ActiveDevicesWidgetProvider.refreshAll(applicationContext)
                     events++
-                    setStatus("Verbunden · Update ${nowTime()} (${events})")
+                    // Deliberately NO per-event notification update — the ongoing
+                    // notification stays calm ("Live-Updates aktiv"); constant re-posts
+                    // are unhealthy. State transitions still update it.
                 }
                 RealtimeProtocol.EVENT_SERVICEBAY -> runCatching {
                     // A new ServiceBay approval (#43) → alert the admin. The verdict
@@ -141,7 +223,8 @@ class RealtimeService : Service() {
         }
 
         override fun onClosed(eventSource: EventSource) {
-            setStatus("Getrennt — neuer Versuch …")
+            RealtimeLog.add(applicationContext, "getrennt (Stream geschlossen)")
+            flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
 
@@ -150,18 +233,21 @@ class RealtimeService : Service() {
                 401 -> {
                     // Token invalid/revoked — don't loop; stop until re-paired/re-enabled.
                     setStatus("Token abgelehnt (401)")
+                    RealtimeLog.add(applicationContext, "Token abgelehnt (401) — gestoppt")
                     stopSelfClean()
                     return
                 }
                 404 -> {
                     // Endpoint not deployed yet (solarisbay#806) — back off long, don't spam.
                     setStatus("Endpoint fehlt (404) — Server nicht bereit?")
+                    RealtimeLog.add(applicationContext, "Endpoint fehlt (404)")
                     scheduleReconnect(RealtimeProtocol.NOT_DEPLOYED_BACKOFF_MS)
                     return
                 }
             }
             val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
-            setStatus("Getrennt ($why) — neuer Versuch …")
+            RealtimeLog.add(applicationContext, "getrennt ($why)")
+            flagDisconnect()
             scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
         }
     }
@@ -197,6 +283,7 @@ class RealtimeService : Service() {
         handler.removeCallbacksAndMessages(null)
         runCatching { source?.cancel() }
         source = null
+        RealtimePoll.cancel(this)
         stopForegroundCompat()
         stopSelf()
     }
@@ -210,9 +297,8 @@ class RealtimeService : Service() {
         )
         return androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.realtime_notif_title))
-            .setContentText(status) // diagnostic status (#48)
-            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(status))
+            .setContentTitle(getString(R.string.appName))
+            .setContentText(status)
             .setOngoing(true)
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
             .setContentIntent(tap)
@@ -262,17 +348,40 @@ class RealtimeService : Service() {
         nm.createNotificationChannel(ch)
     }
 
-    private fun startForegroundNotification() {
-        val notif = buildNotif()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIF_ID, notif)
+    /**
+     * Go foreground. Returns false if the platform refuses — e.g.
+     * `ForegroundServiceStartNotAllowedException` when a background component
+     * (WorkManager rescue / idle-poll alarm) tries to (re)start the service on
+     * Android 12+ without an exemption, or an FGS-type/permission issue. MUST be
+     * caught: an unguarded throw here was crashing the app repeatedly ("keeps
+     * stopping"). On refusal the caller stops the service cleanly instead.
+     */
+    private fun startForegroundNotification(): Boolean {
+        return try {
+            val notif = buildNotif()
+            when {
+                // Android 14+ caps dataSync at ~6h/24h → use specialUse (no cap) for
+                // this long-lived push connection.
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->
+                    startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                    startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                else -> startForeground(NOTIF_ID, notif)
+            }
+            true
+        } catch (t: Throwable) {
+            false
         }
     }
 
     /** Update the ongoing notification's text so the user (and we) can see live state. */
+    /**
+     * Update the ongoing notification — but only when the text actually CHANGES, so
+     * the notification isn't re-posted on every incoming event (that churn is what
+     * we want to avoid). Called on real state transitions, not per event.
+     */
     private fun setStatus(text: String) {
+        if (text == status) return
         status = text
         runCatching {
             getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, buildNotif())
@@ -343,7 +452,39 @@ class RealtimeService : Service() {
 
         fun stop(context: Context) {
             val ctx = context.applicationContext
+            RealtimePoll.cancel(ctx)
             runCatching { ctx.stopService(Intent(ctx, RealtimeService::class.java)) }
+        }
+
+        private const val RESCUE_WORK = "solaris_realtime_rescue"
+
+        /**
+         * Schedule the periodic rescue worker (#48) — a WorkManager backstop that
+         * revives the service after an OEM kill. Unique + KEEP so repeated calls are
+         * idempotent; survives reboots. Called when Live-Updates is enabled.
+         */
+        fun scheduleRescue(context: Context) {
+            val req = androidx.work.PeriodicWorkRequestBuilder<RealtimeRescueWorker>(
+                15, java.util.concurrent.TimeUnit.MINUTES,
+            ).setConstraints(
+                androidx.work.Constraints.Builder()
+                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                    .build(),
+            ).build()
+            runCatching {
+                androidx.work.WorkManager.getInstance(context.applicationContext)
+                    .enqueueUniquePeriodicWork(
+                        RESCUE_WORK, androidx.work.ExistingPeriodicWorkPolicy.KEEP, req,
+                    )
+            }
+        }
+
+        /** Cancel the rescue worker — called when Live-Updates is disabled. */
+        fun cancelRescue(context: Context) {
+            runCatching {
+                androidx.work.WorkManager.getInstance(context.applicationContext)
+                    .cancelUniqueWork(RESCUE_WORK)
+            }
         }
     }
 }

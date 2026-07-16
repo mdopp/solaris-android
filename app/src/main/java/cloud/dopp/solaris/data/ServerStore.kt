@@ -13,6 +13,7 @@ object ServerStore {
     private const val KEY = "base_url"
     private const val KEY_PWA_HINT_DISMISSED = "pwa_hint_dismissed"
     private const val KEY_REALTIME = "realtime_enabled"
+    private const val KEY_POLL_SEC = "realtime_poll_seconds"
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -53,6 +54,17 @@ object ServerStore {
 
     fun setRealtimeEnabled(ctx: Context, enabled: Boolean) =
         p(ctx).edit().putBoolean(KEY_REALTIME, enabled).apply()
+
+    /**
+     * Screen-off responsiveness in **seconds** (#48). Default 240 (4 min). 0 = off
+     * (screen-on live only, nothing while asleep). < 60 = keep the live SSE open even
+     * when the screen is off (real second-level updates, more battery); ≥ 60 = drop
+     * the SSE and run a backstop poll at this interval (battery saving). Clamped.
+     */
+    fun pollSeconds(ctx: Context): Int = p(ctx).getInt(KEY_POLL_SEC, 240)
+
+    fun setPollSeconds(ctx: Context, seconds: Int) =
+        p(ctx).edit().putInt(KEY_POLL_SEC, seconds.coerceIn(0, 24 * 60 * 60)).apply()
 
     fun clear(ctx: Context) = p(ctx).edit().remove(KEY).apply()
 }

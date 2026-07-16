@@ -86,8 +86,13 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
             findViewById<Switch>(R.id.realtime_switch)
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
-            findViewById<TextView>(R.id.app_version).text =
-                getString(R.string.app_version_fmt, appVersionName())
+            findViewById<TextView>(R.id.realtime_interval).setOnClickListener { pickPollInterval() }
+            findViewById<TextView>(R.id.app_version).apply {
+                text = getString(R.string.app_version_fmt, appVersionName())
+                setOnClickListener {
+                    startActivity(android.content.Intent(this@OnboardingHomeActivity, DiagnosticsActivity::class.java))
+                }
+            }
             handleDeepLink(intent)
             render()
             // If Live-Updates is on and we're paired, make sure the service runs.
@@ -150,6 +155,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             // is used elsewhere so this programmatic set doesn't re-fire the toggle.
             findViewById<Switch>(R.id.realtime_switch).isChecked =
                 ServerStore.realtimeEnabled(this)
+            renderPollInterval()
         }
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays
@@ -347,6 +353,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun logout() {
         // Stop the realtime service and forget the opt-in — we're unpaired now (#48).
         RealtimeService.stop(this)
+        RealtimeService.cancelRescue(this)
         ServerStore.setRealtimeEnabled(this, false)
         TokenStore.clear(this)
         ServerStore.clear(this)
@@ -365,6 +372,8 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (!enabled) {
             ServerStore.setRealtimeEnabled(this, false)
             RealtimeService.stop(this)
+            RealtimeService.cancelRescue(this)
+            renderPollInterval()
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -382,9 +391,46 @@ class OnboardingHomeActivity : AppCompatActivity() {
     private fun enableRealtime() {
         ServerStore.setRealtimeEnabled(this, true)
         RealtimeService.start(this)
+        // Periodic backstop: revive the service if an OEM kills it (#48).
+        RealtimeService.scheduleRescue(this)
         // Keep the switch visually in sync (a denied prompt can leave it toggled).
         runCatching { findViewById<Switch>(R.id.realtime_switch).isChecked = true }
+        renderPollInterval()
         promptBatteryExemption()
+    }
+
+    /** Human label for a screen-off interval in seconds (0=off, <60=sec, else min). */
+    private fun intervalLabel(seconds: Int): String = when {
+        seconds <= 0 -> getString(R.string.realtime_interval_off)
+        seconds < 60 -> getString(R.string.realtime_interval_sec, seconds)
+        else -> getString(R.string.realtime_interval_label, seconds / 60)
+    }
+
+    /** Show the screen-off responsiveness (only while Live-Updates is on). */
+    private fun renderPollInterval() {
+        val tv = findViewById<TextView>(R.id.realtime_interval)
+        if (!ServerStore.realtimeEnabled(this)) {
+            tv.visibility = View.GONE
+            return
+        }
+        tv.visibility = View.VISIBLE
+        tv.text = intervalLabel(ServerStore.pollSeconds(this))
+    }
+
+    /** Pick the screen-off responsiveness (0=off; <60s stays live; ≥60s polls). */
+    private fun pickPollInterval() {
+        val seconds = intArrayOf(0, 1, 5, 10, 30, 60, 120, 240, 600, 1800, 3600)
+        val labels = seconds.map { intervalLabel(it) }.toTypedArray()
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.realtime_interval_title)
+            .setItems(labels) { _, which ->
+                ServerStore.setPollSeconds(this, seconds[which])
+                // Re-evaluate now so a change takes effect promptly (awake or asleep).
+                if (ServerStore.realtimeEnabled(this)) RealtimeService.start(this)
+                renderPollInterval()
+            }
+            .setNegativeButton(R.string.home_pick_widget_cancel, null)
+            .show()
     }
 
     /**
