@@ -123,6 +123,28 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
+        <!-- Convert to greyscale before upload — smaller file, better document
+             contrast. Does not lower LLM token cost (that's pixel-based). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_md"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/camera_capture_bw"
+                style="@style/Text.Solaris.Body" />
+
+            <Switch
+                android:id="@+id/cap_bw"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/cap_upload"
             android:layout_width="match_parent"
