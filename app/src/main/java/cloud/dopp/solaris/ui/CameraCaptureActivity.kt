@@ -6,6 +6,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
@@ -24,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.exifinterface.media.ExifInterface
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.ServerStore
@@ -51,6 +56,7 @@ class CameraCaptureActivity : AppCompatActivity() {
     private lateinit var statusView: TextView
     private lateinit var filenameField: EditText
     private lateinit var pdfSwitch: Switch
+    private lateinit var bwSwitch: Switch
     private lateinit var uploadBtn: Button
     private lateinit var clearBtn: Button
     private lateinit var takeBtn: Button
@@ -88,6 +94,7 @@ class CameraCaptureActivity : AppCompatActivity() {
         statusView = findViewById(R.id.cap_status)
         filenameField = findViewById(R.id.cap_filename)
         pdfSwitch = findViewById(R.id.cap_pdf)
+        bwSwitch = findViewById(R.id.cap_bw)
         uploadBtn = findViewById(R.id.cap_upload)
         clearBtn = findViewById(R.id.cap_clear)
         takeBtn = findViewById(R.id.cap_take)
@@ -96,9 +103,11 @@ class CameraCaptureActivity : AppCompatActivity() {
         galleryRow = findViewById(R.id.cap_gallery_row)
 
         // Prefill the filename with a sortable date/time stamp; the user edits the
-        // suffix. e.g. "2026-07-14_1830_".
-        filenameField.setText(SimpleDateFormat("yyyy-MM-dd_HHmm_", Locale.GERMANY).format(Date()))
-        filenameField.setSelection(filenameField.text.length)
+        // suffix. e.g. "2026-07-14_183045_".
+        resetFilename()
+
+        // PDF is the default upload format (#67) — most captures are documents.
+        pdfSwitch.isChecked = true
 
         takeBtn.setOnClickListener { onTake() }
         clearBtn.setOnClickListener { clearPages() }
@@ -110,6 +119,16 @@ class CameraCaptureActivity : AppCompatActivity() {
         // the first shot. Only on the first create, so returning from a capture or
         // rotating doesn't re-launch it.
         if (savedInstanceState == null && pages.isEmpty()) onTake()
+    }
+
+    /** Fresh sortable date/time prefix, seconds-precision so each upload is unique. */
+    private fun datePrefix(): String =
+        SimpleDateFormat("yyyy-MM-dd_HHmmss_", Locale.GERMANY).format(Date())
+
+    /** Reset the filename field to a fresh timestamp, cursor at the end (#67). */
+    private fun resetFilename() {
+        filenameField.setText(datePrefix())
+        filenameField.setSelection(filenameField.text.length)
     }
 
     private fun onTake() {
@@ -198,7 +217,9 @@ class CameraCaptureActivity : AppCompatActivity() {
         val longer = maxOf(bounds.outWidth, bounds.outHeight)
         var sample = 1
         while (longer > 0 && longer / (sample * 2) >= 300) sample *= 2
-        return BitmapFactory.decodeFile(f.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
+        val bmp = BitmapFactory.decodeFile(f.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
+            ?: return null
+        return applyExifRotation(f, bmp)
     }
 
     private fun onUpload() {
@@ -208,10 +229,9 @@ class CameraCaptureActivity : AppCompatActivity() {
             toast(getString(R.string.camera_capture_not_paired))
             return
         }
-        val base = sanitize(filenameField.text.toString().ifBlank {
-            SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.GERMANY).format(Date())
-        })
+        val base = sanitize(filenameField.text.toString().ifBlank { datePrefix() })
         val asPdf = pdfSwitch.isChecked
+        val mono = bwSwitch.isChecked
         setBusy(true)
         statusView.text = getString(R.string.camera_capture_uploading)
 
@@ -219,15 +239,15 @@ class CameraCaptureActivity : AppCompatActivity() {
             val api = ApiClient(applicationContext)
             val result: Int = try {
                 if (asPdf) {
-                    val pdf = buildPdf(pages)
+                    val pdf = buildPdf(pages, mono)
                     api.uploadFile(pdf, "$base.pdf", "application/pdf")
                 } else if (pages.size == 1) {
-                    api.uploadFile(readScaledJpeg(pages[0]), "$base.jpg", "image/jpeg")
+                    api.uploadFile(readScaledJpeg(pages[0], mono), "$base.jpg", "image/jpeg")
                 } else {
                     // Upload each page as its own image; overall result = worst code.
                     var worst = 200
                     pages.forEachIndexed { i, f ->
-                        val code = api.uploadFile(readScaledJpeg(f), "${base}-${i + 1}.jpg", "image/jpeg")
+                        val code = api.uploadFile(readScaledJpeg(f, mono), "${base}-${i + 1}.jpg", "image/jpeg")
                         if (!(code in 200..299)) worst = code
                     }
                     worst
@@ -246,6 +266,8 @@ class CameraCaptureActivity : AppCompatActivity() {
                 statusView.text = getString(R.string.camera_capture_done)
                 toast(getString(R.string.camera_capture_done))
                 clearPages()
+                // Fresh name for the next document so the old one isn't reused (#67).
+                resetFilename()
             }
             code == 404 -> statusView.text = getString(R.string.camera_capture_no_endpoint)
             code == 401 || code == 403 -> statusView.text = getString(R.string.camera_capture_auth)
@@ -260,8 +282,8 @@ class CameraCaptureActivity : AppCompatActivity() {
     }
 
     /** Decode [f] downsampled so its longer edge is ≤ [maxEdge], re-encoded as JPEG. */
-    private fun readScaledJpeg(f: File): ByteArray {
-        val bmp = decodeScaled(f) ?: return f.readBytes()
+    private fun readScaledJpeg(f: File, mono: Boolean): ByteArray {
+        val bmp = decodeScaled(f)?.let { if (mono) toGrayscale(it) else it } ?: return f.readBytes()
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.JPEG, 85, out)
         bmp.recycle()
@@ -269,11 +291,12 @@ class CameraCaptureActivity : AppCompatActivity() {
     }
 
     /** Assemble the captured pages into one multi-page PDF (one page per image). */
-    private fun buildPdf(files: List<File>): ByteArray {
+    private fun buildPdf(files: List<File>, mono: Boolean): ByteArray {
         val doc = PdfDocument()
         try {
             files.forEachIndexed { i, f ->
-                val bmp = decodeScaled(f) ?: return@forEachIndexed
+                val bmp = decodeScaled(f)?.let { if (mono) toGrayscale(it) else it }
+                    ?: return@forEachIndexed
                 val info = PdfDocument.PageInfo.Builder(bmp.width, bmp.height, i + 1).create()
                 val page = doc.startPage(info)
                 page.canvas.drawColor(Color.WHITE)
@@ -296,7 +319,52 @@ class CameraCaptureActivity : AppCompatActivity() {
         var sample = 1
         while (longer > 0 && longer / (sample * 2) >= maxEdge) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeFile(f.absolutePath, opts)
+        val bmp = BitmapFactory.decodeFile(f.absolutePath, opts) ?: return null
+        return applyExifRotation(f, bmp)
+    }
+
+    /**
+     * Rotate/flip [bmp] to match the JPEG's EXIF orientation tag (#67). The camera
+     * often stores a landscape sensor frame with an orientation flag rather than
+     * rotating the pixels; [BitmapFactory] ignores that flag, so documents land
+     * sideways in the PDF/JPEG unless we apply it here.
+     */
+    private fun applyExifRotation(f: File, bmp: Bitmap): Bitmap {
+        val orientation = try {
+            ExifInterface(f.absolutePath)
+                .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } catch (e: Exception) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+        val m = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> m.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { m.postRotate(90f); m.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { m.postRotate(270f); m.postScale(-1f, 1f) }
+            else -> return bmp
+        }
+        return try {
+            val rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+            if (rotated != bmp) bmp.recycle()
+            rotated
+        } catch (e: OutOfMemoryError) {
+            bmp
+        }
+    }
+
+    /** Desaturate [bmp] to greyscale — smaller upload, better document contrast. */
+    private fun toGrayscale(bmp: Bitmap): Bitmap {
+        val gray = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
+        val paint = Paint().apply {
+            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        }
+        Canvas(gray).drawBitmap(bmp, 0f, 0f, paint)
+        bmp.recycle()
+        return gray
     }
 
     /** Keep it filesystem-safe: letters/digits/_-. only; collapse the rest to '_'. */
