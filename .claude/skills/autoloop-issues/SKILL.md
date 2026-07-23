@@ -45,12 +45,28 @@ Create from `work-queue-template.json` (same dir) if absent. Key fields:
 - `device_test[]` — **the human's on-device worklist**: `{issue, pr, apk, what_to_check, since}` — a merged unit whose behaviour only the phone can confirm. This replaces solarisbay's box `/verify`.
 - `verify_state` — `{sha, status:"owed"|"verifying"|"green"|"red", detail, since}`. "verify" here = build + tests + signed APK. `owed`→`verifying`→`green`|`red`.
 - `blocked[]` / `upstream_waits[]` — parked work; `upstream_waits[]` = `{issue, cross_repo_issue, reason, since}` for a local issue blocked on an unmerged **solarisbay/servicebay** ticket the planner filed (cross-repo = ticket only — see project memory). Re-checked each run.
-- `completed[]`, `release_warnings[]`, `notes[]`.
+- `completed[]`, `notes[]` — **bounded caches, not ledgers.** The durable record of
+  shipped work is GitHub (closed issues + merged PRs) + git history; these keep only a
+  short rolling window for the loop's own context. `completed[]` = the last released
+  batch only; `notes[]` = the last ~15 run-scoped entries, dropping any whose subject
+  issue is closed. Re-read in full every stage, so never let them grow.
+  `release_warnings[]` — cleared on release.
 
 **Label mirror (one-way).** The file is source of truth; mirror to GitHub labels
 so a human sees the same worklist: `blocked[]`→`autoloop:blocked`,
 `needs_refinement[]`→`autoloop:needs-refinement`, `device_test[]`→`autoloop:device-test`.
 Derived from the file every run, never the reverse.
+
+**State hygiene (bounded queue — keep it token-cheap).** Every stage re-reads the queue
+in full, so its size is a per-tick token cost. The queue is an orchestration *cache*, not
+a ledger — the durable record already lives in GitHub (issues, labels, merged PRs) + git
+history. At preflight (single writer) prune: `completed[]` → last released batch only;
+`notes[]` → cap ~15, drop notes whose issue is closed; `release_warnings[]` → clear on
+release; never embed the schema or `_comment` prose in the live file (they live in
+`work-queue-template.json`). This is *why* it's a local file and not a GitHub artifact:
+it holds rich in-flight state (clustering, the batch branch, the verify state-machine)
+that GitHub issues can't model without many API calls and two-way-sync races — the durable
+parts are projected to labels one-way and otherwise left to GitHub, so the file stays small.
 
 ## Batch economy — the prime directive (ENFORCED)
 The expensive tail — full test suite, CI, a signed release build — runs **once
@@ -71,7 +87,7 @@ Everything else — grouping, building, compile/test gates, signing — runs wit
 ## Step 0 — Preflight (every firing)
 1. Read `CLAUDE.md` + user memory (`.claude/projects/-workspace-solaris-android/memory/MEMORY.md`). Honour: German replies, Conventional Commits, NEVER commit the keystore, cross-repo=ticket-only.
 2. Ensure the toolchain env (per session — see memory `toolchain-not-preprovisioned`): `JAVA_HOME=~/.bubblewrap/jdk/jdk-17.0.11+9`, `ANDROID_HOME=~/.bubblewrap/android_sdk`, `PATH` incl. `~/.npm-global/bin`. `git config --global --add safe.directory /workspace/solaris-android`.
-3. Read the queue; fold any `.claude/state/verify-result.json` into `verify_state`; reconcile labels.
+3. Read the queue; fold any `.claude/state/verify-result.json` into `verify_state`; reconcile labels; **prune bounded state** (see *State hygiene* above — trim `completed[]`/`notes[]`, drop closed-issue notes) so the file stays token-cheap.
 4. Decide the ONE stage to dispatch this firing (below) and spawn it as a fresh Agent. Re-read the queue after it returns.
 
 ## Dispatch order (one per firing)

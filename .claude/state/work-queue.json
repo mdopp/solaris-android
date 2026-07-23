@@ -1,11 +1,12 @@
 {
-  "_comment": "Shared work queue for the solaris-android autoloop. Single source of truth between Planner/Builder/Verify. Labels are mirrored FROM this file, never the reverse.",
   "repo": "mdopp/solaris-android",
   "queue": [
     {
       "id": "u_crash",
       "kind": "issue",
-      "issues": [49],
+      "issues": [
+        49
+      ],
       "theme": "Crash-Fix: NPE auf BroadcastReceiver$PendingResult.finish()",
       "region": "app/src/main/java/cloud/dopp/solaris/widget/DeviceWidgetProvider.kt",
       "scope": "DeviceWidgetProvider.refresh() ruft goAsync() und im finally pending.finish(). Auf 2.11.0/Pixel 10/Android 16 crasht refresh$lambda (der thread{}-Block) mit NPE, weil pending == null ist.",
@@ -18,7 +19,10 @@
     {
       "id": "u_dopp",
       "kind": "cluster",
-      "issues": [52, 53],
+      "issues": [
+        52,
+        53
+      ],
       "theme": "Multi-Tenant/Cleanup: alle toten chat.dopp.cloud-Reste raus",
       "region": "app/src/main/java/cloud/dopp/solaris/onboarding/OnboardingHomeActivity.kt, app/build.gradle, app/src/main/res/values/strings.xml, twa-manifest.json, SolarisConfig",
       "scope": "#52: OnboardingHomeActivity.kt (~Z.128) befuellt urlField mit ServerStore.baseUrl ?: SolarisConfig.DEFAULT_SERVER_HINT (=https://chat.dopp.cloud). #53: tote TWA-dopp.cloud-Referenzen in build.gradle (hostName, webManifestUrl/launchUrl/assetStatements/providerAuthority/enableNotification resValues), strings.xml (assetStatements-String), twa-manifest.json (host/iconUrl/maskableIconUrl/webManifestUrl).",
@@ -31,7 +35,10 @@
     {
       "id": "u_widgets",
       "kind": "cluster",
-      "issues": [54, 55],
+      "issues": [
+        54,
+        55
+      ],
       "theme": "Widget-Design-Pass: Ausloeser-Kacheln vereinheitlichen + Geraete-Widget-Flaws",
       "region": "app/src/main/res/layout/widget_camera.xml, widget_voice.xml, widget_device_wide.xml, widget_device_tiny.xml, app/src/main/res/drawable/ (tile_accent_circle aus voice_mic_circle), WidgetRender (wireControls)",
       "scope": "#54: Kamera- und Sprechen-Kacheln auf EIN Muster (docs/DESIGN.md 'Ausloeser-Kacheln'): gefuellter Solaris-Akzent-Kreis #3B82F6 mit weissem Glyph, 52dp, zentriert; einzeiliges bold-Label (Text.Solaris.Tile, maxLines=1); gemeinsames Kreis-Drawable (tile_accent_circle aus voice_mic_circle verallgemeinert) + gemeinsames Kachel-Layout. widget_camera.xml: Icon-Farbe #7E9CFF->Akzent, 'Kamera oeffnen'-Zeile entfernen. widget_voice.xml angleichen. #55: (1) widget_device_wide.xml w_cover_up/stop/down + Licht -/+ von festen 50dp auf layout_width=0dp+layout_weight=1 (kein Clip); (2) widget_device_tiny.xml: bei TINY Domaenen-Icon w_icon (z.B. ic_light) statt w_name zeigen; (3) WidgetRender/wireControls: Cover am Anschlag ausgrauen — position>=99 => Hoch(▲) gedaempft+inert, position<=1 => Runter(▼) gedaempft+inert (Tint gedaempft + PendingIntent weglassen bzw. setBoolean setEnabled false).",
@@ -178,40 +185,6 @@
   ],
   "completed": [
     {
-      "issue": 10,
-      "pr": 12,
-      "note": "Closed by planner. Widget polish delivered (type icons + state color, gradient/border card bg, previewLayout placeholders, per-leg magnitude bars). Further energy-look refinement folded into #16.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u1",
-      "issues": [
-        15,
-        16
-      ],
-      "pr": 18,
-      "note": "Solaris design pass — app UI theme + three energy widgets (Jetzt/Verlauf/Gesamt). Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u2",
-      "issues": [
-        13
-      ],
-      "pr": 18,
-      "note": "Adaptive app icon on ServiceBay blue #3B82F6 with white Solaris mark. Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    },
-    {
-      "id": "u3",
-      "issues": [
-        14
-      ],
-      "pr": 18,
-      "note": "Staged crash-reporter dialog + prefilled GitHub-issue report. Sealed in batch/design-pass; device_test owed.",
-      "since": "2026-07-12"
-    },
-    {
       "note": "Builder: #27 + #28 + #25 built on batch/design-pass (PR #18), bumped to 2.9.0/versionCode 26. #27 (confirmed PWA deep-links, solarisbay#769): PwaLauncher.Routes.ENERGY = /#/p/energy; new Routes.device(entityId) = /#/p/device/<id>. DeviceWidgetProvider name/body onBodyTap now opens Routes.device(boundEntityId); ActiveDevicesRemoteViewsService per-row fill-in opens Routes.device(entity_id) (ROOT fallback if blank). Energy widgets keep Routes.ENERGY. PwaLauncherUrlTest updated + 2 device-route cases. #28 (collective endpoint, solarisbay#773): ApiClient.listActive() replaced N+1 threadpool fan-out with ONE GET /napi/portal/active, parsed via internal parseActive() (tolerant id|entity_id, wrapped/bare array, name/room/domain/state -> Card), sorted domain->name, capped 40; ActiveCache stale-then-fresh unchanged; empty/error -> empty list. New ApiClientActiveTest (Robolectric). Removed the ACTIVE_POOL/FANOUT constants + Executors/Callable imports. #25 (small energy polish): reworked widget_energy_small.xml (horizontal: left accent rail widget_pill.xml + tinted bolt icon, all-caps label, 26sp colored value, muted direction subtitle e_sub); EnergyRender.buildSmall via new small() helper sets value/sub/accent/icon tint (Bezug/Einspeisung/Verbrauch, koppeln/laden/keine-Daten states). RemoteViews-safe, larger grid unchanged. Gate GREEN: testDebugUnitTest + assembleDebug. device_test owed (#27 tap lands on exact PWA view; #28 faster single-request active list; #25 small 'Jetzt' fills its space). Not resealed/merged; pushed to PR #18.",
       "since": "2026-07-12"
     }
@@ -221,75 +194,6 @@
     "v2.8.0 debug-APK only this session (keystore password user-held); signed release + Play = human-gated (#3)."
   ],
   "notes": [
-    {
-      "note": "#11 = multi-tenant CONCEPT/umbrella epic (largely executed by the standalone refactor in PR #12). Tracking-only — NOT queued as buildable.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#3 = Play Console upload — human-gated release work, cannot run headlessly. Not queued; leave open as human task.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Latest build v2.8.0 (versionCode 16) on batch/design-pass (PR #18, base feat/standalone-widgets-app). No CI on that base — local gate is the gate. solarisbay#762 (widget /napi/ endpoints) CLOSED — widget data is live.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Device-feedback fixes #19 (Picker: Raum-Gruppierung + Suche + Statusbar-Inset), #20 (wide/flat Widget-Controls via neue 'wide'-Variante + sizeTier-Helper/JVM-Test), #21 (In-App-Logo = Solaris-Figur + Claim) built on batch/design-pass, updating open PR #18. Gate green (assembleDebug + testDebugUnitTest incl. WidgetSizeTierTest). device_test still owed (siehe device_test[] #19/#20/#21). Not resealed/versioned this session.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#22 (Widget-Layout-Dichte-Pass) built on batch/design-pass (PR #18). small/medium/wide-Layouts überarbeitet: Steuertasten volle Breite via layout_weight + größere Tap-Ziele (~52dp), prominenter Zustand (fett, 22sp im medium) + dickerer full-width Balken, medium spreizt Header/State/Controls vertikal (weighted middle) statt oben-links-Cluster; neue Switch-Toggle-Zeile (w_switch_controls) in medium/wide, in WidgetRender.wireControls verdrahtet (OP_TOGGLE); Nicht-steuerbare Domains kollabieren die Control-Row. Gate green (assembleDebug + testDebugUnitTest). device_test owed — User lädt sideload zur Bestätigung.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#28 (aktive-Geräte-Übersichtswidget) + #29 (48h-Verlauf in der Geräte-Widget-Großansicht) built on batch/design-pass (PR #18), auf 2.8.3/versionCode 19 gebumpt. #28: neuer ActiveDevicesWidgetProvider + ActiveDevicesRender + widget_active_small/large.xml + active_devices_widget_info.xml + Manifest-Receiver; ApiClient.listActive() (reuse addable + per-Entity state, gekappt 40) — SME/Datenlücke: es gibt keinen dedizierten /napi-Endpoint für aktive Geräte/Batch-States, das Widget macht N+1 Reads; falls das im Betrieb träge/teuer ist, solarisbay-Ticket für /napi/portal/active bzw. Batch-States anlegen (nicht erfunden). #29: WidgetRender.Tier.LARGE + widget_device_large.xml (medium-Controls + 48h-Sparkline via ChartRenderer.sparkline/getEntityHistory), DeviceWidgetProvider holt History nur für LARGE. Gate green: assembleDebug + testDebugUnitTest (neu: ActiveDevicesRenderTest, erweitert: WidgetSizeTierTest LARGE/showsChart). device_test owed (#28/#29). Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#26+#27 (Energie-Widgets) + #32 (Load-Fail-Härtung) + #31 (1-Feld-Geräte-Widget) built on batch/design-pass (PR #18), auf 2.8.4/versionCode 20 gebumpt. #26/#27-energy: Refresh-Button (ic_refresh) in allen drei Energie-Widget-Headern (Gesamt/Verlauf/Jetzt-Flow, inkl. widget_energy_small vertical mini-card top-right) + refreshPending self-broadcast je Provider (reqCode appWidgetId+730000), Body-Tap → PwaLauncher.Routes.ENERGY statt App-Launch; EnergyRender.build/buildSmall/buildGrid bekamen onRefresh-Param. #32: neues WidgetFallback + widget_error.xml ('konnte nicht laden', Tap=Retry-Refresh); alle Provider-Update/Thread-Bodies (device, active-devices, alle Energie) fangen jetzt Throwable → sauberer Fallback statt uncaught throw; ChartRenderer.MAX_EDGE=640 kappt sparkline+multiLine-Bitmap-Kanten (RemoteViews-Transaktionslimit); DeviceWidgetProvider fängt orphaned/entityId-null sauber ab. #31: neuer WidgetRender.Tier.TINY (minW<110 && minH<110) + widget_device_tiny.xml — Name statt Icon (2 Zeilen), EIN primärer Toggle (Cover ▲/▼ nach Zustand via OP_COVER_OPEN/CLOSE, light/switch OP_TOGGLE mit ◍/○), Zustand als full-width Bottom-Bar (level). Gate green: assembleDebug + testDebugUnitTest (WidgetSizeTierTest erweitert um TINY-Grenzen). device_test owed (#26-energy/#27-energy/#31/#32) — User lädt 2.8.4 sideload zur Bestätigung. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Logic tests added for #19/#27/#32 on batch/design-pass (PR #18): extracted DeviceSearch.filter/matches (data/DeviceSearch.kt, name+room case-insensitive, Locale.GERMANY umlaut) out of WidgetConfigActivity.applyFilter; extracted PwaLauncher.url(base,path) (seam-collapsing join) out of PwaLauncher.open; both refactors behavior-preserving. New JVM tests: DeviceSearchTest (7, pure JUnit), PwaLauncherUrlTest (5, pure JUnit), WidgetFallbackTest (3, Robolectric sdk34 — show() never throws for bogus id/null tap). Gate green: testDebugUnitTest + assembleDebug. No version bump (test-only + behavior-preserving), stays 2.8.4/versionCode 20.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#33 + #28-improve built on batch/design-pass (PR #18), auf 2.8.6/versionCode 22 gebumpt. #33 (Licht/Schalter-Tap-Modell): WidgetRender.togglesOnBodyTap(domain) (pure, light/switch=true) — fuer Licht/Schalter schaltet die zentrale Flaeche (w_icon+w_state, bzw. w_root im small) direkt via OP_TOGGLE, der Name (w_name) oeffnet die PWA; Cover/Sensoren unveraendert (Body-Tap=PWA, Control-Buttons steuern); TINY schon per Einzel-Toggle korrekt. #28-improve: (a) SPEED — ApiClient.listActive() parallelisiert die per-Entity getCard-Reads ueber einen bounded FixedThreadPool(8) via invokeAll(12s-Ceiling), jeder Read timeout-/exception-guarded (war sequentielles N+1 ~10s); Server-Collective-Endpoint = solarisbay#773 (im Code-Kommentar referenziert). (b) ROWS — ActiveDevicesRender.rowsToShow(minH,count) rechnet die passenden Zeilen aus OPTION_APPWIDGET_MIN_HEIGHT statt hartem MAX_ROWS=6; Slot-Ceiling auf 12 erhoeht (widget_active_large.xml Rows 6-11 ergaenzt, alle RemoteViews-safe, kein plain View), '+N weitere' nur bei echtem Overflow; large() nimmt minH, Provider reicht es durch. Neue/erweiterte JVM-Tests: WidgetSizeTierTest.togglesOnBodyTap, ActiveDevicesRenderTest.rowsToShow. Gate green: testDebugUnitTest + assembleDebug. device_test owed (#33 + #28): Licht/Schalter-Widget antippen = an/aus (Name=PWA); Aktive-Geraete-Widget spuerbar schneller + fuellt hohe Groesse ohne frueh abzuschneiden, kleines rendert. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "Builder: #28 großes Aktive-Geräte-Widget auf scrollbare ListView-Collection umgebaut (ActiveDevicesRemoteViewsService + item_active_row + Instant-Cache in WidgetStore/ActiveCache). Gate GRÜN (testDebugUnitTest inkl. ActiveCacheTest + assembleDebug). Version 2.8.9/vc25. Push → PR #18. Serverseitiger Speed-Fix bleibt solarisbay#773.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#30 (Kamera-Snapshot-Widget) built on batch/design-pass (PR #18), auf 2.9.1/versionCode 27 gebumpt. Neuer CameraWidgetProvider (goAsync+thread: sofort 'lädt …'-Scaffold, dann Snapshot-Fetch → setImageViewBitmap oder 'kein Bild'; Refresh-Icon self-broadcast reqCode appWidgetId+400000; Body/Image-Tap → PwaLauncher.Routes.device(entityId) #769 best-effort; try/catch→WidgetFallback #32) + widget_camera.xml (FrameLayout: full-bleed ImageView centerCrop + Header-Scrim mit Name+ic_refresh + Placeholder-TextView, RemoteViews-safe, kein plain <View>) + camera_widget_info.xml (resizable, 2x2, configure, previewLayout=widget_camera, updatePeriodMillis 1800000) + ic_camera.xml + Manifest-Receiver+Config-Activity. ApiClient.getCameraSnapshot(entityId): GET /napi/portal/camera/<id>/snapshot (solarisbay#770, Bearer via bestehendem authed()), Bytes→BitmapFactory, Downscale auf CAMERA_MAX_EDGE_PX=640 via pure sampleSize()-Helper (JVM-getestet: CameraSampleSizeTest). Config = eigene CameraWidgetConfigActivity (Klon von WidgetConfigActivity), Picker filtert listAddable() auf domain=='camera'. LIST-ENDPOINT-GAP: /napi/portal/start/addable ist auf steuerbare Aktoren scoped — falls Kameras dort NICHT auftauchen, zeigt der Picker 'Keine Kameras gefunden.'; dann bräuchte es einen dedizierten Kamera-Listen-Endpoint (solarisbay-Follow-up, NICHT erfunden). Gate GRÜN: testDebugUnitTest + assembleDebug. device_test owed (#30): Widget hinzufügen → Kamera wählen → aktuelles Bild erscheint, Refresh zieht neuen Frame, Tap öffnet Live-Ansicht. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#17 (Sprach-/Mikro-Widget) built on batch/design-pass (PR #18), auf 2.9.2/versionCode 28 gebumpt. Neuer VoiceWidgetProvider (statisches 1x1-Mikro-Widget, kein Config/Poll; Body+Mic-Tap → PendingIntent reqCode appWidgetId+500000 in VoiceTrampolineActivity; try/catch→WidgetFallback #32) + widget_voice.xml (LinearLayout: ic_mic in accent-Kreis voice_mic_circle + Label 'Sprechen', RemoteViews-safe, kein plain <View>) + voice_widget_info.xml (small/resizable, targetCell 1x1, previewLayout, updatePeriodMillis 0) + ic_mic.xml Vektor + Manifest-Receiver. VoiceTrampolineActivity (transparent, exported=false, excludeFromRecents): sichert RECORD_AUDIO (requestPermissions; bei Denial German Toast voice_perm_denied + finish), startet RecognizerIntent.ACTION_RECOGNIZE_SPEECH (FREE_FORM, de-DE, EXTRA_PROMPT 'Sprich mit Solaris …'); onActivityResult nimmt Top-RESULTS_RECOGNITION → bei non-blank PwaLauncher.open(Routes.ask(text)) (Custom Tab auf ServerStore.baseUrl + /#/?ask=<urlencoded>, Server-Contract solarisbay#766 shipped), leer/cancel → still finish; kein Recognizer → Toast voice_no_recognizer. PwaLauncher.Routes.ask(text)=/#/?ask=+URLEncoder.encode(UTF-8) (pure, JVM-getestet: Spaces→+, Umlaute %C3.., '?'→%3F, join mit baseUrl). Manifest: uses-permission RECORD_AUDIO + uses-feature microphone(false); <queries> für android.speech.RecognitionService + RECOGNIZE_SPEECH (Android 11+ Sichtbarkeit). Gate GRÜN: testDebugUnitTest (PwaLauncherUrlTest +4 ask-Fälle) + assembleDebug. device_test owed (#17): Widget hinzufügen → Mikro tippen → Mikro-Freigabe → sprechen → Household-Chat öffnet sich mit abgeschickter Nachricht + Antwort. Kein Emulator/Mikro hier — Struktur/Permissions/Manifest verifiziert, User device-testet. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#28 Device-Feedback-Refinement auf batch/design-pass (PR #18), auf 2.9.3/versionCode 29 gebumpt. Zwei konkrete Fixes: (1) LIST-SCHWELLE gesenkt — ActiveDevicesRender.sizeTier: minH 180→110, minW 180→160, damit ein ~2-Zellen-hohes / volle-Breite-Widget (4x2 / full-width-3-tall) sofort die scrollbare Liste (widget_active_large/ListView) zeigt statt nur der Zahl; Provider wählt Tier weiter über OPTION_APPWIDGET_MIN_HEIGHT/WIDTH. (2) KOMPAKT-TIER = GRUPPIERTE ZUSAMMENFASSUNG statt einer Gesamtzahl — neuer pure Helper ActiveSummary.byType(active): List<Group{domain,count,label}>, gruppiert nach Domain, sortiert most-populous-first (Ties alphabetisch nach domain), deutscher Verb pro Gruppe (light/switch/…='an', cover='offen', climate='aktiv'). widget_active_small.xml um bounded Chip-Reihe erweitert (5 Slots je ImageView[DeviceIcons.forDomain]+TextView 'N verb' + '+N'-Overflow av_chip_more), alle RemoteViews-safe (LinearLayout/ImageView/TextView, kein plain <View>); av_sub entfernt, av_count in Header verschoben. renderChips füllt/versteckt Slots per setViewVisibility. Reuse: ActiveCache + /napi/portal/active-Pfad unverändert (kein Regress). Neue/angepasste JVM-Tests: ActiveSummaryTest (5: empty, counts-per-domain, most-populous-order, deutsche Verben, Tie-Bruch) + ActiveDevicesRenderTest tier-Grenzen aktualisiert (160x110=LARGE, 300x60=SMALL). Gate GRÜN: testDebugUnitTest + assembleDebug. device_test owed (#28): 4x2/full-width-3-tall zeigt scrollbare Liste; 1-2 Zellen hoch zeigt Icon+Anzahl-Chips je Typ (z. B. 💡 3 an · 🪟 2 offen · 🔌 1 an) mit +N-Overflow. Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#34 + #35 + #11(step2) built on batch/design-pass (PR #18), auf 2.9.4/versionCode 30 gebumpt. #34 (Widget-Picker fuer ALLE Typen): OnboardingHomeActivity.addWidget zeigt jetzt einen gestylten AlertDialog-Chooser (item_widget_type.xml: Typ-Icon accent + deutscher Name, Solaris-Dark) statt nur Geraet; Auswahl → requestPinAppWidget(ComponentName(provider)). Provider/Label/Icon in reiner, JVM-getesteter Tabelle WidgetTypes.ALL (Geraet, Energie Jetzt/Verlauf/Gesamt, Aktive Geraete, Kamera, Sprache). Weiter guarded via isRequestPinAppWidgetSupported → sonst deutscher Toast home_add_widget_manual ('Widget ueber den Homescreen-Editor hinzufuegen'). Geraete-/Kamera-Config-Flow unveraendert (Config oeffnet nach Pinning). Neuer Test WidgetTypesTest (Tabelle deckt alle 7 Provider, Geraet zuerst, Label+Icon gesetzt, keine Dubletten). #35 (schoeneres ic_device): ic_device.xml als sauberer Solaris-Control-Panel-Glyph (Screen + Status-Dot + Slider) neu gezeichnet — single tintable path, 24dp-Viewport wie ic_light/ic_cover/ic_switch, Accent-Tint bleibt (Picker/Widget-Header/Chooser). #11 (Onboarding step2 'PWA installieren'): connected_section bekam eine dezente, ueberspringbare Card (card_solaris) mit Titel 'Solaris-App installieren' + Hint 'Fuer Chat & Benachrichtigungen — im Browser oeffnen und Zum Startbildschirm hinzufuegen' + Ghost-Button 'Im Browser oeffnen' → PwaLauncher.open(Routes.ROOT) (Custom Tab/VIEW → beforeinstallprompt). Vier fokussierte Commits (feat(ui) #35, #34, #11 + chore(release)). Gate GRUEN: testDebugUnitTest (inkl. WidgetTypesTest) + assembleDebug. Kein Emulator hier — UI nicht gerendert; device_test owed (#34: aus App laesst sich jeder Widget-Typ anheften; #35: Geraete-Icon wertig; #11: Install-Card oeffnet PWA im Browser). Nicht neu geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#36 + #25 + #38 + #11-dismiss built on batch/design-pass (PR #18), auf 2.9.5/versionCode 31 gebumpt. #36 (Kamera-Widget = Ausloeser-Kachel): CameraWidgetProvider komplett auf statische Trigger-Kachel umgebaut — KEIN Snapshot-Fetch/getCameraSnapshot mehr, kein 'laedt …'-Haenger; widget_camera.xml neu als LinearLayout (ic_camera-Icon + gebundener Kameraname + dezenter Hint 'Kamera oeffnen', RemoteViews-safe, kein plain <View>), Tap → neue PwaLauncher.Routes.camera(entityId)='/#/p/camera/<id>' (solarisbay#782 Platzhalter) bzw. Picker wenn unbound. ApiClient.getCameraSnapshot bleibt (kuenftige optionale Vorschau), treibt aber nicht mehr den Widget-State. CameraWidgetConfigActivity.pick ruft jetzt onUpdate statt entferntem requestRefresh. Strings: camera_open_hint neu, camera_loading/camera_no_image entfernt. Tests: PwaLauncherUrlTest +3 camera-Faelle. #25 (Energie 'Jetzt' 1x1 = Netz-Bilanz): EnergyStyle.gridBalanceLabel(watts) pure ('→ in' bei Bezug w>=0 / '← out' bei Einspeisung w<0), farbcodiert via colorFor('grid',w) (Bezug rot/Einspeisung gruen); EnergyRender.buildSmall zeigt bei tight space nur Netz-Bilanz, EnergyRender.showPv(minW,minH) (minH>=110||minW>=140) blendet bei etwas mehr Platz PV-Zeile ein (widget_energy_small.xml e_pv, default gone); large=volles Fluss-Grid unveraendert. Tests: EnergyLogicTest +3 (gridBalanceLabel in/out/dash, showPv-Tiers). #38 (Sperr-Indikator sensible Geraete): ic_lock.xml Vektor + Lock-Badge (w_lock, top-corner, gone default) in allen Device-Tiers (tiny/small/wide/medium/large) + av_item_lock in item_active_row; pure isSensitiveDevice(domain,deviceClass) (data/Models.kt, cover+garage/door/gate) mirrort Card.isSensitiveCover, WidgetRender.isSensitive nutzt Card wenn da sonst WidgetStore.deviceClass; ActiveDevicesRemoteViewsService zeigt Badge bei card.isSensitiveCover. Test: WidgetSizeTierTest +1 (isSensitiveDevice-Matrix). #11-dismiss: activity_home install-PWA-Card (install_pwa_card) bekam ✕ (install_pwa_dismiss, string home_install_pwa_dismiss 'Ausblenden'); ServerStore.dismissPwaHint/isPwaHintDismissed (pwa_hint_dismissed prefs), OnboardingHomeActivity.render versteckt Card wenn dismissed. Vier fokussierte Commits (fix(widget) #36, feat(widget) #25, feat(widget) #38, feat(ui) #11) + chore(release). Gate GRUEN: testDebugUnitTest + assembleDebug. Kein Emulator — UI nicht gerendert; device_test owed (#36: Kamera-Widget-Tap oeffnet PWA-Kameraansicht ohne 'laedt'-Haenger; #25: Energie 1x1 zeigt → in/← out + Watt farbig, etwas groesser + PV; #38: Garage/Tuer-Widget traegt Schloss-Badge; #11: Ausblenden versteckt Install-Card dauerhaft). Nicht geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#37 (Design-Pass App-Home-Screen) built on batch/design-pass (PR #18), auf 2.9.7/versionCode 33 gebumpt. activity_home.xml wertiger umgebaut, ALLE gebundenen IDs erhalten (qr_scan_btn, server_url, connect_btn, connect_section, connected_section, status, add_widget_btn, install_pwa_btn/-_card/-_dismiss, open_btn, logout_btn): (1) HERO — Wordmark Solar[figure]s groesser (34→38sp), kurze ServiceBay-blaue Akzent-Unterstreichung, mehr Luft (marginTop 56dp) + Claim. (2) STATUS-KARTE — Label uppercase/gespreizt + neue Ampel: farbiger Status-Punkt (neues Drawable status_dot.xml, oval solid energy_supply) neben dem Server-Host; Punkt wird in render() gruen getintet (nur sichtbar wenn verbunden). (3) ACTION-HIERARCHIE — 'Widget hinzufuegen' bleibt gefuellter Accent-Primary; 'Solaris oeffnen'/'Abmelden' Ghost, klar untergeordnet; Install-PWA-Card (mit ✕-Dismiss) bleibt. (4) NEU 'Deine Widgets'-Teaser-Card (widgets_teaser_card, neue IDs) mit Titel+Hint + 5 Icon-Chips (Gerät/Energie/aktiv/Kamera/Sprache, neues Drawable chip_solaris.xml, accent-getintet). Konsistente Radien/Paddings/Zeilenabstaende. Kotlin nur minimal: status_dot-Tint in render(). Neue Strings home_status_connected, home_widgets_teaser_title/-_hint. Gate GRUEN: assembleDebug + testDebugUnitTest. Kein Emulator hier — Layout kohaerent, User macht Screenshot-Review + Iteration. Zwei Commits (feat(ui) #37 + chore(release) 2.9.7). Gepusht → PR #18. Nicht geseal't/gemerged.",
-      "since": "2026-07-12"
-    },
-    {
-      "note": "#29 Nachschärfung (Device-Verlauf) auf batch/design-pass (PR #18), auf 2.9.8/versionCode 34 gebumpt. (1) Verlauf jetzt auch bei MEDIUM (showsChart = MEDIUM|LARGE), Chart-Bitmap kleiner (480x120 vs 560x200), <=640px-Cap gewahrt. (2) An/Aus-Zeitleiste fuer binaere Geraete: ChartRenderer.onOffTimeline + stateIsOn (state->bool). getEntityStateHistory liefert rohe state-Strings (on/off/open/closed) -> Timeline CLIENT-SEITIG ableitbar, KEINE Server-Aenderung noetig. (3) Kein Verlauf -> Flaeche eingeklappt (chart+hint GONE), kein leerer Block. Gate GRUEN (testDebugUnitTest+assembleDebug). JVM-Tests: ChartHistoryTest (stateIsOn, Timeline-Bucketing/Clamp), showsChart-Test angepasst.",
-      "ts": "2026-07-12",
-      "stage": "builder"
-    },
     {
       "note": "#29 REVERTED — der User hat das 48h-Verlaufs-Feature im GERAETE-Widget abgelehnt. Entfernt auf batch/design-pass (PR #18), auf 2.9.9/versionCode 35 gebumpt. WidgetRender: Tier.LARGE + sizeTier-LARGE-Zweig + showsChart() + renderChart/showChart/collapseChart entfernt; build() ohne history/stateHistory-Params; Controls-Sichtbarkeit MEDIUM|WIDE. widget_device_large.xml geloescht; w_chart/w_chart_hint aus widget_device_medium.xml entfernt. DeviceWidgetProvider holt keine Geraete-History mehr (getEntityHistory/getEntityStateHistory-Aufrufe entfernt). Hohe Geraete-Widgets -> MEDIUM (Controls + State, KEIN Chart). WidgetSizeTierTest: LARGE/showsChart-Faelle entfernt (bigBoxIsMedium neu). BEWUSST BELASSEN (harmlos, kompilieren/passen): ChartRenderer.sparkline/stateIsOn/onOffTimeline, ApiClient.getEntityStateHistory, ChartHistoryTest. Die separate Energie-'Verlauf'-Widget (EnergyStatsWidgetProvider + ChartRenderer.multiLine + getEntityHistory) UNANGETASTET. Gate GRUEN: testDebugUnitTest + assembleDebug. Nicht geseal't/gemerged.",
       "ts": "2026-07-13",
@@ -320,14 +224,5 @@
       "ts": "2026-07-14",
       "stage": "builder"
     }
-  ],
-  "_schemas": {
-    "queue_unit": "{id, kind:'cluster'|'issue', issues:[int], theme, region, scope, acceptance, gate:'normal'|'verify', security:false, status:'planned'|'in_progress'|'built'|'blocked', pr:null, notes}",
-    "batch": "{branch:'batch/<id>', units:[int], count:int, sealed:bool, pr:int}",
-    "verify_state": "{sha, status:'owed'|'verifying'|'green'|'red', detail, since}",
-    "needs_refinement": "{issue, question, comment_url, since}",
-    "review": "{issue, pr, flag, since}  (security:true draft PRs — never auto-merge)",
-    "device_test": "{issue, pr, apk, what_to_check, since}  (human sideloads + confirms)",
-    "upstream_waits": "{issue, cross_repo_issue, reason, since}  (blocked on solarisbay/servicebay ticket)"
-  }
+  ]
 }
