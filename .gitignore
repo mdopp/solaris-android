@@ -31,3 +31,9 @@ twa-manifest.json.bak
 # --- misc ---
 *.log
 .DS_Store
+
+# autoloop: ephemeral run-state — never committed (durable state is in GitHub)
+.claude/state/autoloop-cache.json
+.claude/state/verify-result.json
+.claude/state/work-queue.json
+.claude/state/autoloop.lock

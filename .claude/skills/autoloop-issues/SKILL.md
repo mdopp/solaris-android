@@ -1,6 +1,6 @@
 ---
 name: autoloop-issues
-description: Orchestrates an autonomous issue-resolution pipeline for mdopp/solaris-android — Planner → Builder → Verify — coordinated through a shared work queue, spawning each stage as a fresh sub-agent so the loop session stays clean. Adapted from the solarisbay autoloop for a native Android/Gradle app: "verify" is Gradle build + Robolectric tests + a signed release APK (there is no server/box to deploy to — on-device behaviour is human-gated by sideloading the APK). Cross-repo needs become tickets in solarisbay/servicebay, never built here. Signing-key / device-token-contract changes open as a DRAFT PR for human review. Resumable via .claude/state/work-queue.json. Use when the user asks to "burn down the android backlog", "work the solaris-android issues autonomously", or invokes /loop with this skill.
+description: Orchestrates an autonomous issue-resolution pipeline for mdopp/solaris-android — Planner → Builder → Verify — coordinated through a shared work queue, spawning each stage as a fresh sub-agent so the loop session stays clean. Adapted from the solarisbay autoloop for a native Android/Gradle app: "verify" is Gradle build + Robolectric tests + a signed release APK (there is no server/box to deploy to — on-device behaviour is human-gated by sideloading the APK). Cross-repo needs become tickets in solarisbay/servicebay, never built here. Signing-key / device-token-contract changes open as a DRAFT PR for human review. Core state lives in GitHub (autoloop:* labels/issues/PRs); a tiny gitignored cache holds only in-flight run state, brokered by queue.py and rebuildable from GitHub. Use when the user asks to "burn down the android backlog", "work the solaris-android issues autonomously", or invokes /loop with this skill.
 ---
 
 # Autoloop orchestrator — mdopp/solaris-android
@@ -8,11 +8,11 @@ description: Orchestrates an autonomous issue-resolution pipeline for mdopp/sola
 You are the **coordinator** of an autonomous issue-resolution pipeline for the
 **native Android app**. You do **not** write code or groom issues yourself — you
 run a tight dispatch loop that **spawns a fresh sub-agent per stage** and routes
-work through one shared file, `.claude/state/work-queue.json`.
+coordinate through the `queue.py` state broker: durable state in GitHub (`autoloop:*` labels), a tiny gitignored local cache for in-flight run state.
 
 ```
-   you (orchestrator) → preflight → read queue → dispatch ONE stage → re-read → cadence
- PLANNER ──fills──▶ work-queue.json ──▶ BUILDER ──batch seal → CI → merge──▶ VERIFY ──▶ release(APK)
+   you (orchestrator) → preflight (queue.py summary) → dispatch ONE stage → re-read → cadence
+ PLANNER ──queue.py plan──▶ BUILDER ──claim/built/seal → CI → merge──▶ VERIFY ──▶ release(APK)
  groom/cluster/route          fast gates per issue,          build + Robolectric +
  cross-repo → tickets         8/batch on batch/<id>          signed APK; device = human
 ```
@@ -34,39 +34,32 @@ a correctly-signed release APK** — and leaves on-device confirmation to the hu
 `last_crash.txt`) turns any device crash into a copyable report, so device bugs
 come back as precise traces, not mysteries.
 
-## The shared work queue (the only handoff)
-`.claude/state/work-queue.json` is the single source of truth between stages.
-Create from `work-queue-template.json` (same dir) if absent. Key fields:
-- `queue[]` — **units** the builder consumes: `{id, kind:"cluster"|"issue", issues[], theme, region, scope, acceptance, gate:"normal"|"verify", security:false, status:"planned"|"in_progress"|"built"|"blocked", pr, notes}`. A cluster is the work-unit; members never appear standalone.
-- `batch` — the persistent integration branch `{branch, units[], count, sealed}`. Survives firings; reset to `null` after its release/merge completes.
-- `needs_refinement[]` — **the human's worklist**: `{issue, question, comment_url, since}`. The planner parks anything it can't make actionable with the *specific* question.
-- `awaiting_user[]` — external human comment unanswered; never the pipeline's to reply to.
-- `review[]` — **the human's pre-merge review list**: `{issue, pr, flag, since}` for `security:true` changes opened as **draft** PRs (never auto-merged).
-- `device_test[]` — **the human's on-device worklist**: `{issue, pr, apk, what_to_check, since}` — a merged unit whose behaviour only the phone can confirm. This replaces solarisbay's box `/verify`.
-- `verify_state` — `{sha, status:"owed"|"verifying"|"green"|"red", detail, since}`. "verify" here = build + tests + signed APK. `owed`→`verifying`→`green`|`red`.
-- `blocked[]` / `upstream_waits[]` — parked work; `upstream_waits[]` = `{issue, cross_repo_issue, reason, since}` for a local issue blocked on an unmerged **solarisbay/servicebay** ticket the planner filed (cross-repo = ticket only — see project memory). Re-checked each run.
-- `completed[]`, `notes[]` — **bounded caches, not ledgers.** The durable record of
-  shipped work is GitHub (closed issues + merged PRs) + git history; these keep only a
-  short rolling window for the loop's own context. `completed[]` = the last released
-  batch only; `notes[]` = the last ~15 run-scoped entries, dropping any whose subject
-  issue is closed. Re-read in full every stage, so never let them grow.
-  `release_warnings[]` — cleared on release.
+## State — GitHub is the source of truth; `queue.py` brokers a tiny local cache
+No stage loads a big JSON blob into context — every stage calls `queue.py` verbs and gets
+only the slice it needs. State splits by durability:
 
-**Label mirror (one-way).** The file is source of truth; mirror to GitHub labels
-so a human sees the same worklist: `blocked[]`→`autoloop:blocked`,
-`needs_refinement[]`→`autoloop:needs-refinement`, `device_test[]`→`autoloop:device-test`.
-Derived from the file every run, never the reverse.
+**DURABLE / core → GitHub (source of truth).** Issue open/closed, work status as `autoloop:*`
+labels, human questions/links as issue comments, completion as closed-issue + merged-PR.
+Survives firings, machines, and **concurrent instances** — the `autoloop:building` label is
+the **cross-instance claim**, so two instances never grab the same issue. Labels: `queued`
+(planned) · `building` (claimed) · `blocked` · `needs-refinement` · `review` (security
+draft-PR — never auto-merge) · `device-test` (sideload + confirm on the phone) ·
+`upstream-wait` (blocked on an unmerged **solarisbay/servicebay** ticket — cross-repo =
+ticket only) · `verify-pending`/`verify-failed` (on the release PR).
 
-**State hygiene (bounded queue — keep it token-cheap).** Every stage re-reads the queue
-in full, so its size is a per-tick token cost. The queue is an orchestration *cache*, not
-a ledger — the durable record already lives in GitHub (issues, labels, merged PRs) + git
-history. At preflight (single writer) prune: `completed[]` → last released batch only;
-`notes[]` → cap ~15, drop notes whose issue is closed; `release_warnings[]` → clear on
-release; never embed the schema or `_comment` prose in the live file (they live in
-`work-queue-template.json`). This is *why* it's a local file and not a GitHub artifact:
-it holds rich in-flight state (clustering, the batch branch, the verify state-machine)
-that GitHub issues can't model without many API calls and two-way-sync races — the durable
-parts are projected to labels one-way and otherwise left to GitHub, so the file stays small.
+**EPHEMERAL run state → `.claude/state/autoloop-cache.json`** (**gitignored**, touched only
+via `queue.py`): the in-flight `batch`, this run's unit **plan** (`{id, kind, issues[],
+theme, region, scope, acceptance, gate, security, status, pr}`), the `verify` state-machine
+(`owed→verifying→green|red`; here "verify" = build + tests + signed APK), and a bounded
+`notes` ring. A few KB, never committed, rebuildable from GitHub (`queue.py rebuild`).
+
+`queue.py` enforces caps, pruning, one-way label projection, and the cross-instance claim
+**in code**. `security:true` on a unit → a **draft** PR + `autoloop:review` label (never
+auto-merged), the app's pre-merge review path.
+
+### `queue.py` verbs — the only way stages touch state
+`python3 .claude/skills/autoloop-issues/queue.py <verb>` (`--offline` skips gh; covered by `selftest`):
+`summary` (orchestrator peek) · `candidates` / `plan` / `park <issue> <blocked|refinement|review|device-test|upstream-wait>` / `note` (planner) · `next` / `claim` / `built` / `batch new|seal|reset` / `verify-set <sha> <status> [--pr N]` (builder) · `verify-get` / `mirror` / `rebuild` / `lock` (orchestrator).
 
 ## Batch economy — the prime directive (ENFORCED)
 The expensive tail — full test suite, CI, a signed release build — runs **once
@@ -87,7 +80,7 @@ Everything else — grouping, building, compile/test gates, signing — runs wit
 ## Step 0 — Preflight (every firing)
 1. Read `CLAUDE.md` + user memory (`.claude/projects/-workspace-solaris-android/memory/MEMORY.md`). Honour: German replies, Conventional Commits, NEVER commit the keystore, cross-repo=ticket-only.
 2. Ensure the toolchain env (per session — see memory `toolchain-not-preprovisioned`): `JAVA_HOME=~/.bubblewrap/jdk/jdk-17.0.11+9`, `ANDROID_HOME=~/.bubblewrap/android_sdk`, `PATH` incl. `~/.npm-global/bin`. `git config --global --add safe.directory /workspace/solaris-android`.
-3. Read the queue; fold any `.claude/state/verify-result.json` into `verify_state`; reconcile labels; **prune bounded state** (see *State hygiene* above — trim `completed[]`/`notes[]`, drop closed-issue notes) so the file stays token-cheap.
+3. `queue.py summary` for status (cold start: `queue.py rebuild --release-pr <n>`); fold any `.claude/state/verify-result.json` in with `queue.py verify-set …`; `queue.py mirror` prunes the cache + re-projects labels.
 4. Decide the ONE stage to dispatch this firing (below) and spawn it as a fresh Agent. Re-read the queue after it returns.
 
 ## Dispatch order (one per firing)
