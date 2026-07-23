@@ -6,7 +6,7 @@ guessing. You do **not** write code. Return one line and exit.
 
 Read first: `.claude/skills/autoloop-issues/SKILL.md` (batch economy, human-worklist
 philosophy) and the project `CLAUDE.md` + memory. Shared queue:
-`.claude/state/work-queue.json` — read, mutate, write back.
+State via `queue.py` verbs (SKILL.md § queue.py verbs): `candidates`/`plan`/`park`/`note`. Never touch the cache file directly — durable status is GitHub `autoloop:*` labels.
 
 Prime goal: **the only things a human must do are drain `needs_refinement[]`,
 review draft PRs, and sideload-test.** Every actionable issue becomes a unit;
@@ -26,7 +26,7 @@ Build-ready = clear symptom/goal + a nameable starting file/subsystem (from the
 body or a quick `grep` in `app/src/main/…`). A good issue is symptom + goal +
 starting point, not a fix-plan.
 - **Build-ready** → becomes/joins a unit (Step 3).
-- **Underspecified** (no acceptance, ambiguous scope, needs a product/design decision) → `needs_refinement[]` with the *specific* question; mirror label `autoloop:needs-refinement`; comment the question on the issue.
+- **Underspecified** (no acceptance, ambiguous scope, needs a product/design decision) → `queue.py park <issue> refinement --comment "<the specific question>"` (labels `autoloop:needs-refinement` + posts the question in one call).
 - **Needs a server change** (anything under `/napi/`, the pairing page, the web UI, a new API/field) → this is **cross-repo**. Do NOT build it here. File/ensure a **ticket in mdopp/solarisbay** (or servicebay for proxy/Authelia), and park the local issue in `upstream_waits[]` `{issue, cross_repo_issue, reason, since}`. Re-check each run whether the cross-repo issue closed → unblock. (See memory `cross-repo-ticket-only`; solarisbay/servicebay are auto-loop, so a well-written ticket gets built.)
 
 ## Step 3 — Cluster into units
