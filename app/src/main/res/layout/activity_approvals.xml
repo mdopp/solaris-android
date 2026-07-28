@@ -3,6 +3,7 @@
      /napi/servicebay/approvals. Each row opens the PWA to actually approve/reject
      (the verdict needs the Authelia session, which only the Custom Tab has). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/approvals_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"

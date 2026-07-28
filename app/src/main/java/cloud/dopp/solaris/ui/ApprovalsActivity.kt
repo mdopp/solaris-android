@@ -6,6 +6,9 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.SbApiClient
 import cloud.dopp.solaris.data.SbApproval
@@ -28,10 +31,26 @@ class ApprovalsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_approvals)
+        applyStatusBarInset()
         listView = findViewById(R.id.approvals_list)
         status = findViewById(R.id.approvals_status)
         findViewById<TextView>(R.id.approvals_refresh).setOnClickListener { load() }
         load()
+    }
+
+    /**
+     * Keep the "Freigaben" heading below the status bar on edge-to-edge (targetSdk
+     * 35): add the status-bar top inset onto the header's base padding so the title
+     * never collides with the clock (same fix as #19 for the config screen).
+     */
+    private fun applyStatusBarInset() {
+        val root = findViewById<View>(R.id.approvals_root)
+        val basePad = root.paddingTop
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(top = basePad + bars.top, bottom = bars.bottom)
+            insets
+        }
     }
 
     override fun onResume() {
