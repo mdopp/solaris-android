@@ -192,7 +192,9 @@ class OnboardingHomeActivity : AppCompatActivity() {
         if (base.isBlank()) {
             toast(getString(R.string.home_enter_url)); return
         }
-        openUrl(Uri.parse(base + SolarisConfig.PORTAL_PATH))
+        // The request-access CTA lives on the ServiceBay portal (apex domain),
+        // not under the Solaris host (#50). Open it logged-out to see the form.
+        openUrl(Uri.parse(SolarisConfig.portalUrl(base)))
     }
 
     private fun startScan() {

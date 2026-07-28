@@ -19,12 +19,28 @@ object SolarisConfig {
     const val PAIR_PATH = "/pair-device"
 
     /**
-     * Request-access landing page on the user's server (#50). The ServiceBay
-     * portal surfaces the "Zugang anfordern" self-service CTA here (LAN-gated,
-     * pre-auth public web flow — no token, ADR 0010). Kept as one constant so
-     * the exact path is easy to tune on-device.
+     * Derive the **ServiceBay portal** URL from the paired Solaris [base] (#50).
+     *
+     * The "Zugang anfordern" (request-access) CTA lives on the ServiceBay portal,
+     * which sits on the **parent (apex) domain** — e.g. Solaris `chat.dopp.cloud`
+     * → portal `dopp.cloud` — NOT under the Solaris host itself (appending
+     * `/portal` to `chat.dopp.cloud` 404s: Solaris ≠ ServiceBay, different hosts).
+     *
+     * Strips the leftmost subdomain label when the host has ≥3 labels; otherwise
+     * uses the host as-is. Scheme defaults to https when [base] omits one; any
+     * port and path are dropped (the portal answers on its own host root). Pure /
+     * Android-free so it's unit-testable.
      */
-    const val PORTAL_PATH = "/portal"
+    fun portalUrl(base: String): String {
+        val t = base.trim().trimEnd('/')
+        val hasScheme = "://" in t
+        val scheme = if (hasScheme) t.substringBefore("://") else "https"
+        val rest = if (hasScheme) t.substringAfter("://") else t
+        val host = rest.substringBefore('/').substringBefore(':')
+        val labels = host.split('.').filter { it.isNotBlank() }
+        val portalHost = if (labels.size >= 3) labels.drop(1).joinToString(".") else host
+        return "$scheme://$portalHost"
+    }
 
     /**
      * Pairing redirect deep link: `cloud.dopp.solaris://pair#token=…&id=…`
