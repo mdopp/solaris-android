@@ -91,4 +91,14 @@
         <item quantity="one">%d Freigabe wartet</item>
         <item quantity="other">%d Freigaben warten</item>
     </plurals>
+
+    <!-- Pending ServiceBay updates notification (#45). Informational — the actual
+         update is triggered in ServiceBay (solarisbay#827), not natively. -->
+    <string name="updates_channel_name">Updates</string>
+    <string name="updates_channel_desc">Meldung bei ausstehenden ServiceBay-Updates.</string>
+    <string name="updates_notif_title">Updates verfügbar</string>
+    <plurals name="updates_pending">
+        <item quantity="one">%d ausstehendes Update</item>
+        <item quantity="other">%d ausstehende Updates</item>
+    </plurals>
 </resources>
