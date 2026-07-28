@@ -34,7 +34,10 @@ class DeviceWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDeleted(context: Context, ids: IntArray) {
-        ids.forEach { WidgetStore.unbind(context, it) }
+        ids.forEach {
+            WidgetStore.unbind(context, it)
+            WidgetCache.clear(context, it) // drop the last-good render cache (#46)
+        }
         // The bound set shrank → refresh the native SSE watch-set (#48).
         cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(context)
     }
@@ -78,13 +81,17 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         }
         val tap = tapPending(context, appWidgetId, entityId)
         val domain = WidgetStore.domain(context, appWidgetId)
-        // Immediate render from cache with a "lädt…" placeholder, then async fetch.
+        // Immediate render from the last-good cache (#46): show the previous state
+        // instantly — even after a reboot/process death, when StateEpochGuard's
+        // in-memory memory is gone — instead of a bare "lädt…". Then async fetch.
+        val cached = WidgetCache.getCard(context, appWidgetId)
         try {
             mgr.updateAppWidget(
                 appWidgetId,
                 WidgetRender.build(
-                    context, appWidgetId, null, WidgetStore.name(context, appWidgetId),
-                    domain, tap, WidgetRender.Load.LOADING,
+                    context, appWidgetId, cached, WidgetStore.name(context, appWidgetId),
+                    domain, tap,
+                    if (cached != null) WidgetRender.Load.LOADED else WidgetRender.Load.LOADING,
                 ),
             )
         } catch (t: Throwable) {
@@ -112,11 +119,16 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 // the guard's winner (the fetched card if fresh, else the newer
                 // remembered one) — never a stale overwrite (multi-device race).
                 val resolved = card?.let { StateEpochGuard.resolve(it) }
-                val load = if (resolved != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
+                // On success cache the fresh card; on failure fall back to the
+                // last-good card (#46) so a transient net/token hiccup never flips
+                // the widget to "↻ tippen" — only a never-loaded widget shows FAILED.
+                val render = resolved ?: cached
+                val load = if (render != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
+                if (resolved != null) WidgetCache.putCard(context, appWidgetId, resolved)
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
-                        context, appWidgetId, resolved,
+                        context, appWidgetId, render,
                         WidgetStore.name(context, appWidgetId), domain, tap, load,
                     ),
                 )
@@ -187,6 +199,8 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                         WidgetStore.name(context, appWidgetId), domain, tap,
                     ),
                 )
+                // Persist the pushed state so a later failed poll keeps it (#46).
+                WidgetCache.putCard(context, appWidgetId, card)
             } catch (t: Throwable) {
                 requestRefresh(context, appWidgetId)
             }

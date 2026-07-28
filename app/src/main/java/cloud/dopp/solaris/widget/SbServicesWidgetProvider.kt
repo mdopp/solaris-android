@@ -44,8 +44,10 @@ class SbServicesWidgetProvider : AppWidgetProvider() {
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
         val tap = PwaLauncher.tapPending(context, 340_000 + appWidgetId, PwaLauncher.Routes.SERVICEBAY)
+        // Seed the immediate render from the last-good cache (#46) instead of "—".
+        val cached = WidgetCache.getServiceCounts(context, appWidgetId)
         try {
-            mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, null, tap))
+            mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, cached, tap))
         } catch (t: Throwable) {
             WidgetFallback.show(context, appWidgetId, tap)
             return
@@ -59,13 +61,19 @@ class SbServicesWidgetProvider : AppWidgetProvider() {
                     null
                 }
                 val counts = services?.let { SbRender.counts(it) }
-                mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, counts, tap))
+                if (counts != null) WidgetCache.putServiceCounts(context, appWidgetId, counts)
+                // Failed fetch → keep the last-good counts instead of blanking (#46).
+                mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, counts ?: cached, tap))
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, tap)
             } finally {
                 pending?.finish()
             }
         }
+    }
+
+    override fun onDeleted(context: Context, ids: IntArray) {
+        ids.forEach { WidgetCache.clear(context, it) }
     }
 
     private fun render(
