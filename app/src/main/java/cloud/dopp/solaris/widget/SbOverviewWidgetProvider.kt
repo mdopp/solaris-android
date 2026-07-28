@@ -47,9 +47,11 @@ class SbOverviewWidgetProvider : AppWidgetProvider() {
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
         val tap = PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.SERVICEBAY)
-        // Immediate render (placeholders "—"), then async live fetch.
+        // Immediate render from the last-good cache (#46) — show the last numbers
+        // instantly, not "—", even after a reboot/process death — then live fetch.
+        val cached = WidgetCache.getHome(context, appWidgetId)
         try {
-            mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, null, tap))
+            mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, cached, tap))
         } catch (t: Throwable) {
             WidgetFallback.show(context, appWidgetId, tap)
             return
@@ -58,13 +60,19 @@ class SbOverviewWidgetProvider : AppWidgetProvider() {
         thread {
             try {
                 val home = try { SbApiClient(context.applicationContext).getHome() } catch (e: Exception) { null }
-                mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, home, tap))
+                if (home != null) WidgetCache.putHome(context, appWidgetId, home)
+                // On a failed fetch keep the last-good numbers instead of blanking (#46).
+                mgr.updateAppWidget(appWidgetId, render(context, appWidgetId, home ?: cached, tap))
             } catch (t: Throwable) {
                 WidgetFallback.show(context, appWidgetId, tap)
             } finally {
                 pending?.finish()
             }
         }
+    }
+
+    override fun onDeleted(context: Context, ids: IntArray) {
+        ids.forEach { WidgetCache.clear(context, it) }
     }
 
     private fun render(context: Context, appWidgetId: Int, home: SbHome?, tap: PendingIntent): RemoteViews {
