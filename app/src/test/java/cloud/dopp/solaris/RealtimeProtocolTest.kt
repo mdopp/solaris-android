@@ -82,4 +82,18 @@ class RealtimeProtocolTest {
         assertEquals(60_000L, RealtimeProtocol.backoffMillis(20))
         assertEquals(60_000L, RealtimeProtocol.backoffMillis(999))
     }
+
+    @Test
+    fun healthySessionOnlyAfterStableThreshold() {
+        val open = 1_000_000L
+        // Never opened (0) is never healthy, whatever "now" is.
+        org.junit.Assert.assertFalse(RealtimeProtocol.healthySession(0L, open + 999_999L))
+        // A flap that closes before the threshold is NOT healthy → backoff keeps climbing.
+        org.junit.Assert.assertFalse(
+            RealtimeProtocol.healthySession(open, open + RealtimeProtocol.STABLE_SESSION_MS - 1),
+        )
+        // At/after the threshold the session counts as healthy → backoff may reset.
+        assertTrue(RealtimeProtocol.healthySession(open, open + RealtimeProtocol.STABLE_SESSION_MS))
+        assertTrue(RealtimeProtocol.healthySession(open, open + 5 * RealtimeProtocol.STABLE_SESSION_MS))
+    }
 }

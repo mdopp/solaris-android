@@ -56,6 +56,10 @@ class RealtimeService : Service() {
     private val stopping = AtomicBoolean(false)
     @Volatile private var source: EventSource? = null
     @Volatile private var attempt = 0
+    // When the current stream opened (elapsedRealtime; 0 = not open). Used to reset
+    // the backoff ONLY after a healthy session, so a flapping server doesn't drive a
+    // reconnect storm (#79).
+    @Volatile private var connectedAtMs = 0L
     // Diagnostic status shown in the ongoing notification (#48) so we can tell
     // "not connected" (HTTP error) from "connected but no events" (pinning gap).
     @Volatile private var status: String = "Verbinde …"
@@ -173,7 +177,12 @@ class RealtimeService : Service() {
             .header("Authorization", "Bearer $token")
             .header("Accept", "text/event-stream")
             .build()
+        // Only ever one connection + one pending reconnect in flight (#79): cancel any
+        // prior source and drop a queued reconnect so callbacks from a dead stream
+        // can't stack into a storm.
+        handler.removeCallbacks(reconnectRunnable)
         runCatching { source?.cancel() }
+        connectedAtMs = 0L
         // No "Verbinde …" flip here — a quick reconnect shouldn't disturb the calm
         // "Live-Updates aktiv" notification. onOpen confirms; a sustained outage flags.
         source = EventSources.createFactory(client).newEventSource(req, listener)
@@ -190,7 +199,11 @@ class RealtimeService : Service() {
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(eventSource: EventSource, response: Response) {
-            attempt = 0 // healthy connection resets the backoff
+            if (eventSource !== source) return // stale callback from a superseded stream
+            // Do NOT reset the backoff here — only a session that STAYS open (see
+            // handleDisconnect) is healthy. Resetting on every open let an
+            // accept-then-close server drive a 2s reconnect storm (#79).
+            connectedAtMs = android.os.SystemClock.elapsedRealtime()
             setStatus("Live-Updates aktiv")
             RealtimeLog.add(applicationContext, "verbunden")
             // Connection healthy → register the device-widget watch-set (#48
@@ -205,8 +218,10 @@ class RealtimeService : Service() {
                 RealtimeProtocol.EVENT_CARD_STATE -> runCatching {
                     val ev = RealtimeProtocol.parseCardState(data) ?: return
                     DeviceWidgetProvider.wakeEntity(applicationContext, ev.entityId, ev.card)
-                    // A state flip can change the active roster → nudge the overview widgets.
-                    ActiveDevicesWidgetProvider.refreshAll(applicationContext)
+                    // A state flip can change the active roster → nudge the overview
+                    // widgets, but COALESCE it (#79): a burst of card_state frames must
+                    // trigger at most one /napi/portal/active refetch, not one each.
+                    coalesceActiveRefresh()
                     events++
                     // Deliberately NO per-event notification update — the ongoing
                     // notification stays calm ("Live-Updates aktiv"); constant re-posts
@@ -222,9 +237,7 @@ class RealtimeService : Service() {
         }
 
         override fun onClosed(eventSource: EventSource) {
-            RealtimeLog.add(applicationContext, "getrennt (Stream geschlossen)")
-            flagDisconnect()
-            scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
+            handleDisconnect(eventSource, "200")
         }
 
         override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
@@ -238,17 +251,47 @@ class RealtimeService : Service() {
                 }
                 404 -> {
                     // Endpoint not deployed yet (solarisbay#806) — back off long, don't spam.
+                    if (eventSource !== source) return
+                    source = null
+                    connectedAtMs = 0L
                     setStatus("Endpoint fehlt (404) — Server nicht bereit?")
                     RealtimeLog.add(applicationContext, "Endpoint fehlt (404)")
                     scheduleReconnect(RealtimeProtocol.NOT_DEPLOYED_BACKOFF_MS)
                     return
                 }
             }
-            val why = response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?"
-            RealtimeLog.add(applicationContext, "getrennt ($why)")
-            flagDisconnect()
-            scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
+            handleDisconnect(eventSource, response?.code?.toString() ?: t?.javaClass?.simpleName ?: "?")
         }
+    }
+
+    /**
+     * Single disconnect path for both `onClosed` and `onFailure` (#79). Ignores
+     * callbacks from a superseded stream (so overlapping sources can't each schedule
+     * a reconnect), claims the current source so a second callback for it is also
+     * ignored, and resets the backoff ONLY if the session was healthy — otherwise
+     * `attempt` keeps climbing so a flapping server backs off 2s→4s→…→cap instead of
+     * hammering the battery.
+     */
+    private fun handleDisconnect(eventSource: EventSource, reason: String) {
+        if (eventSource !== source) return
+        source = null
+        if (RealtimeProtocol.healthySession(connectedAtMs, android.os.SystemClock.elapsedRealtime())) {
+            attempt = 0
+        }
+        connectedAtMs = 0L
+        RealtimeLog.add(applicationContext, "getrennt ($reason)")
+        flagDisconnect()
+        scheduleReconnect(RealtimeProtocol.backoffMillis(attempt++))
+    }
+
+    /** Coalesce active-overview refreshes so a card_state burst causes one refetch (#79). */
+    private val activeRefreshRunnable = Runnable {
+        ActiveDevicesWidgetProvider.refreshAll(applicationContext)
+    }
+
+    private fun coalesceActiveRefresh() {
+        handler.removeCallbacks(activeRefreshRunnable)
+        handler.postDelayed(activeRefreshRunnable, ACTIVE_REFRESH_DEBOUNCE_MS)
     }
 
     /**
@@ -271,10 +314,15 @@ class RealtimeService : Service() {
         }
     }
 
+    private val reconnectRunnable = Runnable { if (!stopping.get()) connect() }
+
     private fun scheduleReconnect(delayMs: Long) {
         if (stopping.get()) return
         if (!eligible()) { stopSelfClean(); return }
-        handler.postDelayed({ if (!stopping.get()) connect() }, delayMs)
+        // Exactly one pending reconnect — drop any already queued so callbacks from
+        // overlapping dead streams can't stack into a storm (#79).
+        handler.removeCallbacks(reconnectRunnable)
+        handler.postDelayed(reconnectRunnable, delayMs)
     }
 
     private fun stopSelfClean() {
@@ -424,6 +472,9 @@ class RealtimeService : Service() {
 
         /** Re-post the watch-set every ~20 min to refresh the server-side TTL (#48). */
         private const val WATCH_REPOST_MS = 20L * 60L * 1000L
+
+        /** Debounce window that coalesces a card_state burst into one overview refetch (#79). */
+        private const val ACTIVE_REFRESH_DEBOUNCE_MS = 1_500L
 
         /** Start the service iff opt-in && paired; else make sure it's stopped. */
         fun ensure(context: Context) {

@@ -80,4 +80,21 @@ object RealtimeProtocol {
 
     /** Long backoff for HTTP 404 (endpoint not live yet) — avoid spamming logs. */
     const val NOT_DEPLOYED_BACKOFF_MS = 5 * 60 * 1000L
+
+    /**
+     * A connection must stay open at least this long to count as **healthy** — only
+     * then do we reset the reconnect backoff (#79). Resetting on every `onOpen`
+     * let a server that accepts-then-immediately-closes the stream (`getrennt (200)`)
+     * drive a ~2s reconnect storm that never backed off; requiring a stable session
+     * makes a flapping stream escalate 2s→4s→…→cap instead of hammering the battery.
+     */
+    const val STABLE_SESSION_MS = 20_000L
+
+    /**
+     * True when a session that opened at [connectedAtMs] (0 = never opened) has been
+     * up long enough at [nowMs] to be considered healthy — i.e. its drop should
+     * reset the backoff. Pure so the churn guard is unit-testable.
+     */
+    fun healthySession(connectedAtMs: Long, nowMs: Long): Boolean =
+        connectedAtMs != 0L && nowMs - connectedAtMs >= STABLE_SESSION_MS
 }
