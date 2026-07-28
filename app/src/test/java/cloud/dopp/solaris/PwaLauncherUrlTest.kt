@@ -113,4 +113,27 @@ class PwaLauncherUrlTest {
             PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.ask("Hallo")),
         )
     }
+
+    // --- ServiceBay approval verdict route (#43, solarisbay#1085) ---
+
+    @Test
+    fun approvalRouteEmbedsIdInHashForm() {
+        // The hash is mandatory: server /p/{type} matches one segment, so the
+        // plain /p/servicebay/approvals/<id> 404s — only the hash form resolves.
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/servicebay/approvals/e813e295-9c5f-4c83-a812-d1e14675332a",
+            PwaLauncher.url(
+                "https://chat.dopp.cloud",
+                PwaLauncher.Routes.approval("e813e295-9c5f-4c83-a812-d1e14675332a"),
+            ),
+        )
+    }
+
+    @Test
+    fun approvalRouteWithTrailingSlashBase_noDoubleSlash() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/servicebay/approvals/abc123",
+            PwaLauncher.url("https://chat.dopp.cloud/", PwaLauncher.Routes.approval("abc123")),
+        )
+    }
 }

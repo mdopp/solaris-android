@@ -56,6 +56,19 @@ object PwaLauncher {
         const val CAMERA_ROOT = "/#/p/camera"
 
         /**
+         * A single ServiceBay approval's **verdict page** (#43, solarisbay#1085).
+         * [id] is the approval id from the `servicebay` SSE frame `{id,kind,summary}`
+         * or `GET /napi/servicebay/approvals`. The page's buttons POST the verdict
+         * over the Authelia session — the device token cannot (servicebay#2249),
+         * which is why a tap must land here in the Custom Tab, not render natively.
+         *
+         * The **hash is not cosmetic**: server-side `/p/{type}` matches only one path
+         * segment, so `/p/servicebay/approvals/<id>` 404s — only the hash form, which
+         * the client router resolves, works. `PwaLauncherUrlTest` locks this shape.
+         */
+        fun approval(id: String): String = "/#/p/servicebay/approvals/$id"
+
+        /**
          * Voice widget (#17): open a NEW household chat pre-loaded with [text] as the
          * user turn, which the PWA auto-sends once on load (confirmed solarisbay#766,
          * consumed via history.replaceState). The text is URL-encoded so spaces and

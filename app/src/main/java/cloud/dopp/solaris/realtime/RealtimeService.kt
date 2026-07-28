@@ -17,7 +17,6 @@ import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
-import cloud.dopp.solaris.ui.ApprovalsActivity
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import cloud.dopp.solaris.widget.ActiveDevicesWidgetProvider
 import cloud.dopp.solaris.widget.DeviceWidgetProvider
@@ -307,18 +306,19 @@ class RealtimeService : Service() {
     }
 
     /**
-     * Post a heads-up notification for a new ServiceBay approval (#43). Tapping it
-     * opens the in-app approvals list; the actual approve/reject happens in the PWA
-     * (Authelia session). Uses a separate DEFAULT-importance channel so it alerts,
-     * unlike the silent ongoing service notification. No-op without POST_NOTIFICATIONS
-     * (API 33+); never crashes the service.
+     * Post a heads-up notification for a new ServiceBay approval (#43). Since this
+     * event carries the approval [id], the tap deep-links **straight to that
+     * approval's verdict page** in the PWA Custom Tab (owner: direct-to-verdict) —
+     * where the approve/reject buttons POST over the Authelia session (the device
+     * token cannot, servicebay#2249). Uses a separate DEFAULT-importance channel so
+     * it alerts, unlike the silent ongoing service notification. No-op without
+     * POST_NOTIFICATIONS (API 33+); never crashes the service.
      */
     private fun postApprovalNotif(ev: RealtimeProtocol.ApprovalEvent) {
         ensureApprovalChannel()
-        val tap = PendingIntent.getActivity(
+        val tap = cloud.dopp.solaris.widget.PwaLauncher.tapPending(
             this, ev.id.hashCode(),
-            Intent(this, ApprovalsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            cloud.dopp.solaris.widget.PwaLauncher.Routes.approval(ev.id),
         )
         val body = ev.summary.ifBlank { getString(R.string.approval_notif_generic) }
         val notif = androidx.core.app.NotificationCompat.Builder(this, APPROVAL_CHANNEL_ID)

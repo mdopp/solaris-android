@@ -98,8 +98,9 @@ class ApprovalsActivity : AppCompatActivity() {
                 visibility = if (a.description.isBlank()) View.GONE else View.VISIBLE
             }
             row.setOnClickListener {
-                // Open the PWA to act (Authelia session lives in the Custom Tab).
-                PwaLauncher.open(this, PwaLauncher.Routes.SERVICEBAY)
+                // Open this approval's verdict page in the Custom Tab (Authelia
+                // session lives there; device token can't POST the verdict, #2249).
+                PwaLauncher.open(this, PwaLauncher.Routes.approval(a.id))
             }
             listView.addView(row)
         }
