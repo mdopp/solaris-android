@@ -35,6 +35,9 @@
     <string name="home_tile_active">Aktiv</string>
     <string name="home_tile_camera">Kamera</string>
     <string name="home_tile_voice">Sprache</string>
+    <string name="home_widgets_group_servicebay">ServiceBay</string>
+    <string name="home_tile_sb_overview">Übersicht</string>
+    <string name="home_tile_sb_services">Dienste</string>
     <string name="home_add_widget">Widget hinzufügen</string>
     <string name="home_add_widget_manual">Widget über den Homescreen-Editor hinzufügen (lang drücken → Widgets).</string>
 
