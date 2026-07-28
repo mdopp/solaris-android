@@ -14,6 +14,7 @@ import cloud.dopp.solaris.data.SbApiClient
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.ui.ApprovalsActivity
+import cloud.dopp.solaris.widget.PwaLauncher
 
 /**
  * Screen-off backstop for the realtime service (#48): while the screen is off the
@@ -26,9 +27,12 @@ import cloud.dopp.solaris.ui.ApprovalsActivity
 object RealtimePoll {
     private const val PREFS = "realtime_poll"
     private const val K_LAST_APPROVALS = "last_approvals"
+    private const val K_LAST_UPDATES = "last_updates"
     private const val REQ = 48_010
     private const val APPROVAL_CHANNEL = "solaris_approvals"
+    private const val UPDATES_CHANNEL = "solaris_updates"
     private const val NOTIF_ID = 4910
+    private const val NOTIF_ID_UPDATES = 4911
 
     private fun eligible(ctx: Context): Boolean =
         ServerStore.realtimeEnabled(ctx) && ServerStore.isConfigured(ctx) && TokenStore.isPaired(ctx)
@@ -76,11 +80,20 @@ object RealtimePoll {
         val home = try { SbApiClient(ctx).getHome() } catch (e: Exception) { null }
         if (home != null) {
             val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            val last = prefs.getInt(K_LAST_APPROVALS, 0)
-            if (home.pendingApprovals > last && home.pendingApprovals > 0) {
+            // Alert only on a RISE (new since last seen) so a standing count doesn't
+            // re-nag every pass; the stored baseline is updated regardless.
+            val lastApprovals = prefs.getInt(K_LAST_APPROVALS, 0)
+            if (home.pendingApprovals > lastApprovals && home.pendingApprovals > 0) {
                 notifyApprovals(ctx, home.pendingApprovals)
             }
-            prefs.edit().putInt(K_LAST_APPROVALS, home.pendingApprovals).apply()
+            val lastUpdates = prefs.getInt(K_LAST_UPDATES, 0)
+            if (home.pendingUpdates > lastUpdates && home.pendingUpdates > 0) {
+                notifyUpdates(ctx, home.pendingUpdates)
+            }
+            prefs.edit()
+                .putInt(K_LAST_APPROVALS, home.pendingApprovals)
+                .putInt(K_LAST_UPDATES, home.pendingUpdates)
+                .apply()
         }
         schedule(ctx) // re-arm the next pass
     }
@@ -111,6 +124,37 @@ object RealtimePoll {
         nm.createNotificationChannel(
             NotificationChannel(APPROVAL_CHANNEL, ctx.getString(R.string.approval_channel_name), NotificationManager.IMPORTANCE_DEFAULT)
                 .apply { description = ctx.getString(R.string.approval_channel_desc) },
+        )
+    }
+
+    /**
+     * Alert that ServiceBay updates are pending (#45). Informational only — the
+     * update is triggered in ServiceBay (solarisbay#827), not natively; a tap opens
+     * the ServiceBay surface in the PWA Custom Tab. Own DEFAULT-importance channel so
+     * updates and approvals are separately mutable in system settings.
+     */
+    private fun notifyUpdates(ctx: Context, count: Int) {
+        ensureUpdatesChannel(ctx)
+        val tap = PwaLauncher.tapPending(ctx, NOTIF_ID_UPDATES, PwaLauncher.Routes.SERVICEBAY)
+        val text = ctx.resources.getQuantityString(R.plurals.updates_pending, count, count)
+        val n = NotificationCompat.Builder(ctx, UPDATES_CHANNEL)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(ctx.getString(R.string.updates_notif_title))
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(tap)
+            .build()
+        runCatching { ctx.getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID_UPDATES, n) }
+    }
+
+    private fun ensureUpdatesChannel(ctx: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
+        if (nm.getNotificationChannel(UPDATES_CHANNEL) != null) return
+        nm.createNotificationChannel(
+            NotificationChannel(UPDATES_CHANNEL, ctx.getString(R.string.updates_channel_name), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = ctx.getString(R.string.updates_channel_desc) },
         )
     }
 
