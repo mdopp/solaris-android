@@ -35,4 +35,18 @@ class PortalUrlTest {
     @Test fun preservesHttpScheme() {
         assertEquals("http://dopp.cloud", SolarisConfig.portalUrl("http://chat.dopp.cloud"))
     }
+
+    // --- ServiceBay admin URL for the updates notification (#45) ---
+
+    @Test fun adminUrlPrefixesAdminOnApex() {
+        assertEquals("https://admin.dopp.cloud", SolarisConfig.adminUrl("https://chat.dopp.cloud"))
+    }
+
+    @Test fun adminUrlFromApexBase() {
+        assertEquals("https://admin.dopp.cloud", SolarisConfig.adminUrl("https://dopp.cloud"))
+    }
+
+    @Test fun adminUrlDefaultsSchemeAndDropsPortPath() {
+        assertEquals("https://admin.dopp.cloud", SolarisConfig.adminUrl("chat.dopp.cloud:8787/x"))
+    }
 }
