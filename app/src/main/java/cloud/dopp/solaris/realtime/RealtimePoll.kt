@@ -135,7 +135,15 @@ object RealtimePoll {
      */
     private fun notifyUpdates(ctx: Context, count: Int) {
         ensureUpdatesChannel(ctx)
-        val tap = PwaLauncher.tapPending(ctx, NOTIF_ID_UPDATES, PwaLauncher.Routes.SERVICEBAY)
+        // Tap opens the ServiceBay admin (where updates are applied), NOT Solaris
+        // chat (#45). Admin is on a different host than the paired Solaris base, so
+        // this is an absolute URL derived from it (admin.<apex>).
+        val base = ServerStore.baseUrl(ctx)
+        val tap = if (!base.isNullOrBlank()) {
+            PwaLauncher.tapPendingUrl(ctx, NOTIF_ID_UPDATES, cloud.dopp.solaris.SolarisConfig.adminUrl(base))
+        } else {
+            PwaLauncher.tapPending(ctx, NOTIF_ID_UPDATES, PwaLauncher.Routes.SERVICEBAY)
+        }
         val text = ctx.resources.getQuantityString(R.plurals.updates_pending, count, count)
         val n = NotificationCompat.Builder(ctx, UPDATES_CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher)

@@ -43,6 +43,20 @@ object SolarisConfig {
     }
 
     /**
+     * The ServiceBay **admin** UI URL, derived from the paired Solaris [base] (#45):
+     * the apex domain (see [portalUrl]) with an `admin.` prefix — e.g. Solaris
+     * `chat.dopp.cloud` → `admin.dopp.cloud`. That is where pending updates are
+     * applied, so the update notification's tap lands there (Authelia-gated in the
+     * Custom Tab), NOT on the Solaris chat. Pure / Android-free so it's testable.
+     */
+    fun adminUrl(base: String): String {
+        val portal = portalUrl(base)
+        val scheme = portal.substringBefore("://")
+        val host = portal.substringAfter("://")
+        return "$scheme://admin.$host"
+    }
+
+    /**
      * Pairing redirect deep link: `cloud.dopp.solaris://pair#token=…&id=…`
      * (token in the fragment so it never hits proxy logs).
      */

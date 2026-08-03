@@ -106,6 +106,30 @@ object PwaLauncher {
     }
 
     /**
+     * Open an **absolute** [url] on any host in a Custom Tab — NOT joined to the
+     * paired Solaris base (#45). For ServiceBay-host targets (e.g. `admin.…`) the
+     * update notification opens directly; VIEW-intent fallback, then onboarding.
+     */
+    fun openAbsolute(ctx: Context, url: String) {
+        if (url.isBlank()) { openHome(ctx); return }
+        val uri = Uri.parse(url)
+        val app = ctx.applicationContext
+        try {
+            val ct = CustomTabsIntent.Builder().build()
+            ct.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ct.launchUrl(app, uri)
+        } catch (e: Exception) {
+            try {
+                app.startActivity(
+                    Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            } catch (e2: Exception) {
+                openHome(app)
+            }
+        }
+    }
+
+    /**
      * Join [base] + [path] into a single URL, collapsing the seam so a trailing
      * slash on the base and a leading slash on the path never double up. Pure and
      * Android-free so it's unit-testable (#27).
@@ -127,6 +151,21 @@ object PwaLauncher {
     fun tapPending(ctx: Context, reqCode: Int, path: String): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
             .putExtra(PwaTrampolineActivity.EXTRA_PATH, path)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            ctx, reqCode, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * A notification/widget tap [PendingIntent] that opens an **absolute** [url]
+     * (any host, not the paired Solaris base) via the trampoline — for ServiceBay
+     * targets like the admin UI (#45). `reqCode` unique per use.
+     */
+    fun tapPendingUrl(ctx: Context, reqCode: Int, url: String): PendingIntent {
+        val i = Intent(ctx, PwaTrampolineActivity::class.java)
+            .putExtra(PwaTrampolineActivity.EXTRA_URL, url)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return PendingIntent.getActivity(
             ctx, reqCode, i,
