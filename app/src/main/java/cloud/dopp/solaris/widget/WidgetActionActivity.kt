@@ -9,9 +9,11 @@ import cloud.dopp.solaris.data.ApiClient
 import kotlin.concurrent.thread
 
 /**
- * Confirm dialog for a sensitive cover open (garage/door/gate). Launched by the
- * headless [WidgetActionReceiver] only when the server returns the 403 confirm
- * gate — so ordinary toggles never spawn a visible screen.
+ * Confirm dialog for a sensitive action (garage/door/gate, lock, alarm panel).
+ * Launched by the headless [WidgetActionReceiver] only when the server returns
+ * the 403 confirm gate — so ordinary toggles never spawn a visible screen.
+ * Whether a confirm is needed stays server-authoritative; only the wording is
+ * decided here, via [ConfirmVerb].
  */
 class WidgetActionActivity : Activity() {
 
@@ -26,10 +28,12 @@ class WidgetActionActivity : Activity() {
             finish()
             return
         }
-        // Confirm wording follows the action (open vs close), derived from the service.
-        val closing = service.contains("close")
-        val verb = getString(if (closing) R.string.widget_verb_close else R.string.widget_verb_open)
-        val positive = if (closing) R.string.widget_confirm_close else R.string.widget_confirm_yes
+        // Wording follows the service's own direction (#85) — a substring test on
+        // "close" mislabels lock.lock and alarm_arm_*, so ConfirmVerb maps the
+        // dotted domain.action instead and the button follows the same verb.
+        val action = ConfirmVerb.of(service)
+        val verb = getString(ConfirmWording.verbRes(action))
+        val positive = ConfirmWording.positiveRes(action)
         AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
             .setTitle(R.string.widget_confirm_title)
             .setMessage(getString(R.string.widget_confirm_msg, WidgetStore.name(this, appWidgetId), verb))
