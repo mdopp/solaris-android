@@ -28,9 +28,14 @@ import com.journeyapps.barcodescanner.ScanOptions
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisApp
 import cloud.dopp.solaris.SolarisConfig
+import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
+import cloud.dopp.solaris.data.ToolDef
+import cloud.dopp.solaris.data.ToolDefs
 import cloud.dopp.solaris.widget.PwaLauncher
+import cloud.dopp.solaris.widget.ToolWidgetProvider
+import cloud.dopp.solaris.widget.WidgetStore
 import cloud.dopp.solaris.widget.WidgetTypes
 import java.io.File
 import java.io.PrintWriter
@@ -169,7 +174,73 @@ class OnboardingHomeActivity : AppCompatActivity() {
         // hidden on future launches (we can't detect an installed WebAPK).
         findViewById<View>(R.id.install_pwa_card).visibility =
             if (ServerStore.isPwaHintDismissed(this)) View.GONE else View.VISIBLE
+
+        renderToolSection()
     }
+
+    /**
+     * The **catalog-driven** part of the widget picker (#72). Unlike the tiles
+     * above — a static Kotlin table — this section is built from the server's
+     * `.tool` catalog (`/napi/defs/tool`), so a newly installed `.tool` plugin
+     * shows up as an addable widget **without an app rebuild**.
+     *
+     * Draws the last-seen catalog first (instant, and the fallback when the fetch
+     * fails), then refreshes from the server. Only tools that can fill a list card
+     * are offered ([ToolDef.isListable]).
+     */
+    private fun renderToolSection() {
+        val group = findViewById<ViewGroup>(R.id.tools_group)
+        showTools(group, listableTools(WidgetStore.toolCatalogJson(this)))
+        if (toolsLoading || !(ServerStore.isConfigured(this) && TokenStore.isPaired(this))) return
+        toolsLoading = true
+        kotlin.concurrent.thread {
+            val body = try {
+                ApiClient(applicationContext).toolCatalogBody()
+            } catch (e: Exception) {
+                null
+            }
+            if (body != null) WidgetStore.setToolCatalogJson(applicationContext, body)
+            runOnUiThread {
+                toolsLoading = false
+                // No catalog (offline / not deployed) → keep the cached section.
+                if (body != null && !isFinishing) showTools(group, listableTools(body))
+            }
+        }
+    }
+
+    private fun listableTools(catalogJson: String?): List<ToolDef> =
+        ToolDefs.parseCatalog(catalogJson).filter { it.isListable }
+
+    /** Rebuild the tool rows; the whole group hides when there is nothing to offer. */
+    private fun showTools(group: ViewGroup, defs: List<ToolDef>) {
+        group.removeAllViews()
+        val vis = if (defs.isEmpty()) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.tools_group_title).visibility = vis
+        findViewById<View>(R.id.tools_group_hint).visibility = vis
+        group.visibility = vis
+        defs.forEach { def ->
+            val row = layoutInflater.inflate(R.layout.item_widget_type, group, false)
+            row.findViewById<ImageView>(R.id.type_icon).setImageResource(R.drawable.ic_services)
+            row.findViewById<TextView>(R.id.type_label).text = def.label
+            row.setOnClickListener { pinTool(def) }
+            group.addView(row)
+        }
+    }
+
+    /**
+     * Pin the generic tool widget bound to [def]. `requestPinAppWidget` cannot hand
+     * an extra to the new instance, so the picked id is parked for
+     * [ToolWidgetConfigActivity], which binds without asking again.
+     */
+    private fun pinTool(def: ToolDef) {
+        val mgr = pinManagerOrToast() ?: return
+        WidgetStore.setPendingToolId(this, def.id)
+        mgr.requestPinAppWidget(ComponentName(this, ToolWidgetProvider::class.java), null, null)
+    }
+
+    /** Guards against a second catalog fetch while one is in flight (onResume). */
+    @Volatile
+    private var toolsLoading = false
 
     /** Persist the dismiss flag (#11) and hide the install-PWA hint card. */
     private fun dismissPwaHint() {

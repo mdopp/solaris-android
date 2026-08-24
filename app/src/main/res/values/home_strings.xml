@@ -38,6 +38,10 @@
     <string name="home_widgets_group_servicebay">ServiceBay</string>
     <string name="home_tile_sb_overview">Übersicht</string>
     <string name="home_tile_sb_services">Dienste</string>
+    <!-- Catalog-driven tool section (#72): filled at runtime from /napi/defs/tool,
+         so a neu installiertes .tool erscheint hier ohne App-Update. -->
+    <string name="home_widgets_group_tools">Tools</string>
+    <string name="home_tools_hint">Aus deinem Solaris-Server geladen — neue Tools erscheinen automatisch.</string>
     <string name="home_add_widget">Widget hinzufügen</string>
     <string name="home_add_widget_manual">Widget über den Homescreen-Editor hinzufügen (lang drücken → Widgets).</string>
 

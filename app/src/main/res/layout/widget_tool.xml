@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The generic schema-driven tool widget (#70): header (tool label + refresh) +
+     a scrollable ListView collection backed by ToolRemoteViewsService. Nothing in
+     here is tool-specific — every row is produced by the schema→cell mapper from
+     the server's tool-cell-schema, so a brand-new .tool renders with no new code.
+     RemoteViews-safe views only (no plain <View>). Empty state via setEmptyView. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tw_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="14dp">
+
+    <!-- Header: icon + tool label + refresh -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false">
+
+        <ImageView
+            android:id="@+id/tw_icon"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_services"
+            android:tint="#FF7E9CFF"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/tw_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/tool_widget_label"
+            android:textColor="#FFF2F2F5"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <ImageView
+            android:id="@+id/tw_refresh"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:padding="3dp"
+            android:src="@drawable/ic_refresh"
+            android:tint="#FF9AA0AE"
+            android:contentDescription="@string/widget_refresh" />
+    </LinearLayout>
+
+    <!-- Empty view: shown by setEmptyView when the collection has no rows. -->
+    <TextView
+        android:id="@+id/tw_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/tool_empty"
+        android:textColor="#FFB0BEC5"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- The scrollable collection: one row per item, mapped from the cell schema. -->
+    <ListView
+        android:id="@+id/tw_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:scrollbars="none" />
+</LinearLayout>

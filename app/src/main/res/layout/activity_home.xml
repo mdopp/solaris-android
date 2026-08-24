@@ -522,6 +522,36 @@
                             android:text="@string/home_tile_sb_services" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <!-- Tools group (#72): NOT a static tile list — filled at runtime
+                     from the server's .tool catalog (/napi/defs/tool), so a newly
+                     installed plugin shows up as an addable widget without an app
+                     rebuild. Hidden until the catalog yields a listable tool. -->
+                <TextView
+                    android:id="@+id/tools_group_title"
+                    style="@style/Text.Solaris.Title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_widgets_group_tools"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:layout_marginBottom="6dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tools_group_hint"
+                    style="@style/Text.Solaris.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_tools_hint"
+                    android:layout_marginBottom="@dimen/space_sm"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/tools_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- 4. Install-PWA card (#11): dismissible; button reworded to

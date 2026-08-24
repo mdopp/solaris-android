@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One row of the generic tool widget (#70). The slots mirror the closed
+     tool-cell-schema role vocabulary (ADR 0011) one-to-one: title = primary line,
+     subtitle + meta = the muted detail line, badge = the trailing status chip.
+     A role the schema doesn't use is hidden by the factory — the layout carries no
+     tool-specific knowledge. RemoteViews-safe views only. Tap → PWA via the
+     collection's PendingIntentTemplate + a per-row fill-in intent. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tw_item_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:baselineAligned="false"
+    android:paddingTop="9dp"
+    android:paddingBottom="9dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tw_item_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="#FFF2F2F5"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tw_item_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="#FFB0BEC5"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tw_item_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="1"
+        android:textColor="#FFB0BEC5"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:visibility="gone" />
+</LinearLayout>

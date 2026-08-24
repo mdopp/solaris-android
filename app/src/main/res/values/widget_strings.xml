@@ -59,6 +59,17 @@
     <string name="camera_config_empty">Keine Kameras gefunden.</string>
     <string name="camera_open_hint">Kamera öffnen</string>
 
+    <!-- Generic schema-driven .tool widget (#70/#72): one provider for every tool. -->
+    <string name="tool_widget_label">Solaris · Tool</string>
+    <string name="tool_widget_description">Liste eines Solaris-Tools (Aufgaben, Kontakte, Dokumente …)</string>
+    <!-- %1$s = Tool-Name, %2$d = Anzahl Einträge. -->
+    <string name="tool_title_count">%1$s · %2$d</string>
+    <string name="tool_empty">Keine Einträge</string>
+    <string name="tool_unbound">Tool wählen</string>
+    <string name="tool_config_loading">Tools werden geladen …</string>
+    <string name="tool_config_pick">Tool wählen:</string>
+    <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
+
     <!-- Voice/mic widget (#17). -->
     <string name="voice_widget_label">Solaris · Sprache</string>
     <string name="voice_widget_description">Per Sprache eine Frage an Solaris stellen</string>
