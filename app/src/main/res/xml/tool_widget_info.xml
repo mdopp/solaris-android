@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The generic .tool widget (#70): one provider serves EVERY tool, bound per
+     instance to a tool-id by ToolWidgetConfigActivity. List-shaped by default
+     (a collection needs room), resizable. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:description="@string/tool_widget_description"
+    android:configure="cloud.dopp.solaris.widget.ToolWidgetConfigActivity"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_tool"
+    android:previewLayout="@layout/widget_tool"
+    android:updatePeriodMillis="1800000" />

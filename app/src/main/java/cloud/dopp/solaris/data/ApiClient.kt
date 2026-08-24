@@ -244,6 +244,43 @@ class ApiClient(private val ctx: Context) {
     }
 
     /**
+     * The **`.tool` catalog** via `GET /napi/defs/tool` (#72, solarisbay#1021):
+     * every declarative `.tool` plugin the server has, with its label, data path,
+     * actions and cell schema. This is what lets a brand-new tool appear as an
+     * addable widget **without an app rebuild** — the app never hardcodes the set.
+     *
+     * Returns the raw body so the caller can also persist it as the offline
+     * fallback for the picker; parse it with [ToolDefs.parseCatalog]. Null on any
+     * error (not paired, offline, endpoint not deployed) — never throws.
+     */
+    fun toolCatalogBody(): String? = getBody("/defs/tool")
+
+    /** [toolCatalogBody] parsed. Empty on any error. */
+    fun listToolDefs(): List<ToolDef> = ToolDefs.parseCatalog(toolCatalogBody())
+
+    /**
+     * The item rows behind one tool, fetched from its declared `tool-api-path`
+     * rewritten onto the native surface (#70). The generic widget renders these
+     * through the tool's `tool-cell-schema` — no per-tool code here. A tool without
+     * a data path (e.g. `.note`) yields nothing.
+     */
+    fun fetchToolRows(def: ToolDef): List<org.json.JSONObject> {
+        val path = def.apiPath ?: return emptyList()
+        return ToolDefs.rows(getBody(path))
+    }
+
+    /** GET [path] under `/napi`, returning the body, or null on any failure. */
+    private fun getBody(path: String): String? {
+        return try {
+            http.newCall(authed(path).get().build()).execute().use { resp ->
+                if (!resp.isSuccessful) null else resp.body?.string()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
      * Recent state history for one entity via `/napi/portal/entity-history`
      * (#755). Returns the numeric series (non-numeric states dropped) — used for
      * the line sparkline (dimmable brightness, temperature, power, …).

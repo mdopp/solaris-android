@@ -4,12 +4,29 @@
     <string name="widget_device_description">Ein Gerät steuern (Licht, Schalter, Garage …)</string>
 
     <string name="widget_confirm_title">Bestätigen</string>
-    <!-- %1$s = Gerätename, %2$s = Verb (öffnen/schließen). -->
+    <!-- %1$s = Gerätename, %2$s = Verb aus widget_verb_* (#85). -->
     <string name="widget_confirm_msg">%1$s wirklich %2$s?</string>
+    <!-- Verben: aus dem Dienst domain.action abgeleitet, siehe ConfirmVerb. -->
     <string name="widget_verb_open">öffnen</string>
     <string name="widget_verb_close">schließen</string>
-    <string name="widget_confirm_yes">Öffnen</string>
+    <string name="widget_verb_lock">abschließen</string>
+    <string name="widget_verb_unlock">aufschließen</string>
+    <string name="widget_verb_unlatch">per Türöffner öffnen</string>
+    <string name="widget_verb_arm">scharf schalten</string>
+    <string name="widget_verb_disarm">unscharf schalten</string>
+    <string name="widget_verb_toggle">umschalten</string>
+    <!-- Unbekannter Dienst: keine Richtung behaupten. -->
+    <string name="widget_verb_neutral">schalten</string>
+    <!-- Bestätigen-Knopf: dasselbe Verb, groß. -->
+    <string name="widget_confirm_open">Öffnen</string>
     <string name="widget_confirm_close">Schließen</string>
+    <string name="widget_confirm_lock">Abschließen</string>
+    <string name="widget_confirm_unlock">Aufschließen</string>
+    <string name="widget_confirm_unlatch">Öffnen</string>
+    <string name="widget_confirm_arm">Scharf schalten</string>
+    <string name="widget_confirm_disarm">Unscharf schalten</string>
+    <string name="widget_confirm_toggle">Umschalten</string>
+    <string name="widget_confirm_neutral">Schalten</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
     <string name="widget_config_loading">Geräte werden geladen …</string>
@@ -41,6 +58,17 @@
     <string name="camera_config_pick">Kamera wählen:</string>
     <string name="camera_config_empty">Keine Kameras gefunden.</string>
     <string name="camera_open_hint">Kamera öffnen</string>
+
+    <!-- Generic schema-driven .tool widget (#70/#72): one provider for every tool. -->
+    <string name="tool_widget_label">Solaris · Tool</string>
+    <string name="tool_widget_description">Liste eines Solaris-Tools (Aufgaben, Kontakte, Dokumente …)</string>
+    <!-- %1$s = Tool-Name, %2$d = Anzahl Einträge. -->
+    <string name="tool_title_count">%1$s · %2$d</string>
+    <string name="tool_empty">Keine Einträge</string>
+    <string name="tool_unbound">Tool wählen</string>
+    <string name="tool_config_loading">Tools werden geladen …</string>
+    <string name="tool_config_pick">Tool wählen:</string>
+    <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
 
     <!-- Voice/mic widget (#17). -->
     <string name="voice_widget_label">Solaris · Sprache</string>

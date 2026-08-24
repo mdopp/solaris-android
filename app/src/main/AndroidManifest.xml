@@ -258,6 +258,38 @@
                 android:resource="@xml/sb_services_widget_info" />
         </receiver>
 
+        <!-- Generic schema-driven .tool widget (#70): ONE provider that renders any
+             tool from the catalog's tool-cell-schema — a new .tool plugin becomes a
+             widget with no native code (#72 lists them in the in-app picker). -->
+        <receiver
+            android:name=".widget.ToolWidgetProvider"
+            android:exported="true"
+            android:label="@string/tool_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tool_widget_info" />
+        </receiver>
+
+        <!-- Collection service backing the tool widget's scrollable row list (#70). -->
+        <service
+            android:name=".widget.ToolRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
+        <!-- Binds a placed tool widget to one tool-id from the live catalog (#70). -->
+        <activity
+            android:name=".widget.ToolWidgetConfigActivity"
+            android:exported="true"
+            android:label="@string/tool_widget_label"
+            android:theme="@style/Theme.Solaris.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Realtime SSE client (#48): embedded foreground service that wakes
              device widgets from card_state pushes. Opt-in, off by default. -->
         <service

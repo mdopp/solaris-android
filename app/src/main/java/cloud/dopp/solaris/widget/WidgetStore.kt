@@ -56,4 +56,90 @@ object WidgetStore {
     }
 
     private const val KEY_ACTIVE_CACHE = "active_cache_json"
+
+    // --- generic .tool widget (#70/#72) --------------------------------------
+
+    /** Bind [id] to a `tool-id` from the catalog, with its label for the header. */
+    fun bindTool(ctx: Context, id: Int, toolId: String, label: String) {
+        p(ctx).edit()
+            .putString("tool_$id", toolId)
+            .putString("toolname_$id", label)
+            .remove("toolcells_$id")
+            .apply()
+    }
+
+    fun toolId(ctx: Context, id: Int): String? = p(ctx).getString("tool_$id", null)
+
+    fun toolLabel(ctx: Context, id: Int): String =
+        p(ctx).getString("toolname_$id", "") ?: ""
+
+    /** Update just the header label (the catalog renamed the tool) — keeps the rows. */
+    fun setToolLabel(ctx: Context, id: Int, label: String) {
+        p(ctx).edit().putString("toolname_$id", label).apply()
+    }
+
+    fun unbindTool(ctx: Context, id: Int) {
+        p(ctx).edit()
+            .remove("tool_$id").remove("toolname_$id").remove("toolcells_$id")
+            .apply()
+    }
+
+    /**
+     * Last-good mapped rows for one tool widget, as [ToolCells] JSON. Same
+     * stale-then-fresh contract as [activeCacheJson]: the collection factory draws
+     * from here instantly, and a failed refresh leaves the previous rows standing
+     * instead of blanking the widget (#46).
+     */
+    fun toolCellsJson(ctx: Context, id: Int): String? = p(ctx).getString("toolcells_$id", null)
+
+    fun setToolCellsJson(ctx: Context, id: Int, json: String) {
+        p(ctx).edit().putString("toolcells_$id", json).apply()
+    }
+
+    /**
+     * Last-seen raw `/napi/defs/tool` body — the picker's offline fallback, so the
+     * in-app tool section still lists the known tools when the catalog fetch fails.
+     * Shared across instances (the catalog is per-server, not per-widget).
+     */
+    fun toolCatalogJson(ctx: Context): String? = p(ctx).getString(KEY_TOOL_CATALOG, null)
+
+    fun setToolCatalogJson(ctx: Context, json: String) {
+        p(ctx).edit().putString(KEY_TOOL_CATALOG, json).apply()
+    }
+
+    /**
+     * One-shot hand-off from the in-app tool picker to the widget's config screen:
+     * `requestPinAppWidget` can't carry an extra to the new instance, so the picked
+     * `tool-id` is parked here and consumed by the config activity, which then
+     * binds without asking again. Pinning from the launcher's widget tray leaves it
+     * unset, so that path still shows the tool list.
+     */
+    fun setPendingToolId(ctx: Context, toolId: String) {
+        p(ctx).edit()
+            .putString(KEY_PENDING_TOOL, toolId)
+            .putLong(KEY_PENDING_TOOL_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    /**
+     * Take the parked id, if any, and forget it. Expires after
+     * [PENDING_TOOL_TTL_MS] so a dismissed pin dialog can't silently bind a widget
+     * the user later adds from the launcher's tray — that path asks again.
+     */
+    fun consumePendingToolId(ctx: Context): String? {
+        val v = p(ctx).getString(KEY_PENDING_TOOL, null)
+        val at = p(ctx).getLong(KEY_PENDING_TOOL_AT, 0L)
+        if (v != null) {
+            p(ctx).edit().remove(KEY_PENDING_TOOL).remove(KEY_PENDING_TOOL_AT).apply()
+        }
+        val fresh = System.currentTimeMillis() - at in 0..PENDING_TOOL_TTL_MS
+        return if (fresh) v?.ifBlank { null } else null
+    }
+
+    private const val KEY_TOOL_CATALOG = "tool_catalog_json"
+    private const val KEY_PENDING_TOOL = "pending_tool_id"
+    private const val KEY_PENDING_TOOL_AT = "pending_tool_at"
+
+    /** How long a picked-but-not-yet-placed tool id stays valid. */
+    const val PENDING_TOOL_TTL_MS = 5 * 60 * 1000L
 }

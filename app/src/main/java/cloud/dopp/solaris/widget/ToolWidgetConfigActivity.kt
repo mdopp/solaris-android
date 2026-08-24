@@ -1,0 +1,159 @@
+package cloud.dopp.solaris.widget
+
+import android.appwidget.AppWidgetManager
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.BaseAdapter
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.ListView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import cloud.dopp.solaris.R
+import cloud.dopp.solaris.data.ApiClient
+import cloud.dopp.solaris.data.ServerStore
+import cloud.dopp.solaris.data.TokenStore
+import cloud.dopp.solaris.data.ToolDef
+import cloud.dopp.solaris.data.ToolDefs
+import cloud.dopp.solaris.ui.OnboardingHomeActivity
+import kotlin.concurrent.thread
+
+/**
+ * Binds a freshly placed generic tool widget to one `.tool` (#70/#72). The list is
+ * the **live catalog** (`/napi/defs/tool`), not a hardcoded set — that is what lets
+ * a new plugin become a widget without an app rebuild — with the last-seen catalog
+ * as the offline fallback.
+ *
+ * Only tools that can actually fill a list card are offered ([ToolDef.isListable]):
+ * a tool without a `tool-api-path` (`.note`) has nothing to fetch, and one with an
+ * empty `tool-cell-schema` (`.energy`, `.home`) is a bespoke browser card. Pinning
+ * either would leave a permanently blank widget.
+ *
+ * When the user picked the tool in the in-app section (#72) the id is already
+ * parked ([WidgetStore.consumePendingToolId]) and this screen binds and closes
+ * without asking again.
+ */
+class ToolWidgetConfigActivity : AppCompatActivity() {
+
+    private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setResult(RESULT_CANCELED)
+        appWidgetId = intent?.extras?.getInt(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID,
+        ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish()
+            return
+        }
+        setContentView(R.layout.activity_widget_config)
+        applyStatusBarInset()
+
+        if (!ServerStore.isConfigured(this) || !TokenStore.isPaired(this)) {
+            findViewById<TextView>(R.id.config_status).setText(R.string.widget_config_pair_first)
+            findViewById<Button>(R.id.config_pair).apply {
+                visibility = View.VISIBLE
+                setOnClickListener { startActivity(Intent(context, OnboardingHomeActivity::class.java)) }
+            }
+            return
+        }
+        loadTools()
+    }
+
+    private fun applyStatusBarInset() {
+        val root = findViewById<View>(R.id.config_root)
+        val basePad = root.paddingTop
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            v.updatePadding(top = basePad + top)
+            insets
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (ServerStore.isConfigured(this) && TokenStore.isPaired(this) &&
+            findViewById<ListView>(R.id.config_list).adapter == null
+        ) {
+            findViewById<Button>(R.id.config_pair).visibility = View.GONE
+            loadTools()
+        }
+    }
+
+    private fun loadTools() {
+        val status = findViewById<TextView>(R.id.config_status)
+        val list = findViewById<ListView>(R.id.config_list)
+        status.setText(R.string.tool_config_loading)
+        val pending = WidgetStore.consumePendingToolId(applicationContext)
+        thread {
+            val defs = loadCatalog().filter { it.isListable }
+            val preset = pending?.let { id -> defs.firstOrNull { it.id == id } }
+            runOnUiThread {
+                if (preset != null) pick(preset) else showTools(list, status, defs)
+            }
+        }
+    }
+
+    /** Fresh catalog when reachable (and remembered), else the last-seen one. */
+    private fun loadCatalog(): List<ToolDef> {
+        val body = try {
+            ApiClient(applicationContext).toolCatalogBody()
+        } catch (e: Exception) {
+            null
+        }
+        if (body != null) {
+            WidgetStore.setToolCatalogJson(applicationContext, body)
+            val fresh = ToolDefs.parseCatalog(body)
+            if (fresh.isNotEmpty()) return fresh
+        }
+        return ToolDefs.parseCatalog(WidgetStore.toolCatalogJson(applicationContext))
+    }
+
+    private fun showTools(list: ListView, status: TextView, defs: List<ToolDef>) {
+        if (defs.isEmpty()) {
+            status.setText(R.string.tool_config_empty)
+            return
+        }
+        status.setText(R.string.tool_config_pick)
+        list.adapter = ToolAdapter(this, defs)
+        list.setOnItemClickListener { _, _, pos, _ -> pick(defs[pos]) }
+    }
+
+    private class ToolAdapter(
+        ctx: Context,
+        private val defs: List<ToolDef>,
+    ) : BaseAdapter() {
+        private val inflater = LayoutInflater.from(ctx)
+
+        override fun getCount() = defs.size
+        override fun getItem(position: Int) = defs[position]
+        override fun getItemId(position: Int) = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+            val v = convertView ?: inflater.inflate(R.layout.item_widget_type, parent, false)
+            val def = defs[position]
+            v.findViewById<ImageView>(R.id.type_icon).setImageResource(R.drawable.ic_services)
+            v.findViewById<TextView>(R.id.type_label).text = def.label
+            return v
+        }
+    }
+
+    private fun pick(def: ToolDef) {
+        WidgetStore.bindTool(this, appWidgetId, def.id, def.label)
+        ToolWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+        setResult(
+            RESULT_OK,
+            Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+        )
+        finish()
+    }
+}
