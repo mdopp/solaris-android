@@ -1,0 +1,15 @@
+<!-- Lock state `jammed` (#91): the bolt is stuck mid-travel — the shackle sits
+     askew on a level body and the keyhole is replaced by an exclamation mark. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <!-- Shackle tilted about the body's top edge: it never seated. -->
+    <group android:rotation="18" android:pivotX="12" android:pivotY="10.5">
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M7,11V9a5,5 0 0 1 10,0v2h-2.2V9a2.8,2.8 0 0 0 -5.6,0v2z" />
+    </group>
+    <!-- Body with an exclamation mark punched out instead of the keyhole. -->
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M5.5,10.5h13a1.5,1.5 0 0 1 1.5,1.5v7.5a1.5,1.5 0 0 1 -1.5,1.5h-13a1.5,1.5 0 0 1 -1.5,-1.5v-7.5a1.5,1.5 0 0 1 1.5,-1.5zM11.2,12.4h1.6v4.2h-1.6zM12,18.4m-0.95,0a0.95,0.95 0 1,0 1.9,0a0.95,0.95 0 1,0 -1.9,0" />
+</vector>

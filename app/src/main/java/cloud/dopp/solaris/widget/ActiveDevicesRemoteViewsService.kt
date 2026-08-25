@@ -50,7 +50,9 @@ private class ActiveDevicesFactory(
         val card = cards.getOrNull(position)
             ?: return row.also { it.setViewVisibility(R.id.av_item_root, View.GONE) }
 
-        row.setImageViewResource(R.id.av_item_icon, DeviceIcons.forDomain(card.domain))
+        // A lock row is drawn by its state (#91), like the device tile — the row
+        // already spells the state out next to it, the glyph makes it scannable.
+        row.setImageViewResource(R.id.av_item_icon, DeviceIcons.forState(card.domain, card.state))
         row.setInt(R.id.av_item_icon, "setColorFilter", accentFor(card.domain))
         row.setTextViewText(R.id.av_item_name, card.name.ifBlank { card.entityId })
         row.setTextViewText(R.id.av_item_state, ActiveDevicesRender.stateLabel(card))

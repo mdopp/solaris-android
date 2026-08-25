@@ -1,0 +1,14 @@
+<!-- Lock state `locked` (#91): a padlock whose shackle is a closed, symmetric arch
+     seated on the body. The state family is told apart by SILHOUETTE, never by
+     colour — the accent already carries meaning and must stay redundant. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <!-- Shackle: closed arch, both legs down into the body. -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M7,11V9a5,5 0 0 1 10,0v2h-2.2V9a2.8,2.8 0 0 0 -5.6,0v2z" />
+    <!-- Body with the keyhole punched out (evenOdd), so tinting keeps the hole. -->
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M5.5,10.5h13a1.5,1.5 0 0 1 1.5,1.5v7.5a1.5,1.5 0 0 1 -1.5,1.5h-13a1.5,1.5 0 0 1 -1.5,-1.5v-7.5a1.5,1.5 0 0 1 1.5,-1.5zM12,12.2a1.6,1.6 0 0 1 0.9,2.93L13.2,18.2h-2.4l0.3,-3.07A1.6,1.6 0 0 1 12,12.2z" />
+</vector>

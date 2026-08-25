@@ -101,7 +101,7 @@ object WidgetRender {
 
         val accent = accentFor(dom, card, on)
 
-        v.setImageViewResource(R.id.w_icon, iconFor(dom))
+        v.setImageViewResource(R.id.w_icon, iconFor(dom, card))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setTextViewText(R.id.w_state, stateLabel(card, load))
@@ -197,7 +197,7 @@ object WidgetRender {
         // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
         // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
         // tap runs the domain's primary action (toggle / open↔close by state).
-        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom))
+        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom, card))
         v.setInt(R.id.w_tiny_toggle, "setColorFilter", accent)
         v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, tinyToggleOp(dom, card)))
 
@@ -395,7 +395,12 @@ object WidgetRender {
         )
     }
 
-    private fun iconFor(domain: String): Int = DeviceIcons.forDomain(domain)
+    /**
+     * The tile's type icon. A lock is drawn by its **state** rather than by its
+     * domain (#91), so `abgeschlossen` / `aufgeschlossen` / `entriegelt` are told
+     * apart by the picture and not only by the word underneath it.
+     */
+    private fun iconFor(domain: String, card: Card?): Int = DeviceIcons.forState(domain, card?.state)
 
     /**
      * The tile's accent. A lock is coloured by its **state** rather than by the
