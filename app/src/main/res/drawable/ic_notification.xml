@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification small icon (#88): the Solaris energy bolt, white on transparent.
+     Android masks a small icon by its ALPHA channel and paints everything opaque
+     white, so the blue rounded tile of ic_solaris_logo.xml is deliberately left
+     out here — a filled tile would render as a solid white blob. Only the bolt
+     carries alpha; the brand blue comes back via NotificationCompat.setColor.
+     The path is the bolt of ic_solaris_logo.xml rescaled from its 48 viewport to
+     24 and inset by 2dp on every side, because shapes touching the viewport edge
+     get clipped in the status bar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12.75,2L12.04,9.14h4.64c0.64,0 0.71,0.43 0.5,0.86L10.61,22h-0.72l0.72,-8.57H7.04c-0.72,0 -0.65,-0.43 -0.43,-0.79L12.04,2z" />
+</vector>
