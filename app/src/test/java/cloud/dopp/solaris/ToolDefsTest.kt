@@ -33,21 +33,29 @@ class ToolDefsTest {
           {"id":"task-tool","name":"solaris-task-tool","kind":"tool","tool-id":"task",
            "tool-label":"Aufgabe","command":".task",
            "tool-api-path":"/api/portal/tasks?done=1","tool-search-path":"",
+           "tool-compose-path":"#/p/task/new",
            "tool-actions":["task.set_status","task.add","task.update"],
-           "tool-cell-schema":{"title":"title","meta":["due"]}},
+           "tool-cell-schema":{"title":"title","meta":["due"],"actions":["task.set_status"]},
+           "tool-action-params":{"task.set_status":{"entity_id":"${'$'}id","status":"done"},
+             "task.add":{"title":"${'$'}title","due":"${'$'}due"},
+             "task.update":{"entity_id":"${'$'}id","title":"${'$'}title","due":"${'$'}due"}}},
           {"id":"contacts-tool","name":"solaris-contacts-tool","kind":"tool","tool-id":"contacts",
            "tool-label":"Kontakt","tool-api-path":"/api/portal/persons",
+           "tool-compose-path":"#/p/contacts/new",
            "tool-actions":["contact.add","person.update"],
            "tool-cell-schema":{"title":"name","meta":["phone","email"]}},
           {"id":"doc-tool","name":"solaris-doc-tool","kind":"tool","tool-id":"doc",
            "tool-label":"Dokument","tool-api-path":"/api/portal/documents/search",
+           "tool-compose-path":"#/p/doc/new",
            "tool-actions":["doc.classify"],
            "tool-cell-schema":{"title":"title","meta":["category"]}},
           {"id":"photo-tool","name":"solaris-photo-tool","kind":"tool","tool-id":"photo",
            "tool-label":"Foto","tool-api-path":"/api/photo","tool-actions":[],
+           "tool-compose-path":"#/p/photo/new",
            "tool-cell-schema":{"title":"name","meta":["people"]}},
           {"id":"note-tool","name":"solaris-note-tool","kind":"tool","tool-id":"note",
            "tool-label":"Notiz","tool-api-path":"","tool-actions":["note.add"],
+           "tool-compose-path":"#/p/note/new",
            "tool-cell-schema":{"title":"label"}},
           {"id":"energy-tool","name":"solaris-energy-tool","kind":"tool","tool-id":"energy",
            "tool-label":"Energie","tool-api-path":"/api/portal/energy","tool-actions":[],
@@ -201,6 +209,78 @@ class ToolDefsTest {
         // A def without a tool-id is skipped; the rest of the catalog survives.
         val mixed = """{"defs":[{"tool-label":"kaputt"},{"tool-id":"ok","tool-label":"OK"}]}"""
         assertEquals(listOf("ok"), ToolDefs.parseCatalog(mixed).map { it.id })
+    }
+
+    // --- tool-compose-path (#71, solarisbay#1213) -----------------------------
+
+    /**
+     * Which of the shipped tools may be offered an "Erfassen" tile. The five
+     * create-capable tools declare the route themselves; `home` and `energy` are
+     * view-only and declare none — and a missing declaration must stay missing,
+     * because a synthesised `#/p/home/new` would land on the start page.
+     */
+    @Test
+    fun onlyDeclaringToolsCarryAComposePath() {
+        val byId = ToolDefs.parseCatalog(shippedCatalog).associateBy { it.id }
+        assertEquals("#/p/task/new", byId.getValue("task").composePath)
+        assertEquals("#/p/note/new", byId.getValue("note").composePath)
+        assertEquals("#/p/contacts/new", byId.getValue("contacts").composePath)
+        assertEquals("#/p/doc/new", byId.getValue("doc").composePath)
+        assertEquals("#/p/photo/new", byId.getValue("photo").composePath)
+        assertNull(byId.getValue("home").composePath)
+        assertNull(byId.getValue("energy").composePath)
+    }
+
+    @Test
+    fun composePathIsTakenAsDeclaredAndForeignOnesRefused() {
+        assertEquals("#/p/x/new", ToolDefs.composePath("  #/p/x/new  "))
+        assertNull(ToolDefs.composePath(null))
+        assertNull(ToolDefs.composePath(""))
+        assertNull(ToolDefs.composePath("   "))
+        // Off-server — never open a tile at someone else's host.
+        assertNull(ToolDefs.composePath("https://example.com/#/p/x/new"))
+    }
+
+    // --- tool-action-params (#90, solarisbay#1214) ----------------------------
+
+    /** The real `.task` declaration — the only tool that ships one today. */
+    @Test
+    fun taskActionParamsAreReadPerActionId() {
+        val byId = ToolDefs.parseCatalog(shippedCatalog).associateBy { it.id }
+        val task = byId.getValue("task").actionParams
+        assertEquals(setOf("task.set_status", "task.add", "task.update"), task.keys)
+        assertEquals(
+            mapOf("entity_id" to "\$id", "status" to "done"),
+            task["task.set_status"],
+        )
+        // Every other shipped tool declares none — so no row of theirs gets a button.
+        listOf("contacts", "doc", "photo", "note", "home", "energy").forEach {
+            assertTrue(it, byId.getValue(it).actionParams.isEmpty())
+        }
+    }
+
+    /**
+     * A source must be a non-empty string; a bare `$` names no field (the server
+     * lints exactly that). Such an action is dropped whole rather than sent with a
+     * hole in its params.
+     */
+    @Test
+    fun unusableActionParamMappingsAreDropped() {
+        val body = """
+            {"defs":[{"tool-id":"x","tool-actions":["a","b","c","d"],
+             "tool-action-params":{"a":{"p":"${'$'}"},"b":{"p":42},"c":{},
+               "d":{"p":"${'$'}field","q":"lit"}}}]}
+        """.trimIndent()
+        val params = ToolDefs.parseCatalog(body).single().actionParams
+        assertEquals(setOf("d"), params.keys)
+        assertEquals(mapOf("p" to "\$field", "q" to "lit"), params["d"])
+    }
+
+    @Test
+    fun missingOrMalformedActionParamsYieldAnEmptyMap() {
+        assertTrue(ToolDefs.parseActionParams(null).isEmpty())
+        val body = """{"defs":[{"tool-id":"x","tool-action-params":"nope"}]}"""
+        assertTrue(ToolDefs.parseCatalog(body).single().actionParams.isEmpty())
     }
 
     // --- item payloads --------------------------------------------------------

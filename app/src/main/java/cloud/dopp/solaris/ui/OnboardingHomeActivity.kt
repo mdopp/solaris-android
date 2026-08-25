@@ -34,6 +34,7 @@ import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.data.ToolDef
 import cloud.dopp.solaris.data.ToolDefs
 import cloud.dopp.solaris.widget.PwaLauncher
+import cloud.dopp.solaris.widget.ToolLauncherWidgetProvider
 import cloud.dopp.solaris.widget.ToolWidgetProvider
 import cloud.dopp.solaris.widget.WidgetStore
 import cloud.dopp.solaris.widget.WidgetTypes
@@ -225,6 +226,25 @@ class OnboardingHomeActivity : AppCompatActivity() {
             row.setOnClickListener { pinTool(def) }
             group.addView(row)
         }
+        if (defs.isNotEmpty()) addLauncherRow(group)
+    }
+
+    /**
+     * The 1×1 launcher tile (#71) as one entry, not one row per tool × mode: the
+     * tile's own config screen is the picker (it offers a "Neu" entry only where
+     * the def declares a `tool-compose-path`), so this section stays short.
+     */
+    private fun addLauncherRow(group: ViewGroup) {
+        val row = layoutInflater.inflate(R.layout.item_widget_type, group, false)
+        row.findViewById<ImageView>(R.id.type_icon).setImageResource(R.drawable.ic_plus)
+        row.findViewById<TextView>(R.id.type_label).setText(R.string.tool_launch_label)
+        row.setOnClickListener {
+            val mgr = pinManagerOrToast() ?: return@setOnClickListener
+            mgr.requestPinAppWidget(
+                ComponentName(this, ToolLauncherWidgetProvider::class.java), null, null,
+            )
+        }
+        group.addView(row)
     }
 
     /**

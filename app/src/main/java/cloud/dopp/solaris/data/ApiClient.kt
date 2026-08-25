@@ -28,6 +28,20 @@ class ApiClient(private val ctx: Context) {
     /** The server refused a sensitive action (garage/door open) without confirm. */
     class SensitiveException : Exception("sensitive action needs confirmation")
 
+    /**
+     * How `POST /napi/action-callback` answered a tool-row action (#90). The three
+     * refusals the server distinguishes need three different reactions, so they
+     * are separate values rather than one boolean:
+     *
+     * - [CONFIRM_REQUIRED] — destructive action, unconfirmed (403): ask, then
+     *   re-send with `confirmed=true`.
+     * - [FORBIDDEN] — admin-only action (403). On `/napi/` this is **always** the
+     *   answer, because `Remote-Groups` is not trustworthy there — so there is
+     *   nothing to retry and no dialog to show.
+     * - [UNKNOWN_ACTION] — the id isn't registered (404): leave the row alone.
+     */
+    enum class ActionOutcome { OK, CONFIRM_REQUIRED, FORBIDDEN, UNKNOWN_ACTION, FAILED }
+
     private val http = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -269,6 +283,31 @@ class ApiClient(private val ctx: Context) {
         return ToolDefs.rows(getBody(path))
     }
 
+    /**
+     * Run one declared tool action via `POST /napi/action-callback` (#90) with the
+     * `{action_id, params}` body [ToolDefs.actionBody] builds — the params already
+     * resolved from the rendered row through the catalog's `tool-action-params`,
+     * so nothing here knows what a task is.
+     *
+     * Never throws: a transport failure is [ActionOutcome.FAILED], because a
+     * widget button that crashes the provider is worse than one that does nothing.
+     */
+    fun postActionCallback(
+        actionId: String,
+        params: JSONObject?,
+        confirmed: Boolean = false,
+    ): ActionOutcome {
+        return try {
+            val body = ToolDefs.actionBody(actionId, params, confirmed)
+                .toString().toRequestBody(JSON)
+            http.newCall(authed("/action-callback").post(body).build()).execute().use { resp ->
+                actionOutcome(resp.code, resp.body?.string())
+            }
+        } catch (e: Exception) {
+            ActionOutcome.FAILED
+        }
+    }
+
     /** GET [path] under `/napi`, returning the body, or null on any failure. */
     private fun getBody(path: String): String? {
         return try {
@@ -452,6 +491,29 @@ class ApiClient(private val ctx: Context) {
          */
         fun watchBody(entityIds: List<String>): JSONObject =
             JSONObject().put("entity_ids", org.json.JSONArray(entityIds))
+
+        /**
+         * Classify an `/napi/action-callback` reply (#90). Both refusals the
+         * server can give are **403**, so the status alone is ambiguous — the
+         * `reason` in the body is what separates "ask and retry" from "you may
+         * never do this". An unreadable body degrades to [ActionOutcome.FAILED]
+         * rather than to a confirm dialog for an action we can't name. Pure →
+         * JVM-testable without a server.
+         */
+        fun actionOutcome(code: Int, body: String?): ActionOutcome {
+            if (code in 200..299) return ActionOutcome.OK
+            val reason = try {
+                if (body.isNullOrBlank()) "" else JSONObject(body).optString("reason")
+            } catch (e: Exception) {
+                ""
+            }
+            return when {
+                code == 403 && reason == "confirm_required" -> ActionOutcome.CONFIRM_REQUIRED
+                code == 403 -> ActionOutcome.FORBIDDEN
+                code == 404 || reason == "unknown_action" -> ActionOutcome.UNKNOWN_ACTION
+                else -> ActionOutcome.FAILED
+            }
+        }
 
         /** Safe max edge for a camera snapshot pushed into a RemoteViews bundle. */
         const val CAMERA_MAX_EDGE_PX = 640

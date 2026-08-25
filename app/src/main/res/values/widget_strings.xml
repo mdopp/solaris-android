@@ -91,6 +91,20 @@
     <string name="tool_config_loading">Tools werden geladen …</string>
     <string name="tool_config_pick">Tool wählen:</string>
     <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
+    <!-- Aktions-Knopf in der Zeile (#90). %1$s = Titel der Zeile. -->
+    <string name="tool_action_cd">Aktion ausführen</string>
+    <string name="tool_action_confirm">„%1$s“ wirklich ausführen?</string>
+    <string name="tool_action_do">Ausführen</string>
+
+    <!-- 1x1-Tool-Kachel (#71): Erfassen bzw. Chat mit geöffneter Karte. -->
+    <string name="tool_launch_label">Solaris · Tool-Kachel</string>
+    <string name="tool_launch_description">Kachel öffnet ein Tool: neu erfassen oder Karte im Chat</string>
+    <string name="tool_launch_cta_compose">Neu</string>
+    <string name="tool_launch_cta_chat">Öffnen</string>
+    <string name="tool_launch_pick">Kachel wählen:</string>
+    <string name="tool_launch_empty">Keine Tools gefunden.</string>
+    <!-- %1$s = Tool-Name, %2$s = tool_launch_cta_*. -->
+    <string name="tool_launch_entry">%1$s · %2$s</string>
 
     <!-- Voice/mic widget (#17). -->
     <string name="voice_widget_label">Solaris · Sprache</string>
