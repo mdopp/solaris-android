@@ -34,10 +34,20 @@ import kotlin.concurrent.thread
  * that deep-links into the start page. Unlike the list widget's picker there is no
  * `isListable` filter: a launcher needs no items and no cell schema, which is why
  * `.note`, `.home` and `.energy` are offerable here and not there.
+ *
+ * Re-entered from the launcher's *Einrichten* entry the tile is already bound
+ * (#96): the list marks the current tool **and** mode, and a back-out leaves the
+ * tile where it is — see [ConfigEntry].
  */
 class ToolLauncherConfigActivity : AppCompatActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /** The tool + mode this tile already opens, if we were re-opened (#96). */
+    private var boundToolId: String? = null
+    private var boundMode = ToolLaunchMode.COMPOSE
+
+    private var entry = ConfigEntry.FIRST_PLACEMENT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +60,11 @@ class ToolLauncherConfigActivity : AppCompatActivity() {
             finish()
             return
         }
+        boundToolId = WidgetStore.toolLaunchId(this, appWidgetId)
+        boundMode = WidgetStore.toolLaunchMode(this, appWidgetId)
+        entry = ConfigEntry.of(boundToolId != null)
+        // Backing out of a reconfigure must not cost the user the tile (#96).
+        setResult(entry.backOutResult, resultIntent())
         setContentView(R.layout.activity_widget_config)
         applyStatusBarInset()
 
@@ -116,14 +131,23 @@ class ToolLauncherConfigActivity : AppCompatActivity() {
             status.setText(R.string.tool_launch_empty)
             return
         }
-        status.setText(R.string.tool_launch_pick)
-        list.adapter = TileAdapter(this, tiles)
+        status.setText(
+            if (entry.isReconfigure) R.string.tool_launch_change else R.string.tool_launch_pick,
+        )
+        list.adapter = TileAdapter(this, tiles, boundToolId, boundMode)
         list.setOnItemClickListener { _, _, pos, _ -> pick(tiles[pos]) }
+        // Reconfigure: open on the entry the tile currently uses (#96). Tool AND
+        // mode — the same tool appears twice, once per mode.
+        tiles.indexOfFirst { it.toolId == boundToolId && it.mode == boundMode }
+            .takeIf { it >= 0 }?.let { list.setSelection(it) }
     }
 
     private class TileAdapter(
         private val ctx: Context,
         private val tiles: List<ToolLaunchTile>,
+        /** The tile's current binding, marked in the list on reconfigure (#96). */
+        private val currentToolId: String?,
+        private val currentMode: ToolLaunchMode,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
@@ -135,20 +159,28 @@ class ToolLauncherConfigActivity : AppCompatActivity() {
             val v = convertView ?: inflater.inflate(R.layout.item_widget_type, parent, false)
             val tile = tiles[position]
             v.findViewById<ImageView>(R.id.type_icon).setImageResource(tile.mode.iconRes)
-            v.findViewById<TextView>(R.id.type_label).text = ctx.getString(
+            val label = ctx.getString(
                 R.string.tool_launch_entry, tile.label, ctx.getString(tile.mode.ctaRes),
             )
+            v.findViewById<TextView>(R.id.type_label).text =
+                if (tile.toolId == currentToolId && tile.mode == currentMode) {
+                    ctx.getString(R.string.widget_config_current, label)
+                } else {
+                    label
+                }
             return v
         }
     }
 
     private fun pick(tile: ToolLaunchTile) {
+        // Keyed by appWidgetId: re-binding overwrites all four fields of this
+        // instance's entry, never adds a second one (#96).
         WidgetStore.bindToolLaunch(this, appWidgetId, tile)
         ToolLauncherWidgetProvider.requestRefresh(applicationContext, appWidgetId)
-        setResult(
-            RESULT_OK,
-            Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
-        )
+        setResult(RESULT_OK, resultIntent())
         finish()
     }
+
+    private fun resultIntent() =
+        Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
 }
