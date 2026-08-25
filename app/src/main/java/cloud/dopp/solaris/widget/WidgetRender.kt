@@ -86,10 +86,11 @@ object WidgetRender {
         val on = card?.isOn == true
 
         // TINY (1×1, #31) has its own shape: name instead of icon, one primary
-        // toggle, and the state docked as a bottom bar. Built separately.
-        val sensitive = isSensitive(ctx, appWidgetId, card, dom)
+        // toggle, and the state docked as a bottom bar. Built separately — and
+        // without the confirm badge (#95), which does not fit a single cell.
+        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, load)
 
-        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, sensitive)
+        val sensitive = isSensitive(ctx, appWidgetId, card, dom)
 
         // WIDE and SMALL share the same wide layout — SMALL just hides the control
         // row below, so a narrow card looks identical to the wide one minus buttons.
@@ -108,7 +109,7 @@ object WidgetRender {
         v.setTextColor(R.id.w_state, accent)
 
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
-        v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.w_lock, if (showsLockBadge(tier, sensitive)) View.VISIBLE else View.GONE)
 
         val level = card?.level
         if (level != null) {
@@ -173,7 +174,8 @@ object WidgetRender {
      * (top, single line, ellipsized), the **toggle is a tappable state-tinted domain
      * icon** with no button chrome (tap = the domain's primary action), and the
      * **state is a full-width bottom bar** (position / brightness). Tapping the name
-     * opens the PWA; tapping the icon toggles.
+     * opens the PWA; tapping the icon toggles — unless nothing is bound yet, when
+     * the whole tile is one "einrichten" button (#94).
      */
     private fun buildTiny(
         ctx: Context,
@@ -183,16 +185,17 @@ object WidgetRender {
         dom: String,
         on: Boolean,
         onBodyTap: PendingIntent,
-        sensitive: Boolean,
+        load: Load,
     ): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
+
+        if (tinyTap(load) == TinyTap.SETUP) return tinySetup(v, onBodyTap, load)
+
         val accent = accentFor(dom, card, on)
 
         // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
-        // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
-        v.setViewVisibility(R.id.w_lock, if (sensitive) View.VISIBLE else View.GONE)
 
         // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
         // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
@@ -211,6 +214,51 @@ object WidgetRender {
         }
         return v
     }
+
+    /**
+     * The empty 1×1 tile (#94): nothing is bound yet, so the tile says so and
+     * behaves as a single button. [onBodyTap] is the picker intent in this state
+     * (see [build]); it goes on **`w_root`**, and the two sub-regions that would
+     * otherwise act — the name (opens the PWA) and the toggle icon (fires an op
+     * with no entity behind it) — are disarmed with a `null` intent, the same way
+     * a stopped cover button is. The state bar stays hidden: there is no state.
+     */
+    private fun tinySetup(v: RemoteViews, onBodyTap: PendingIntent, load: Load): RemoteViews {
+        v.setTextViewText(R.id.w_name, stateLabel(null, load))
+        v.setImageViewResource(R.id.w_tiny_toggle, R.drawable.ic_plus)
+        v.setInt(R.id.w_tiny_toggle, "setColorFilter", OFF)
+        v.setViewVisibility(R.id.w_bar, View.GONE)
+        v.setOnClickPendingIntent(R.id.w_name, null)
+        v.setOnClickPendingIntent(R.id.w_tiny_toggle, null)
+        v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
+        return v
+    }
+
+    /**
+     * Where a tap on the 1×1 tile goes, decided by the load state alone (#94).
+     * [TinyTap.SETUP] = nothing bound (fresh widget, or orphaned after a
+     * reinstall) → the whole tile opens the picker and no sub-region does anything
+     * else; [TinyTap.BOUND] = an entity is behind the tile (its state may still be
+     * loading or may have failed to load, which changes what is *shown*, not what a
+     * tap *does*) → name opens the PWA, icon runs the domain action. Pure →
+     * JVM-testable.
+     */
+    fun tinyTap(load: Load): TinyTap = when (load) {
+        Load.UNCONFIGURED -> TinyTap.SETUP
+        Load.LOADING, Load.FAILED, Load.LOADED -> TinyTap.BOUND
+    }
+
+    /** The two tap wirings of the 1×1 tile (#94). See [tinyTap]. */
+    enum class TinyTap { SETUP, BOUND }
+
+    /**
+     * Does this tier carry the confirm badge (#38)? Everything but [Tier.TINY]:
+     * on a single cell the badge cost about a third of the name width, and since
+     * #92 a tap there opens the chooser anyway, so it announced what the very next
+     * touch makes plain (#95). Presentation only — `isSensitiveDevice` and the
+     * server's 403 `sensitive_action` gate are untouched. Pure → JVM-testable.
+     */
+    fun showsLockBadge(tier: Tier, sensitive: Boolean): Boolean = sensitive && tier != Tier.TINY
 
     /**
      * The tiny-tier toggle-icon's primary action (#57): the tappable icon runs this
