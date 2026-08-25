@@ -57,6 +57,10 @@
     <string name="widget_config_no_match">Keine Treffer.</string>
     <string name="widget_config_empty">Keine steuerbaren Geräte gefunden.</string>
     <string name="widget_config_pair_first">Bitte zuerst das Gerät koppeln.</string>
+    <!-- Neu-Einrichten aus dem Langdruck-Menü (#96): das Widget ist schon
+         gebunden, es wird nur umgehängt. %1$s = Raum bzw. Bezeichnung der Zeile. -->
+    <string name="widget_config_change">Gerät ändern:</string>
+    <string name="widget_config_current">%1$s · aktuell</string>
 
     <!-- Active-devices overview widget (#28). -->
     <string name="active_widget_label">Solaris · Aktive Geräte</string>
@@ -91,6 +95,7 @@
     <string name="tool_config_loading">Tools werden geladen …</string>
     <string name="tool_config_pick">Tool wählen:</string>
     <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
+    <string name="tool_config_change">Tool ändern:</string>
     <!-- Aktions-Knopf in der Zeile (#90). %1$s = Titel der Zeile. -->
     <string name="tool_action_cd">Aktion ausführen</string>
     <string name="tool_action_confirm">„%1$s“ wirklich ausführen?</string>
@@ -103,6 +108,7 @@
     <string name="tool_launch_cta_chat">Öffnen</string>
     <string name="tool_launch_pick">Kachel wählen:</string>
     <string name="tool_launch_empty">Keine Tools gefunden.</string>
+    <string name="tool_launch_change">Kachel ändern:</string>
     <!-- %1$s = Tool-Name, %2$s = tool_launch_cta_*. -->
     <string name="tool_launch_entry">%1$s · %2$s</string>
 

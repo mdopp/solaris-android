@@ -33,6 +33,7 @@ import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.data.ToolDef
 import cloud.dopp.solaris.data.ToolDefs
+import cloud.dopp.solaris.widget.AppShortcuts
 import cloud.dopp.solaris.widget.PwaLauncher
 import cloud.dopp.solaris.widget.ToolLauncherWidgetProvider
 import cloud.dopp.solaris.widget.ToolWidgetProvider
@@ -133,6 +134,9 @@ class OnboardingHomeActivity : AppCompatActivity() {
         super.onResume()
         try {
             render()
+            // Catch-all for the app-icon long-press menu (#97): bind/delete keep it
+            // current, this picks up a restore or a widget removed while away.
+            AppShortcuts.refreshAsync(applicationContext)
         } catch (e: Throwable) {
             showError("onResume", e)
         }

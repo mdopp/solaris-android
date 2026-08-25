@@ -3,6 +3,7 @@ package cloud.dopp.solaris.widget
 import android.app.Activity
 import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
+import android.content.Intent
 import android.os.Bundle
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
@@ -21,7 +22,11 @@ import kotlin.concurrent.thread
  *    the tile's swatch button. See [LightColors] for why a palette and not a
  *    picker.
  * 3. **Lock chooser** for the 1×1 lock tile (#92) — the one dialog that is not a
- *    reaction to a call, but the thing that decides *which* call is made.
+ *    reaction to a call, but the thing that decides *which* call is made. The
+ *    app-icon shortcut of a lock (#97) opens exactly this, never a call.
+ * 4. **Shortcut trampoline** (#97): an app-icon shortcut can only start an
+ *    activity, so a non-sensitive device's shortcut lands here and is handed
+ *    straight to [WidgetActionReceiver] as the widget's own toggle.
  *
  * The activity deliberately declares **no `showWhenLocked`** and dismisses no
  * keyguard: sitting behind the device lock is what makes a homescreen tile an
@@ -43,6 +48,23 @@ class WidgetActionActivity : Activity() {
         // Lock chooser (#92) carries no service either — the pick names it.
         if (intent.getBooleanExtra(EXTRA_LOCK_CHOOSE, false)) {
             if (entityId == null) finish() else showLockChooser(entityId, appWidgetId)
+            return
+        }
+        // App-icon shortcut tap (#97). A shortcut cannot start a BroadcastReceiver,
+        // so this invisible screen hands the tap to the widget's own tap handler —
+        // the same op, the same 403 confirm path, no second code path to keep safe.
+        // Re-checked against the *store's* domain, not the intent's: a stale or
+        // forged shortcut aimed at a lock must do nothing at all here.
+        if (intent.getBooleanExtra(EXTRA_SHORTCUT_TOGGLE, false)) {
+            if (DeviceShortcuts.actsDirectly(WidgetStore.domain(this, appWidgetId))) {
+                sendBroadcast(
+                    Intent(this, WidgetActionReceiver::class.java)
+                        .setAction(WidgetActionReceiver.ACTION_TAP)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                        .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE),
+                )
+            }
+            finish()
             return
         }
         val service = intent.getStringExtra(WidgetActionReceiver.EXTRA_SERVICE)
@@ -151,5 +173,12 @@ class WidgetActionActivity : Activity() {
 
         /** Boolean extra: open the lock chooser instead of a confirm (#92). */
         const val EXTRA_LOCK_CHOOSE = "lock_choose"
+
+        /**
+         * Boolean extra: an app-icon shortcut (#97) wants the bound widget's
+         * ordinary toggle. Only honoured for a domain [DeviceShortcuts] lets act
+         * directly — never for a lock.
+         */
+        const val EXTRA_SHORTCUT_TOGGLE = "shortcut_toggle"
     }
 }

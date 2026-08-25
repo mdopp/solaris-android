@@ -33,6 +33,10 @@ import kotlin.concurrent.thread
  * Widget configuration screen shown when the widget is placed: lists the
  * household's controllable actuators and binds the chosen one to this instance.
  * If the app isn't paired yet, it points the user to pairing first.
+ *
+ * The same screen is re-entered from the launcher's *Einrichten* entry (#96), on
+ * an already bound instance — see [ConfigEntry] for why that path shows the
+ * current device and answers a back-out differently.
  */
 class WidgetConfigActivity : AppCompatActivity() {
 
@@ -40,6 +44,11 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     /** All addable devices, once loaded — the source the search filters against. */
     private var allDevices: List<Device> = emptyList()
+
+    /** The device this instance is already bound to, if we were re-opened (#96). */
+    private var boundEntityId: String? = null
+
+    private var entry = ConfigEntry.FIRST_PLACEMENT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +62,11 @@ class WidgetConfigActivity : AppCompatActivity() {
             finish()
             return
         }
+        boundEntityId = WidgetStore.entityId(this, appWidgetId)
+        entry = ConfigEntry.of(boundEntityId != null)
+        // Re-entered on a live widget: backing out must leave it bound, so the
+        // armed answer is a no-op RESULT_OK instead of "drop it" (#96).
+        setResult(entry.backOutResult, resultIntent())
         setContentView(R.layout.activity_widget_config)
         applyStatusBarInset()
 
@@ -113,7 +127,7 @@ class WidgetConfigActivity : AppCompatActivity() {
             return
         }
         allDevices = devices
-        status.setText(R.string.widget_config_pick)
+        status.setText(pickPrompt())
 
         val search = findViewById<EditText>(R.id.config_search)
         search.visibility = View.VISIBLE
@@ -135,9 +149,20 @@ class WidgetConfigActivity : AppCompatActivity() {
     /** Live filter by device name AND room (case-insensitive), keeping grouping. */
     private fun applyFilter(list: ListView, status: TextView, query: String) {
         val matches = DeviceSearch.filter(allDevices, query)
-        status.setText(if (matches.isEmpty()) R.string.widget_config_no_match else R.string.widget_config_pick)
-        list.adapter = SectionedDeviceAdapter(this, groupByRoom(matches))
+        status.setText(if (matches.isEmpty()) R.string.widget_config_no_match else pickPrompt())
+        val adapter = SectionedDeviceAdapter(this, groupByRoom(matches), boundEntityId)
+        list.adapter = adapter
+        // Reconfigure: start on the device the widget currently shows instead of
+        // at the top of the household (#96).
+        adapter.indexOf(boundEntityId).takeIf { it >= 0 }?.let { list.setSelection(it) }
     }
+
+    /** "Gerät wählen" on a fresh widget, "Gerät ändern" when re-configuring. */
+    private fun pickPrompt() =
+        if (entry.isReconfigure) R.string.widget_config_change else R.string.widget_config_pick
+
+    private fun resultIntent() =
+        Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
 
     /**
      * Group devices by room (fallback: domain), rooms sorted alphabetically in
@@ -167,12 +192,22 @@ class WidgetConfigActivity : AppCompatActivity() {
      * Headers are non-selectable so only device rows fire the click.
      */
     private class SectionedDeviceAdapter(
-        ctx: Context,
+        private val ctx: Context,
         private val items: List<Row>,
+        /** The instance's current binding, marked in the list on reconfigure (#96). */
+        private val currentEntityId: String?,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
         fun deviceAt(position: Int): Device? = (items.getOrNull(position) as? Row.DeviceRow)?.device
+
+        /** Row index of [entityId], or -1 when it isn't in the current filter. */
+        fun indexOf(entityId: String?): Int =
+            if (entityId == null) {
+                -1
+            } else {
+                items.indexOfFirst { it is Row.DeviceRow && it.device.entityId == entityId }
+            }
 
         override fun getCount() = items.size
         override fun getItem(position: Int) = items[position]
@@ -197,7 +232,13 @@ class WidgetConfigActivity : AppCompatActivity() {
                     val d = row.device
                     v.findViewById<ImageView>(R.id.row_icon).setImageResource(DeviceIcons.forDomain(d.domain))
                     v.findViewById<TextView>(R.id.row_name).text = d.name
-                    v.findViewById<TextView>(R.id.row_room).text = d.room ?: d.domain
+                    val where = d.room ?: d.domain
+                    v.findViewById<TextView>(R.id.row_room).text =
+                        if (d.entityId == currentEntityId) {
+                            ctx.getString(R.string.widget_config_current, where)
+                        } else {
+                            where
+                        }
                     v
                 }
             }
@@ -210,14 +251,20 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun pick(d: Device) {
+        // Re-bound to a *different* device: the last-good card cached for this
+        // instance belongs to the old one, so drop it rather than let the widget
+        // draw the previous device until the refresh lands (#96).
+        if (boundEntityId != null && boundEntityId != d.entityId) {
+            WidgetCache.clear(this, appWidgetId)
+        }
+        // Keyed by appWidgetId, so re-binding overwrites — never a second entry.
         WidgetStore.bind(this, appWidgetId, d.entityId, d.name, d.domain, d.deviceClass)
         DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
         // Refresh the native SSE watch-set now that one more entity is bound (#48).
         cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(applicationContext)
-        setResult(
-            RESULT_OK,
-            Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
-        )
+        // …and the app-icon long-press menu, which is that same device set (#97).
+        AppShortcuts.refreshAsync(applicationContext)
+        setResult(RESULT_OK, resultIntent())
         finish()
     }
 }

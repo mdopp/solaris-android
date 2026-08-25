@@ -39,10 +39,19 @@ import kotlin.concurrent.thread
  * When the user picked the tool in the in-app section (#72) the id is already
  * parked ([WidgetStore.consumePendingToolId]) and this screen binds and closes
  * without asking again.
+ *
+ * Re-entered from the launcher's *Einrichten* entry the instance is already bound
+ * (#96): the list then shows the current tool and a back-out leaves the widget
+ * alone — see [ConfigEntry].
  */
 class ToolWidgetConfigActivity : AppCompatActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /** The tool this instance already shows, if we were re-opened (#96). */
+    private var boundToolId: String? = null
+
+    private var entry = ConfigEntry.FIRST_PLACEMENT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +64,10 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
             finish()
             return
         }
+        boundToolId = WidgetStore.toolId(this, appWidgetId)
+        entry = ConfigEntry.of(boundToolId != null)
+        // Backing out of a reconfigure must not cost the user the widget (#96).
+        setResult(entry.backOutResult, resultIntent())
         setContentView(R.layout.activity_widget_config)
         applyStatusBarInset()
 
@@ -93,7 +106,13 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
         val status = findViewById<TextView>(R.id.config_status)
         val list = findViewById<ListView>(R.id.config_list)
         status.setText(R.string.tool_config_loading)
-        val pending = WidgetStore.consumePendingToolId(applicationContext)
+        // The parked id belongs to a *pending placement*, not to a widget that is
+        // already bound — a reconfigure must ask, not silently re-bind (#96).
+        val pending = if (entry.isReconfigure) {
+            null
+        } else {
+            WidgetStore.consumePendingToolId(applicationContext)
+        }
         thread {
             val defs = loadCatalog().filter { it.isListable }
             val preset = pending?.let { id -> defs.firstOrNull { it.id == id } }
@@ -123,14 +142,20 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
             status.setText(R.string.tool_config_empty)
             return
         }
-        status.setText(R.string.tool_config_pick)
-        list.adapter = ToolAdapter(this, defs)
+        status.setText(
+            if (entry.isReconfigure) R.string.tool_config_change else R.string.tool_config_pick,
+        )
+        list.adapter = ToolAdapter(this, defs, boundToolId)
         list.setOnItemClickListener { _, _, pos, _ -> pick(defs[pos]) }
+        // Reconfigure: open on the tool the widget currently shows (#96).
+        defs.indexOfFirst { it.id == boundToolId }.takeIf { it >= 0 }?.let { list.setSelection(it) }
     }
 
     private class ToolAdapter(
-        ctx: Context,
+        private val ctx: Context,
         private val defs: List<ToolDef>,
+        /** The instance's current tool, marked in the list on reconfigure (#96). */
+        private val currentToolId: String?,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
@@ -142,18 +167,25 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
             val v = convertView ?: inflater.inflate(R.layout.item_widget_type, parent, false)
             val def = defs[position]
             v.findViewById<ImageView>(R.id.type_icon).setImageResource(R.drawable.ic_services)
-            v.findViewById<TextView>(R.id.type_label).text = def.label
+            v.findViewById<TextView>(R.id.type_label).text =
+                if (def.id == currentToolId) {
+                    ctx.getString(R.string.widget_config_current, def.label)
+                } else {
+                    def.label
+                }
             return v
         }
     }
 
     private fun pick(def: ToolDef) {
+        // Keyed by appWidgetId and it drops the cached rows, so re-binding replaces
+        // the instance's entry instead of adding one (#96).
         WidgetStore.bindTool(this, appWidgetId, def.id, def.label)
         ToolWidgetProvider.requestRefresh(applicationContext, appWidgetId)
-        setResult(
-            RESULT_OK,
-            Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
-        )
+        setResult(RESULT_OK, resultIntent())
         finish()
     }
+
+    private fun resultIntent() =
+        Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
 }
