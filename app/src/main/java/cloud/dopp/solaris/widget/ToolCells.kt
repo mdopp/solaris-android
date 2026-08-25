@@ -2,6 +2,7 @@ package cloud.dopp.solaris.widget
 
 import cloud.dopp.solaris.data.ToolDef
 import cloud.dopp.solaris.data.ToolCellSchema
+import cloud.dopp.solaris.data.ToolDefs
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -21,8 +22,19 @@ data class ToolCell(
     val meta: String?,
     /** Status chip (`badge`/`state`). */
     val badge: String?,
-    /** Action ids declared for this row (see [ToolCells] on why they're inert). */
+    /** Action ids the schema declares for this row. */
     val actions: List<String> = emptyList(),
+    /**
+     * The one action this row offers as a button (#90), or null when the tool
+     * declares none — or when the row lacks a field the action's params need.
+     */
+    val actionId: String? = null,
+    /**
+     * [actionId]'s fully resolved `params` object, JSON-encoded — the exact body
+     * `POST /napi/action-callback` is sent. Resolved at map time so the button
+     * carries everything it needs and the tap does no catalog lookup.
+     */
+    val actionParams: String? = null,
 )
 
 /**
@@ -36,9 +48,10 @@ data class ToolCell(
  * outside the vocabulary is **skipped** — a malformed plugin loses a line, it
  * doesn't crash the home screen.
  *
- * Action ids ride along on the cell but are not yet wired to buttons: the catalog
- * declares *which* action, not which params it needs, so a generic renderer
- * cannot build the `/napi/action-callback` body (solarisbay#1214).
+ * Since solarisbay#1214 the catalog also declares **where an action's params come
+ * from** (`tool-action-params`), so a row's `/napi/action-callback` body is
+ * resolved here — still with no per-tool knowledge — and the row can carry a
+ * working button (#90) instead of only opening the web card.
  */
 object ToolCells {
 
@@ -53,7 +66,7 @@ object ToolCells {
 
     /** Map every item through [map], dropping the ones that yield no title. */
     fun mapAll(def: ToolDef, rows: List<JSONObject>): List<ToolCell> =
-        rows.mapNotNull { map(def.schema, it, def.actions) }
+        rows.mapNotNull { map(def.schema, it, def.actions, def.actionParams) }
 
     /**
      * One item → one cell, or null when the schema's `title` field is missing on
@@ -63,6 +76,7 @@ object ToolCells {
         schema: ToolCellSchema,
         row: JSONObject,
         declaredActions: List<String> = emptyList(),
+        actionParams: Map<String, Map<String, String>> = emptyMap(),
     ): ToolCell? {
         val title = value(row, schema.title) ?: return null
         val meta = schema.meta
@@ -70,14 +84,74 @@ object ToolCells {
             .take(META_MAX)
             .joinToString(META_SEP)
             .ifBlank { null }
+        val actions = schema.actions.filter { it in declaredActions }
+        val action = resolveAction(actions, row, actionParams)
         return ToolCell(
             id = idOf(row),
             title = title,
             subtitle = value(row, schema.subtitle),
             meta = meta,
             badge = value(row, schema.badge),
-            actions = schema.actions.filter { it in declaredActions },
+            actions = actions,
+            actionId = action?.first,
+            actionParams = action?.second?.toString(),
         )
+    }
+
+    /**
+     * The row's button (#90): the first schema-declared action whose params the
+     * catalog declares **and** this row can fill. Everything else yields null —
+     * no button rather than one that would 400 on a missing `entity_id`. A tool
+     * that declares no `tool-action-params` (today: all but `.task`) therefore
+     * behaves exactly as before.
+     */
+    fun resolveAction(
+        actions: List<String>,
+        row: JSONObject,
+        actionParams: Map<String, Map<String, String>>,
+    ): Pair<String, JSONObject>? {
+        for (id in actions) {
+            val mapping = actionParams[id] ?: continue
+            val params = resolveParams(mapping, row) ?: continue
+            return id to params
+        }
+        return null
+    }
+
+    /**
+     * Resolve one action's `param → source` mapping against [row]: a `$`-prefixed
+     * source reads the row field of that name, anything else is a literal
+     * (solarisbay `_ACTION_PARAM_FIELD_PREFIX`). Null when a referenced field is
+     * missing or carries a value outside the closed type set — a half-filled
+     * callback body must never go out.
+     *
+     * Field values are taken **raw** (the JSON string/number/boolean), not the
+     * display formatting: the server wants the item's `id`, not "ja"/"nein".
+     */
+    fun resolveParams(mapping: Map<String, String>, row: JSONObject): JSONObject? {
+        if (mapping.isEmpty()) return null
+        val out = JSONObject()
+        for ((param, source) in mapping) {
+            if (param.isBlank() || source.isBlank()) return null
+            if (source.startsWith(ToolDefs.FIELD_PREFIX)) {
+                val field = source.removePrefix(ToolDefs.FIELD_PREFIX)
+                if (field.isBlank()) return null
+                out.put(param, raw(row, field) ?: return null)
+            } else {
+                out.put(param, source)
+            }
+        }
+        return out
+    }
+
+    /** [field]'s raw JSON value, restricted to the closed scalar set; else null. */
+    private fun raw(row: JSONObject, field: String): Any? {
+        if (!row.has(field) || row.isNull(field)) return null
+        return when (val v = row.opt(field)) {
+            is String -> v.trim().ifBlank { null }
+            is Number, is Boolean -> v
+            else -> null
+        }
     }
 
     /**
@@ -152,6 +226,10 @@ object ToolCells {
             c.subtitle?.let { o.put("s", it) }
             c.meta?.let { o.put("m", it) }
             c.badge?.let { o.put("b", it) }
+            // The row's resolved action rides into the cache with it — the button
+            // must work off a cold redraw, without re-reading the catalog.
+            c.actionId?.let { o.put("a", it) }
+            c.actionParams?.let { o.put("p", it) }
             arr.put(o)
         }
         return arr.toString()
@@ -173,6 +251,8 @@ object ToolCells {
                         subtitle = o.optString("s").ifBlank { null },
                         meta = o.optString("m").ifBlank { null },
                         badge = o.optString("b").ifBlank { null },
+                        actionId = o.optString("a").ifBlank { null },
+                        actionParams = o.optString("p").ifBlank { null },
                     ),
                 )
             }

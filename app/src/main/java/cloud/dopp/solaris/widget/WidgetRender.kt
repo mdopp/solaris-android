@@ -20,6 +20,16 @@ import java.util.Locale
 object WidgetRender {
     private const val OFF = 0xFF9E9E9E.toInt()
     private const val COVER_ACCENT = 0xFF7E9CFF.toInt()
+    private const val LIGHT_ACCENT = 0xFFFFC107.toInt()
+
+    // Lock state colours (#84). `locked` is the only calm/green one; `unknown`
+    // deliberately gets the neutral grey so a missing MQTT retain message can
+    // never be mistaken for a secured door.
+    private const val LOCK_SECURED = 0xFF66BB6A.toInt()   // abgeschlossen
+    private const val LOCK_UNSECURED = 0xFFFFA726.toInt() // aufgeschlossen
+    private const val LOCK_LATCH = 0xFFFF7043.toInt()     // entriegelt (Falle offen)
+    private const val LOCK_MOVING = 0xFF7E9CFF.toInt()    // schließt ab/auf
+    private const val LOCK_JAMMED = 0xFFEF5350.toInt()    // klemmt
 
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
     enum class Tier { TINY, SMALL, WIDE, MEDIUM }
@@ -89,9 +99,9 @@ object WidgetRender {
         }
         val v = RemoteViews(ctx.packageName, layout)
 
-        val accent = if (on) accentFor(dom) else OFF
+        val accent = accentFor(dom, card, on)
 
-        v.setImageViewResource(R.id.w_icon, iconFor(dom))
+        v.setImageViewResource(R.id.w_icon, iconFor(dom, card))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setTextViewText(R.id.w_state, stateLabel(card, load))
@@ -122,9 +132,15 @@ object WidgetRender {
         // A sensitive cover (garage/door/gate) confirms IN-APP right away instead of
         // opening the PWA: the body tap toggles open/close via the confirm dialog (#38).
         val entityId = card?.entityId ?: WidgetStore.entityId(ctx, appWidgetId)
-        val coverBodyTap = if (sensitive && dom == "cover" && entityId != null)
-            confirmPending(ctx, appWidgetId, 1, entityId, if (on) "cover.close_cover" else "cover.open_cover")
-        else onBodyTap
+        val gatedBodyTap = when {
+            // A lock never acts blind (#84): the tap runs the toggle op, which reads
+            // the live state, picks the bolt direction and hits the server's 403
+            // confirm gate — so a mistap costs a dialog, not the front door.
+            dom == "lock" -> bodyToggle
+            sensitive && dom == "cover" && entityId != null ->
+                confirmPending(ctx, appWidgetId, 1, entityId, if (on) "cover.close_cover" else "cover.open_cover")
+            else -> onBodyTap
+        }
         if (tier == Tier.MEDIUM || tier == Tier.WIDE) {
             if (toggles) {
                 // Central icon+state area toggles; name opens the PWA.
@@ -132,20 +148,21 @@ object WidgetRender {
                 v.setOnClickPendingIntent(R.id.w_state, bodyToggle)
                 v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
             } else {
-                v.setOnClickPendingIntent(R.id.w_header, coverBodyTap)
+                v.setOnClickPendingIntent(R.id.w_header, gatedBodyTap)
             }
             wireControls(ctx, v, appWidgetId, dom, sensitive, entityId, card)
         } else {
             // SMALL: same wide layout, control row hidden → identical look, no buttons.
             v.setViewVisibility(R.id.w_light_controls, View.GONE)
             v.setViewVisibility(R.id.w_cover_controls, View.GONE)
+            v.setViewVisibility(R.id.w_lock_controls, View.GONE)
             v.setViewVisibility(R.id.w_switch_controls, View.GONE)
             if (toggles) {
                 // Small tier: whole card toggles, name opens the PWA.
                 v.setOnClickPendingIntent(R.id.w_root, bodyToggle)
                 v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
             } else {
-                v.setOnClickPendingIntent(R.id.w_root, coverBodyTap)
+                v.setOnClickPendingIntent(R.id.w_root, gatedBodyTap)
             }
         }
         return v
@@ -169,7 +186,7 @@ object WidgetRender {
         sensitive: Boolean,
     ): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
-        val accent = if (on) accentFor(dom) else OFF
+        val accent = accentFor(dom, card, on)
 
         // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
@@ -180,7 +197,7 @@ object WidgetRender {
         // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
         // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
         // tap runs the domain's primary action (toggle / open↔close by state).
-        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom))
+        v.setImageViewResource(R.id.w_tiny_toggle, iconFor(dom, card))
         v.setInt(R.id.w_tiny_toggle, "setColorFilter", accent)
         v.setOnClickPendingIntent(R.id.w_tiny_toggle, op(ctx, appWidgetId, 8, tinyToggleOp(dom, card)))
 
@@ -198,11 +215,18 @@ object WidgetRender {
     /**
      * The tiny-tier toggle-icon's primary action (#57): the tappable icon runs this
      * op. Cover toggles open/close by current state; light/switch toggle on↔off;
-     * anything else re-fetches.
+     * anything else re-fetches. Pure → JVM-testable.
+     *
+     * A **lock** is the exception (#92): on 1×1 there is hardly any state to read
+     * before tapping, so the tap opens the chooser
+     * ([WidgetActionReceiver.OP_LOCK_CHOOSE]) instead of flipping the bolt blind.
+     * Every other domain — and every larger tier — keeps the toggle it had.
      */
-    private fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
+    fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
         "cover" -> if (card?.isOn == true) WidgetActionReceiver.OP_COVER_CLOSE
                    else WidgetActionReceiver.OP_COVER_OPEN
+        // The chooser is the confirmation: no tap on this tile acts by itself.
+        "lock" -> WidgetActionReceiver.OP_LOCK_CHOOSE
         "light", "switch" -> WidgetActionReceiver.OP_TOGGLE
         else -> WidgetActionReceiver.OP_REFRESH
     }
@@ -213,7 +237,7 @@ object WidgetRender {
      * bound widget metadata (domain + deviceClass) persisted at config time.
      */
     private fun isSensitive(ctx: Context, appWidgetId: Int, card: Card?, dom: String): Boolean {
-        if (card != null) return card.isSensitiveCover
+        if (card != null) return card.isSensitive
         return isSensitiveDevice(dom, WidgetStore.deviceClass(ctx, appWidgetId))
     }
 
@@ -235,12 +259,14 @@ object WidgetRender {
         // Default: everything hidden; enable just the row we need below.
         v.setViewVisibility(R.id.w_light_controls, View.GONE)
         v.setViewVisibility(R.id.w_cover_controls, View.GONE)
+        v.setViewVisibility(R.id.w_lock_controls, View.GONE)
         setSwitchRowVisibility(v, View.GONE)
         when (domain) {
             "light" -> {
                 v.setViewVisibility(R.id.w_light_controls, View.VISIBLE)
                 v.setOnClickPendingIntent(R.id.w_bright_down, op(ctx, appWidgetId, 2, WidgetActionReceiver.OP_BRIGHT_DOWN))
                 v.setOnClickPendingIntent(R.id.w_bright_up, op(ctx, appWidgetId, 1, WidgetActionReceiver.OP_BRIGHT_UP))
+                wireColorSwatch(ctx, v, appWidgetId, entityId, card)
             }
             "cover" -> {
                 v.setViewVisibility(R.id.w_cover_controls, View.VISIBLE)
@@ -259,12 +285,38 @@ object WidgetRender {
                 v.setOnClickPendingIntent(R.id.w_cover_stop, op(ctx, appWidgetId, 4, WidgetActionReceiver.OP_COVER_STOP))
                 wireCoverButton(v, R.id.w_cover_down, downEnabled, downIntent, COVER_ACCENT)
             }
+            "lock" -> {
+                v.setViewVisibility(R.id.w_lock_controls, View.VISIBLE)
+                // Both directions named, both server-gated (every lock.* service is
+                // sensitive → 403 → confirm dialog). `lock.open` is missing on
+                // purpose: it pulls the latch, i.e. it opens the door (#84).
+                v.setOnClickPendingIntent(R.id.w_lock_lock, op(ctx, appWidgetId, 10, WidgetActionReceiver.OP_LOCK))
+                v.setOnClickPendingIntent(R.id.w_lock_unlock, op(ctx, appWidgetId, 11, WidgetActionReceiver.OP_UNLOCK))
+            }
             "switch" -> {
                 setSwitchRowVisibility(v, View.VISIBLE)
                 v.setOnClickPendingIntent(R.id.w_switch_toggle, op(ctx, appWidgetId, 6, WidgetActionReceiver.OP_TOGGLE))
             }
             // sensors / other domains: no control row — the state + bar fill the card.
         }
+    }
+
+    /**
+     * The colour swatch on a light row (#87). Shown only for a colour-capable lamp
+     * — a plain white bulb keeps exactly the −/+ row it had. The button's face
+     * carries the lamp's current `rgb_color`, and the tap hands off to
+     * [WidgetActionActivity]: `RemoteViews` has no colour-picker view, so the
+     * palette lives in a dialog that POSTs `light.turn_on {rgb_color}` — the same
+     * call the web card makes.
+     */
+    private fun wireColorSwatch(ctx: Context, v: RemoteViews, appWidgetId: Int, entityId: String?, card: Card?) {
+        if (card == null || entityId == null || !card.isColorCapable) {
+            v.setViewVisibility(R.id.w_light_color, View.GONE)
+            return
+        }
+        v.setViewVisibility(R.id.w_light_color, View.VISIBLE)
+        v.setTextColor(R.id.w_light_color, card.colorArgb ?: LIGHT_ACCENT)
+        v.setOnClickPendingIntent(R.id.w_light_color, colorPending(ctx, appWidgetId, 12, entityId))
     }
 
     /**
@@ -295,13 +347,20 @@ object WidgetRender {
         v.setViewVisibility(R.id.w_switch_controls, vis)
     }
 
+    /**
+     * A control broadcast for [appWidgetId]. The request code is
+     * `appWidgetId * 100 + code` — 100 slots per widget, widened from 10 when the
+     * lock/colour buttons (#84/#87) took the codes past 9; at ×10 code 10 would
+     * have been the *next* widget's code 0 and the two taps would have shared one
+     * PendingIntent.
+     */
     private fun op(ctx: Context, appWidgetId: Int, code: Int, op: String): PendingIntent {
         val i = Intent(ctx, WidgetActionReceiver::class.java)
             .setAction(WidgetActionReceiver.ACTION_TAP)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             .putExtra(WidgetActionReceiver.EXTRA_OP, op)
         return PendingIntent.getBroadcast(
-            ctx, appWidgetId * 10 + code, i,
+            ctx, appWidgetId * 100 + code, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
@@ -319,19 +378,86 @@ object WidgetRender {
             .putExtra(WidgetActionReceiver.EXTRA_SERVICE, service)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return PendingIntent.getActivity(
-            ctx, 500000 + appWidgetId * 10 + code, i,
+            ctx, 500000 + appWidgetId * 100 + code, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 
-    private fun iconFor(domain: String): Int = DeviceIcons.forDomain(domain)
+    /**
+     * A PendingIntent that opens [WidgetActionActivity]'s colour palette for a
+     * colour-capable light (#87). Own request-code base so it never collides with
+     * the [op] broadcasts or the [confirmPending] dialogs.
+     */
+    private fun colorPending(ctx: Context, appWidgetId: Int, code: Int, entityId: String): PendingIntent {
+        val i = Intent(ctx, WidgetActionActivity::class.java)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .putExtra(WidgetActionReceiver.EXTRA_ENTITY, entityId)
+            .putExtra(WidgetActionActivity.EXTRA_PICK_COLOR, true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            ctx, 700000 + appWidgetId * 100 + code, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /**
+     * The tile's type icon. A lock is drawn by its **state** rather than by its
+     * domain (#91), so `abgeschlossen` / `aufgeschlossen` / `entriegelt` are told
+     * apart by the picture and not only by the word underneath it.
+     */
+    private fun iconFor(domain: String, card: Card?): Int = DeviceIcons.forState(domain, card?.state)
+
+    /**
+     * The tile's accent. A lock is coloured by its **state** rather than by the
+     * on/off flag ([lockAccent]) — everything else keeps the domain accent when
+     * active and the neutral grey when not.
+     */
+    private fun accentFor(domain: String, card: Card?, on: Boolean): Int = when {
+        domain == "lock" -> lockAccent(card?.state)
+        on -> accentFor(domain)
+        else -> OFF
+    }
 
     private fun accentFor(domain: String): Int = when (domain) {
-        "light" -> 0xFFFFC107.toInt()
-        "cover" -> 0xFF7E9CFF.toInt()
+        "light" -> LIGHT_ACCENT
+        "cover" -> COVER_ACCENT
         "switch" -> 0xFF66BB6A.toInt()
         "climate" -> 0xFFFF8A65.toInt()
-        else -> 0xFFFFC107.toInt()
+        else -> LIGHT_ACCENT
+    }
+
+    /**
+     * German state text for a lock (#84). It talks about the **bolt**, never the
+     * door: there is no door sensor, so a lock reporting `locked` says
+     * *abgeschlossen*, not *zu*. `unknown` (no MQTT retain message yet after a
+     * broker or phone restart) is its own word — it must never read as
+     * *abgeschlossen*. Pure → JVM-testable.
+     */
+    fun lockLabel(state: String?): String = when (state?.trim()?.lowercase()) {
+        "locked" -> "abgeschlossen"
+        "unlocked" -> "aufgeschlossen"
+        "open" -> "entriegelt"
+        "locking" -> "schließt ab …"
+        "unlocking" -> "schließt auf …"
+        "opening" -> "entriegelt …"
+        "jammed" -> "klemmt"
+        "unavailable" -> "nicht erreichbar"
+        null, "", "unknown", "none" -> "unbekannt"
+        else -> state
+    }
+
+    /**
+     * Accent colour for a lock state (#84). Only `locked` gets the calm green;
+     * `unknown` stays neutral grey, so the two never look alike. Pure →
+     * JVM-testable.
+     */
+    fun lockAccent(state: String?): Int = when (state?.trim()?.lowercase()) {
+        "locked" -> LOCK_SECURED
+        "unlocked" -> LOCK_UNSECURED
+        "open" -> LOCK_LATCH
+        "locking", "unlocking", "opening" -> LOCK_MOVING
+        "jammed" -> LOCK_JAMMED
+        else -> OFF
     }
 
     private fun stateLabel(card: Card?, load: Load = Load.LOADED): String {
@@ -351,6 +477,7 @@ object WidgetRender {
                     else -> "$p % offen"
                 }
             } ?: if (card.isOn) "offen" else "zu"
+            "lock" -> lockLabel(card.state)
             "climate" -> card.temperature?.let { String.format(Locale.GERMANY, "%.1f °", it) } ?: (card.state ?: "?")
             else -> sensorLabel(card)
         }

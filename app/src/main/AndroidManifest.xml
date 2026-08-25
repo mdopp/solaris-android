@@ -290,6 +290,41 @@
             </intent-filter>
         </activity>
 
+        <!-- Row target of the tool widget (#70/#90): a collection has ONE pending-
+             intent template, so this one activity handles both fill-ins — the body
+             tap (open the PWA) and the action button (POST /napi/action-callback,
+             with the server's confirm gate). Invisible; no layout is set. -->
+        <activity
+            android:name=".widget.ToolActionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- 1x1 tool launcher tile (#71): a deep link into the PWA for one tool —
+             its declared create path, or the chat with its card already open. -->
+        <receiver
+            android:name=".widget.ToolLauncherWidgetProvider"
+            android:exported="true"
+            android:label="@string/tool_launch_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tool_launcher_widget_info" />
+        </receiver>
+
+        <!-- Binds a placed launcher tile to one tool-id + mode from the catalog (#71). -->
+        <activity
+            android:name=".widget.ToolLauncherConfigActivity"
+            android:exported="true"
+            android:label="@string/tool_launch_label"
+            android:theme="@style/Theme.Solaris.Config">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- Realtime SSE client (#48): embedded foreground service that wakes
              device widgets from card_state pushes. Opt-in, off by default. -->
         <service

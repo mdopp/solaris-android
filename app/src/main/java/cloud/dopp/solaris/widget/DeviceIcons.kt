@@ -15,6 +15,36 @@ object DeviceIcons {
         "switch" -> R.drawable.ic_switch
         "cover" -> R.drawable.ic_cover
         "climate" -> R.drawable.ic_climate
+        // A door with a keyhole (#84) — the padlock ic_lock stays the confirm badge.
+        "lock" -> R.drawable.ic_door_lock
         else -> R.drawable.ic_device
+    }
+
+    /**
+     * Type icon for a **live** card (#91). Everything but a lock is a domain, so
+     * it falls through to [forDomain]; a lock is drawn by its *state*, because on
+     * a home screen a tile is read in passing and `aufgeschlossen` vs `entriegelt`
+     * is exactly the distinction that gets lost when only the words differ.
+     */
+    @DrawableRes
+    fun forState(domain: String?, state: String?): Int =
+        if (domain == "lock") forLockState(state) else forDomain(domain)
+
+    /**
+     * Lock state → glyph (#91). The four glyphs differ by **silhouette, not
+     * colour** — the accent ([WidgetRender.lockAccent]) already carries meaning
+     * and the tile has to stay readable with a red-green weakness. Transitions
+     * borrow the picture of the state they are heading for; anything unmapped —
+     * including `unavailable` and `null` — lands on the shackle-less question
+     * mark, which, like the neutral grey accent, claims nothing. Pure →
+     * JVM-testable.
+     */
+    @DrawableRes
+    fun forLockState(state: String?): Int = when (state?.trim()?.lowercase()) {
+        "locked", "locking" -> R.drawable.ic_lock_locked
+        "unlocked", "unlocking" -> R.drawable.ic_lock_unlocked
+        "open", "opening" -> R.drawable.ic_lock_open
+        "jammed" -> R.drawable.ic_lock_jammed
+        else -> R.drawable.ic_lock_unknown
     }
 }

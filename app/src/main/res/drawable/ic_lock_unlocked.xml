@@ -1,0 +1,15 @@
+<!-- Lock state `unlocked` (#91): the same padlock body, but the shackle has sprung
+     open — the arch sits up and to the left, only its right leg still meets the
+     body, and the free leg ends in mid-air. Asymmetric silhouette, so it is told
+     apart from `locked` without looking at the accent colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <!-- Shackle: sprung open, hinged right, free leg hanging clear of the body. -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M14,11V6.5a5,5 0 0 0 -10,0v1.2h2.2V6.5a2.8,2.8 0 0 1 5.6,0V11z" />
+    <!-- Body, identical to ic_lock_locked so only the shackle reads as the state. -->
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M5.5,10.5h13a1.5,1.5 0 0 1 1.5,1.5v7.5a1.5,1.5 0 0 1 -1.5,1.5h-13a1.5,1.5 0 0 1 -1.5,-1.5v-7.5a1.5,1.5 0 0 1 1.5,-1.5zM12,12.2a1.6,1.6 0 0 1 0.9,2.93L13.2,18.2h-2.4l0.3,-3.07A1.6,1.6 0 0 1 12,12.2z" />
+</vector>

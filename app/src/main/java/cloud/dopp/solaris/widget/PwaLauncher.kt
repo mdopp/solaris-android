@@ -76,6 +76,32 @@ object PwaLauncher {
          */
         fun ask(text: String): String =
             "/#/?ask=" + java.net.URLEncoder.encode(text, "UTF-8")
+
+        /**
+         * Tool launcher tile, mode **B** (#71, confirmed solarisbay#1213): open the
+         * tool's **create** screen. [declared] is the def's own `tool-compose-path`
+         * (`#/p/task/new`) — the route is never synthesised here, because only the
+         * server knows whether a tool has a create path at all, and a guessed one
+         * lands on [TOOL_START]. Only the leading slash of the join is added.
+         */
+        fun toolCompose(declared: String): String =
+            if (declared.startsWith("/")) declared else "/$declared"
+
+        /**
+         * Tool launcher tile, mode **C** (#71, solarisbay#1213): open the chat with
+         * this tool's card already rendered. The PWA consumes `?tool=` **once** via
+         * `history.replaceState`, and `?ask=` wins when both are present — which is
+         * why the voice tile ([ask]) and this one never share a URL.
+         */
+        fun toolChat(toolId: String): String =
+            "/#/?tool=" + java.net.URLEncoder.encode(toolId, "UTF-8")
+
+        /**
+         * Where both tool deep links land when the id no longer resolves — a tile
+         * outlives the `.tool` it points at (uninstalled, renamed). The PWA does
+         * this fallback itself; the constant exists so the app can too.
+         */
+        const val TOOL_START = "/#/p/start"
     }
 
     /**

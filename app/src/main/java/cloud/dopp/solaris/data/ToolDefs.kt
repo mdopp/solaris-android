@@ -27,6 +27,24 @@ data class ToolDef(
     val actions: List<String>,
     /** `tool-cell-schema` — the role→field mapping the row renderer reads. */
     val schema: ToolCellSchema,
+    /**
+     * `tool-compose-path` (#71, solarisbay#1213) — the PWA route that opens this
+     * tool's **create** screen, exactly as the def declares it (`#/p/task/new`).
+     * Null when the tool declares none: `home` and `energy` are view-only, and a
+     * missing declaration means "this tool has no create path", never "synthesise
+     * one" — a guessed route would land the tile on the `#/p/start` fallback.
+     * Turn it into a launchable route with `PwaLauncher.Routes.toolCompose`.
+     */
+    val composePath: String? = null,
+    /**
+     * `tool-action-params` (#90, solarisbay#1214) — per action id, the callback's
+     * `param name → source`. A source with a leading `$` names a **field of the
+     * rendered row**, anything else is a literal; that marker is the only thing
+     * telling `{"status": "done"}` (literal) from `{"entity_id": "$id"}` (field).
+     * This is what lets a generic renderer build a `/napi/action-callback` body
+     * without knowing the tool — see `ToolCells.resolveParams`.
+     */
+    val actionParams: Map<String, Map<String, String>> = emptyMap(),
 ) {
     /**
      * Can this tool be offered as a **list widget** (archetype A)?
@@ -143,8 +161,56 @@ object ToolDefs {
             // The schema may only reference ids the def actually declares — an
             // action id we can't dispatch is dropped rather than shown dead.
             schema = schema.copy(actions = schema.actions.filter { it in actions }),
+            composePath = composePath(o.optString("tool-compose-path")),
+            actionParams = parseActionParams(o.optJSONObject("tool-action-params")),
         )
     }
+
+    /**
+     * The declared `tool-compose-path` as a usable value, or null when the tool
+     * has none. Only trimmed and sanity-checked — deliberately **not** rebuilt:
+     * the route is the server's to declare (solarisbay#1213), and an absolute URL
+     * points off our server, so it is refused rather than opened.
+     */
+    fun composePath(declared: String?): String? {
+        val raw = declared?.trim().orEmpty()
+        if (raw.isEmpty() || "://" in raw) return null
+        return raw
+    }
+
+    /**
+     * Read `tool-action-params` into `action id → (param → source)`. Both levels
+     * must be plain strings — a nested object or a number is not a source we can
+     * resolve — and a bare `$` names no field (the server lints it out too), so
+     * such an entry is dropped. An action left without a usable mapping simply
+     * gets no button; the row still renders.
+     */
+    fun parseActionParams(o: JSONObject?): Map<String, Map<String, String>> {
+        if (o == null) return emptyMap()
+        val out = LinkedHashMap<String, Map<String, String>>()
+        val ids = o.keys()
+        while (ids.hasNext()) {
+            val id = ids.next()
+            val mapping = o.optJSONObject(id) ?: continue
+            val params = LinkedHashMap<String, String>()
+            var usable = true
+            val keys = mapping.keys()
+            while (keys.hasNext()) {
+                val param = keys.next()
+                val source = (mapping.opt(param) as? String)?.trim().orEmpty()
+                if (param.isBlank() || source.isEmpty() || source == FIELD_PREFIX) {
+                    usable = false
+                    break
+                }
+                params[param] = source
+            }
+            if (usable && params.isNotEmpty()) out[id] = params
+        }
+        return out
+    }
+
+    /** The marker that a `tool-action-params` source is a row field, not a literal. */
+    const val FIELD_PREFIX = "$"
 
     /**
      * Read the closed role vocabulary out of a `tool-cell-schema` object. Unknown
@@ -195,10 +261,10 @@ object ToolDefs {
      * `{"action_id": …, "params": {…}}`, plus `confirmed` on the retry after the
      * server's 403 confirm-gate. Pure so the wire shape is unit-testable.
      *
-     * NB: which **params** an action needs is action-specific (`task.set_status`
-     * wants `entity_id`+`status`) and the catalog does not declare them yet, so a
-     * generic renderer cannot fill them — see solarisbay#1214. Until then this
-     * builder exists for callers that know their params.
+     * The **params** are action-specific (`task.set_status` wants
+     * `entity_id`+`status`), and since solarisbay#1214 the catalog declares where
+     * each one comes from — see [ToolDef.actionParams] — so a generic renderer
+     * resolves them off the row it drew instead of hardcoding the tool.
      */
     fun actionBody(actionId: String, params: JSONObject?, confirmed: Boolean = false): JSONObject {
         val o = JSONObject().put("action_id", actionId)

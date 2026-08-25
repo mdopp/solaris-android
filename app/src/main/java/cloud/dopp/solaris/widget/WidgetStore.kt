@@ -136,6 +136,40 @@ object WidgetStore {
         return if (fresh) v?.ifBlank { null } else null
     }
 
+    // --- 1x1 tool launcher tile (#71) ----------------------------------------
+
+    /**
+     * Bind [id] to one tool + mode + the **resolved** deep-link route. The route is
+     * stored, not re-derived on every draw: the tile must open instantly and
+     * offline, and the def that declared it may be gone by then — in which case the
+     * PWA lands the link on its own `#/p/start` fallback rather than nowhere.
+     */
+    fun bindToolLaunch(ctx: Context, id: Int, tile: ToolLaunchTile) {
+        p(ctx).edit()
+            .putString("tl_$id", tile.toolId)
+            .putString("tlmode_$id", tile.mode.key)
+            .putString("tllabel_$id", tile.label)
+            .putString("tlpath_$id", tile.path)
+            .apply()
+    }
+
+    fun toolLaunchId(ctx: Context, id: Int): String? = p(ctx).getString("tl_$id", null)
+
+    fun toolLaunchMode(ctx: Context, id: Int): ToolLaunchMode =
+        ToolLaunchMode.fromKey(p(ctx).getString("tlmode_$id", null))
+
+    fun toolLaunchLabel(ctx: Context, id: Int): String =
+        p(ctx).getString("tllabel_$id", "") ?: ""
+
+    fun toolLaunchPath(ctx: Context, id: Int): String? =
+        p(ctx).getString("tlpath_$id", null)?.ifBlank { null }
+
+    fun unbindToolLaunch(ctx: Context, id: Int) {
+        p(ctx).edit()
+            .remove("tl_$id").remove("tlmode_$id").remove("tllabel_$id").remove("tlpath_$id")
+            .apply()
+    }
+
     private const val KEY_TOOL_CATALOG = "tool_catalog_json"
     private const val KEY_PENDING_TOOL = "pending_tool_id"
     private const val KEY_PENDING_TOOL_AT = "pending_tool_at"

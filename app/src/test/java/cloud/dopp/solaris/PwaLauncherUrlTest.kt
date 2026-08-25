@@ -114,6 +114,52 @@ class PwaLauncherUrlTest {
         )
     }
 
+    // --- Tool launcher tile routes (#71, solarisbay#1213) ---
+
+    /**
+     * The compose route is the def's own `tool-compose-path` (`#/p/task/new`) —
+     * only the join's leading slash is added here. Never rebuilt from the id: a
+     * tool that declares none has no create path at all.
+     */
+    @Test
+    fun composeRouteIsTheDeclaredPathJoinedToTheBase() {
+        assertEquals("/#/p/task/new", PwaLauncher.Routes.toolCompose("#/p/task/new"))
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/note/new",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.toolCompose("#/p/note/new")),
+        )
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/contacts/new",
+            PwaLauncher.url("https://chat.dopp.cloud/", PwaLauncher.Routes.toolCompose("#/p/contacts/new")),
+        )
+        // An already-rooted declaration is not double-slashed.
+        assertEquals("/#/p/doc/new", PwaLauncher.Routes.toolCompose("/#/p/doc/new"))
+    }
+
+    /** Chat-with-card: `#/?tool=<id>`, consumed once by the PWA. */
+    @Test
+    fun toolChatRouteEmbedsTheToolId() {
+        assertEquals("/#/?tool=task", PwaLauncher.Routes.toolChat("task"))
+        assertEquals(
+            "https://chat.dopp.cloud/#/?tool=energy",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.toolChat("energy")),
+        )
+    }
+
+    @Test
+    fun toolChatRouteEncodesAnAwkwardId() {
+        assertEquals("/#/?tool=my+tool%26x", PwaLauncher.Routes.toolChat("my tool&x"))
+    }
+
+    /** The dead-end guard both routes fall back to server-side. */
+    @Test
+    fun toolFallbackIsTheStartPage() {
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/start",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.TOOL_START),
+        )
+    }
+
     // --- ServiceBay approval verdict route (#43, solarisbay#1085) ---
 
     @Test

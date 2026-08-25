@@ -50,12 +50,15 @@ private class ActiveDevicesFactory(
         val card = cards.getOrNull(position)
             ?: return row.also { it.setViewVisibility(R.id.av_item_root, View.GONE) }
 
-        row.setImageViewResource(R.id.av_item_icon, DeviceIcons.forDomain(card.domain))
+        // A lock row is drawn by its state (#91), like the device tile — the row
+        // already spells the state out next to it, the glyph makes it scannable.
+        row.setImageViewResource(R.id.av_item_icon, DeviceIcons.forState(card.domain, card.state))
         row.setInt(R.id.av_item_icon, "setColorFilter", accentFor(card.domain))
         row.setTextViewText(R.id.av_item_name, card.name.ifBlank { card.entityId })
         row.setTextViewText(R.id.av_item_state, ActiveDevicesRender.stateLabel(card))
-        // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
-        row.setViewVisibility(R.id.av_item_lock, if (card.isSensitiveCover) View.VISIBLE else View.GONE)
+        // Lock badge (#38/#84): sensitive devices (garage/door/gate covers, locks,
+        // alarm panels) need a confirm.
+        row.setViewVisibility(R.id.av_item_lock, if (card.isSensitive) View.VISIBLE else View.GONE)
 
         // Per-row fill-in intent, merged with the ListView's PendingIntentTemplate
         // (set in the provider) so a tap opens that device's card in the PWA
@@ -81,6 +84,8 @@ private class ActiveDevicesFactory(
         "cover" -> 0xFF7E9CFF.toInt()
         "switch" -> 0xFF66BB6A.toInt()
         "climate" -> 0xFFFF8A65.toInt()
+        // A lock in this list is unsecured (#84) — amber, not the calm green.
+        "lock" -> 0xFFFFA726.toInt()
         else -> 0xFF66BB6A.toInt()
     }
 }

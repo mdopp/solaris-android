@@ -23,6 +23,8 @@
     <color name="solaris_text_muted">#9AA0AE</color>   <!-- secondary/hint text -->
     <color name="solaris_text_faint">#6B7280</color>   <!-- tertiary -->
 
+    <color name="solaris_warn">#EF5350</color>         <!-- folgenschwere Aktion (#92) -->
+
     <color name="solaris_field">#161620</color>        <!-- input field fill -->
     <color name="solaris_divider">#1AFFFFFF</color>    <!-- list divider -->
 

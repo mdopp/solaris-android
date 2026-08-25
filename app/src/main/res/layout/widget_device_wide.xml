@@ -97,7 +97,10 @@
                 android:textSize="15sp" />
 
             <!-- Light controls: brightness − / + — weighted so the buttons always
-                 fit the row width and never clip (#55). -->
+                 fit the row width and never clip (#55). The colour swatch (#87)
+                 is a third, GONE-by-default button, so a plain white bulb keeps the
+                 exact geometry it had; minWidth=0 lets the weights alone decide the
+                 split once three buttons share the row. -->
             <LinearLayout
                 android:id="@+id/w_light_controls"
                 android:layout_width="0dp"
@@ -109,11 +112,25 @@
                 android:visibility="gone">
 
                 <Button
+                    android:id="@+id/w_light_color"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minWidth="0dp"
+                    android:background="@drawable/widget_btn_bg"
+                    android:text="●"
+                    android:textColor="#FFFFC107"
+                    android:textSize="20sp"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/w_bright_down"
                     android:layout_width="0dp"
                     android:layout_height="46dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
+                    android:minWidth="0dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="−"
                     android:textColor="#FFF2F2F5"
@@ -124,6 +141,7 @@
                     android:layout_width="0dp"
                     android:layout_height="46dp"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
                     android:background="@drawable/widget_btn_bg"
                     android:text="+"
                     android:textColor="#FFF2F2F5"
@@ -173,6 +191,42 @@
                     android:text="▼"
                     android:textColor="#FF7E9CFF"
                     android:textSize="18sp" />
+            </LinearLayout>
+
+            <!-- Lock controls (#84): abschließen / aufschließen, both named. No
+                 lock.open button anywhere — that unlatches the door. -->
+            <LinearLayout
+                android:id="@+id/w_lock_controls"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:layout_marginStart="10dp"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/w_lock_lock"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:minWidth="0dp"
+                    android:background="@drawable/widget_btn_bg"
+                    android:text="@string/widget_lock_lock"
+                    android:textColor="#FFF2F2F5"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/w_lock_unlock"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:background="@drawable/widget_btn_bg"
+                    android:text="@string/widget_lock_unlock"
+                    android:textColor="#FFF2F2F5"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <!-- Switch control: single toggle — weighted so it fills the row and

@@ -22,12 +22,34 @@
     <string name="widget_confirm_close">Schließen</string>
     <string name="widget_confirm_lock">Abschließen</string>
     <string name="widget_confirm_unlock">Aufschließen</string>
-    <string name="widget_confirm_unlatch">Öffnen</string>
+    <!-- "Öffnen" allein steht neben "Aufschließen" mehrdeutig da (#92): dieser
+         Knopf zieht die Falle, macht also die Tür auf. -->
+    <string name="widget_confirm_unlatch">Tür öffnen</string>
     <string name="widget_confirm_arm">Scharf schalten</string>
     <string name="widget_confirm_disarm">Unscharf schalten</string>
     <string name="widget_confirm_toggle">Umschalten</string>
     <string name="widget_confirm_neutral">Schalten</string>
     <string name="widget_confirm_no">Abbrechen</string>
+
+    <!-- Schloss-Kachel (#84): der Riegel, nicht die Tür. -->
+    <string name="widget_lock_lock">Abschließen</string>
+    <string name="widget_lock_unlock">Aufschließen</string>
+    <!-- Auswahl der 1x1-Kachel (#92). %1$s = Gerätename. Die Wörter der
+         Einträge kommen aus widget_confirm_* (#85), nicht von hier. -->
+    <string name="widget_lock_title">%1$s · Schloss</string>
+
+    <!-- Farbwahl einer farbfähigen Lampe (#87). %1$s = Gerätename. -->
+    <string name="widget_color_title">%1$s · Farbe</string>
+    <string name="color_warm_white">Warmweiß</string>
+    <string name="color_neutral_white">Neutralweiß</string>
+    <string name="color_cool_white">Kaltweiß</string>
+    <string name="color_red">Rot</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Gelb</string>
+    <string name="color_green">Grün</string>
+    <string name="color_turquoise">Türkis</string>
+    <string name="color_blue">Blau</string>
+    <string name="color_violet">Violett</string>
 
     <string name="widget_config_loading">Geräte werden geladen …</string>
     <string name="widget_config_pick">Gerät wählen:</string>
@@ -69,6 +91,20 @@
     <string name="tool_config_loading">Tools werden geladen …</string>
     <string name="tool_config_pick">Tool wählen:</string>
     <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
+    <!-- Aktions-Knopf in der Zeile (#90). %1$s = Titel der Zeile. -->
+    <string name="tool_action_cd">Aktion ausführen</string>
+    <string name="tool_action_confirm">„%1$s“ wirklich ausführen?</string>
+    <string name="tool_action_do">Ausführen</string>
+
+    <!-- 1x1-Tool-Kachel (#71): Erfassen bzw. Chat mit geöffneter Karte. -->
+    <string name="tool_launch_label">Solaris · Tool-Kachel</string>
+    <string name="tool_launch_description">Kachel öffnet ein Tool: neu erfassen oder Karte im Chat</string>
+    <string name="tool_launch_cta_compose">Neu</string>
+    <string name="tool_launch_cta_chat">Öffnen</string>
+    <string name="tool_launch_pick">Kachel wählen:</string>
+    <string name="tool_launch_empty">Keine Tools gefunden.</string>
+    <!-- %1$s = Tool-Name, %2$s = tool_launch_cta_*. -->
+    <string name="tool_launch_entry">%1$s · %2$s</string>
 
     <!-- Voice/mic widget (#17). -->
     <string name="voice_widget_label">Solaris · Sprache</string>

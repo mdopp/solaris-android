@@ -16,7 +16,8 @@ import cloud.dopp.solaris.R
  * schema→cell mapping and persists the result per instance, so a redraw is
  * instant and survives process death. Which slots a row shows is decided entirely
  * by the tool's `tool-cell-schema` — an unused role simply arrives as null here
- * and its view is hidden.
+ * and its view is hidden. That now includes the action button (#90): the cell
+ * arrives with its callback body already resolved, or with none at all.
  */
 class ToolRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
@@ -69,11 +70,30 @@ private class ToolCellFactory(
             row.setTextViewText(R.id.tw_item_badge, cell.badge)
         }
 
-        // Tap → the PWA (merged with the provider's PendingIntentTemplate). Acting
-        // on the row in place needs the action's params, which the catalog doesn't
-        // declare yet (solarisbay#1214), so the web card stays the place to act.
-        val fill = Intent().putExtra(PwaTrampolineActivity.EXTRA_PATH, PwaLauncher.Routes.ROOT)
-        row.setOnClickFillInIntent(R.id.tw_item_root, fill)
+        // Body tap → the PWA, unchanged: the web card stays the place to read and
+        // edit an item. Both fill-ins merge into the same template
+        // (ToolActionActivity), which tells them apart by the action extras.
+        row.setOnClickFillInIntent(
+            R.id.tw_item_root,
+            Intent().putExtra(ToolActionActivity.EXTRA_PATH, PwaLauncher.Routes.ROOT),
+        )
+
+        // The action button (#90) appears only for a row whose action the catalog
+        // declared params for and whose fields actually filled them — a tool
+        // without `tool-action-params` shows no empty placeholder.
+        if (cell.actionId.isNullOrBlank()) {
+            row.setViewVisibility(R.id.tw_item_action, View.GONE)
+        } else {
+            row.setViewVisibility(R.id.tw_item_action, View.VISIBLE)
+            row.setOnClickFillInIntent(
+                R.id.tw_item_action,
+                Intent()
+                    .putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
+                    .putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
+                    .putExtra(ToolActionActivity.EXTRA_TITLE, cell.title)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
+            )
+        }
         return row
     }
 

@@ -1,6 +1,7 @@
 package cloud.dopp.solaris.widget
 
 import android.content.Context
+import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.Card
 import cloud.dopp.solaris.data.SbHome
 import org.json.JSONObject
@@ -43,7 +44,19 @@ object WidgetCache {
         card.brightness?.let { o.put("brightness", it) }
         card.position?.let { o.put("position", it) }
         card.temperature?.let { o.put("temperature", it) }
+        // Colour (#87) rides along so the stale-render keeps the swatch and its
+        // current tint instead of dropping to the plain −/+ row on one bad fetch.
+        card.rgbColor?.let { o.put("rgbColor", it) }
+        if (card.supportedColorModes.isNotEmpty()) {
+            o.put("colorModes", org.json.JSONArray(card.supportedColorModes))
+        }
+        card.colorMode?.let { o.put("colorMode", it) }
+        card.colorTemp?.let { o.put("colorTemp", it) }
         card.updatedAtMs?.let { o.put("updatedAtMs", it) }
+        // The capability bitmask rides along (#92): the lock chooser reads it from
+        // here, so it must survive a process restart — otherwise a cold tap would
+        // silently drop the "Tür öffnen" entry on a lock that has a latch.
+        card.supportedFeatures?.let { o.put("supportedFeatures", it) }
         write(ctx, "card_$id", o)
     }
 
@@ -60,7 +73,12 @@ object WidgetCache {
                 brightness = if (o.has("brightness")) o.optInt("brightness") else null,
                 position = if (o.has("position")) o.optInt("position") else null,
                 temperature = if (o.has("temperature")) o.optDouble("temperature") else null,
+                rgbColor = if (o.has("rgbColor")) o.optInt("rgbColor") else null,
+                supportedColorModes = ApiClient.stringList(o.optJSONArray("colorModes")),
+                colorMode = o.optStringOrNull("colorMode"),
+                colorTemp = if (o.has("colorTemp")) o.optInt("colorTemp") else null,
                 updatedAtMs = if (o.has("updatedAtMs")) o.optLong("updatedAtMs") else null,
+                supportedFeatures = if (o.has("supportedFeatures")) o.optInt("supportedFeatures") else null,
             )
         } catch (e: Exception) {
             null

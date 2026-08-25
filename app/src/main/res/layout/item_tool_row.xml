@@ -4,7 +4,10 @@
      subtitle + meta = the muted detail line, badge = the trailing status chip.
      A role the schema doesn't use is hidden by the factory — the layout carries no
      tool-specific knowledge. RemoteViews-safe views only. Tap → PWA via the
-     collection's PendingIntentTemplate + a per-row fill-in intent. -->
+     collection's PendingIntentTemplate + a per-row fill-in intent.
+     The action button (#90) carries its OWN fill-in so a tap on it runs the
+     declared action while a tap anywhere else on the row still opens the PWA;
+     it is hidden unless the catalog declared params the row can fill. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tw_item_root"
     android:layout_width="match_parent"
@@ -51,5 +54,16 @@
         android:textColor="#FFB0BEC5"
         android:textStyle="bold"
         android:textSize="13sp"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/tw_item_action"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginStart="8dp"
+        android:padding="5dp"
+        android:src="@drawable/ic_check"
+        android:tint="#FF7E9CFF"
+        android:contentDescription="@string/tool_action_cd"
         android:visibility="gone" />
 </LinearLayout>

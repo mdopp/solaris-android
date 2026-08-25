@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import cloud.dopp.solaris.R
@@ -31,8 +32,8 @@ import kotlin.concurrent.thread
  * Reuses the established plumbing: the #28 collection ListView, goAsync fetching,
  * the #46 last-good cache (a failed refresh keeps the previous rows) and the #32
  * [WidgetFallback] so a render failure never becomes "Widget kann nicht geladen
- * werden". Row taps open the PWA; action buttons wait on solarisbay#1214 (the
- * catalog declares action ids but not their params).
+ * werden". A row tap still opens the PWA; since solarisbay#1214 a row may also
+ * carry an action button, wired from the catalog's `tool-action-params` (#90).
  */
 class ToolWidgetProvider : AppWidgetProvider() {
 
@@ -152,13 +153,31 @@ class ToolWidgetProvider : AppWidgetProvider() {
             .setData(Uri.parse("solaris://tool/$appWidgetId"))
         v.setRemoteAdapter(R.id.tw_list, svc)
         v.setEmptyView(R.id.tw_list, R.id.tw_empty)
-        v.setPendingIntentTemplate(R.id.tw_list, PwaLauncher.rowTapTemplate(context, appWidgetId))
+        v.setPendingIntentTemplate(R.id.tw_list, rowTemplate(context, appWidgetId))
 
         v.setOnClickPendingIntent(
             R.id.tw_root, PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT),
         )
         v.setOnClickPendingIntent(R.id.tw_refresh, refreshPending(context, appWidgetId))
         return v
+    }
+
+    /**
+     * The ListView's one `PendingIntentTemplate` (#28 pattern). It aims at
+     * [ToolActionActivity] rather than the plain PWA trampoline because a
+     * collection has exactly one template for the whole row: the body's fill-in
+     * carries a path, the action button's carries an action id, and that activity
+     * is what tells them apart. **Mutable** so the fill-in can merge.
+     */
+    private fun rowTemplate(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, ToolActionActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val mutable =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+        return PendingIntent.getActivity(
+            context, 410_000 + appWidgetId, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or mutable,
+        )
     }
 
     private fun refreshPending(context: Context, appWidgetId: Int): PendingIntent {
