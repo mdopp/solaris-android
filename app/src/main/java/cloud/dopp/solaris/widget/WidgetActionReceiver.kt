@@ -12,9 +12,10 @@ import kotlin.concurrent.thread
 /**
  * Headless handler for every device-widget control — toggle, brightness ±,
  * cover up/stop/down, and the lock's bolt (#84). Runs in the background with
- * **no visible UI** (so taps don't flash a screen). Only the server's 403
- * confirm gate — a garage/door open, any `lock.*` — defers to
- * [WidgetActionActivity].
+ * **no visible UI** (so taps don't flash a screen). Two things defer to
+ * [WidgetActionActivity]: the server's 403 confirm gate — a garage/door open,
+ * any `lock.*` — and the 1×1 lock tile's chooser ([OP_LOCK_CHOOSE], #92), which
+ * asks *before* anything is called rather than after.
  */
 class WidgetActionReceiver : BroadcastReceiver() {
 
@@ -31,6 +32,22 @@ class WidgetActionReceiver : BroadcastReceiver() {
         }
         val entityId = WidgetStore.entityId(context, id) ?: return
         val domain = WidgetStore.domain(context, id)
+        // The 1×1 lock tile never acts on a tap (#92): it opens the chooser, and
+        // the pick made there is the confirmation. Handled before the worker
+        // thread — no fetch, no service call, so nothing can fire on this path.
+        // Domain-checked so a stale PendingIntent can't aim it at another device.
+        if (op == OP_LOCK_CHOOSE) {
+            if (domain == "lock") {
+                context.startActivity(
+                    Intent(context, WidgetActionActivity::class.java)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                        .putExtra(EXTRA_ENTITY, entityId)
+                        .putExtra(WidgetActionActivity.EXTRA_LOCK_CHOOSE, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            return
+        }
         val app = context.applicationContext
         val pending = goAsync()
         thread {
@@ -110,6 +127,9 @@ class WidgetActionReceiver : BroadcastReceiver() {
         const val OP_COVER_CLOSE = "cover_close"
         const val OP_LOCK = "lock_lock"
         const val OP_UNLOCK = "lock_unlock"
+
+        /** 1×1 lock tile (#92): open the chooser — this op runs no service itself. */
+        const val OP_LOCK_CHOOSE = "lock_choose"
 
         private const val STEP = 20 // brightness step, %
 

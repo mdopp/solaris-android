@@ -215,14 +215,19 @@ object WidgetRender {
     /**
      * The tiny-tier toggle-icon's primary action (#57): the tappable icon runs this
      * op. Cover toggles open/close by current state; light/switch toggle on↔off;
-     * anything else re-fetches.
+     * anything else re-fetches. Pure → JVM-testable.
+     *
+     * A **lock** is the exception (#92): on 1×1 there is hardly any state to read
+     * before tapping, so the tap opens the chooser
+     * ([WidgetActionReceiver.OP_LOCK_CHOOSE]) instead of flipping the bolt blind.
+     * Every other domain — and every larger tier — keeps the toggle it had.
      */
-    private fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
+    fun tinyToggleOp(domain: String, card: Card?): String = when (domain) {
         "cover" -> if (card?.isOn == true) WidgetActionReceiver.OP_COVER_CLOSE
                    else WidgetActionReceiver.OP_COVER_OPEN
-        // The lock's direction is resolved from the live state in the receiver,
-        // then gated by the server's 403 confirm (#84).
-        "light", "switch", "lock" -> WidgetActionReceiver.OP_TOGGLE
+        // The chooser is the confirmation: no tap on this tile acts by itself.
+        "lock" -> WidgetActionReceiver.OP_LOCK_CHOOSE
+        "light", "switch" -> WidgetActionReceiver.OP_TOGGLE
         else -> WidgetActionReceiver.OP_REFRESH
     }
 

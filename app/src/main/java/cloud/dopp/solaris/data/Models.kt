@@ -32,6 +32,10 @@ data class Card(
     // the server doesn't send it (legacy): the staleness guard then passes
     // everything through unchanged. See [StateEpochGuard].
     val updatedAtMs: Long? = null,
+    // HA's `supported_features` bitmask, forwarded verbatim by `card_spec`. Only
+    // the lock's latch bit is read today (#92, `LockChooser.FEATURE_OPEN`): a
+    // door-opening entry is offered only for a lock that says it has a latch.
+    val supportedFeatures: Int? = null,
 ) {
     /**
      * Best-effort "active" reading across the supported domains. For a lock

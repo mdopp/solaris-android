@@ -416,6 +416,9 @@ class ApiClient(private val ctx: Context) {
             // Server-forwarded HA `last_updated` (epoch-ms) — the ordering stamp for
             // the staleness guard. Absent on legacy servers → null → guard inert.
             updatedAtMs = o.optLong("updated_at_ms", -1L).takeIf { it >= 0 },
+            // HA's capability bitmask (#92). Absent ⇒ null ⇒ "capability unproven",
+            // which the lock chooser reads as "no latch".
+            supportedFeatures = o.optInt("supported_features", -1).takeIf { it >= 0 },
         )
 
         /**

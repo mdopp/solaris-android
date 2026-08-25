@@ -22,7 +22,9 @@
     <string name="widget_confirm_close">Schließen</string>
     <string name="widget_confirm_lock">Abschließen</string>
     <string name="widget_confirm_unlock">Aufschließen</string>
-    <string name="widget_confirm_unlatch">Öffnen</string>
+    <!-- "Öffnen" allein steht neben "Aufschließen" mehrdeutig da (#92): dieser
+         Knopf zieht die Falle, macht also die Tür auf. -->
+    <string name="widget_confirm_unlatch">Tür öffnen</string>
     <string name="widget_confirm_arm">Scharf schalten</string>
     <string name="widget_confirm_disarm">Unscharf schalten</string>
     <string name="widget_confirm_toggle">Umschalten</string>
@@ -32,6 +34,9 @@
     <!-- Schloss-Kachel (#84): der Riegel, nicht die Tür. -->
     <string name="widget_lock_lock">Abschließen</string>
     <string name="widget_lock_unlock">Aufschließen</string>
+    <!-- Auswahl der 1x1-Kachel (#92). %1$s = Gerätename. Die Wörter der
+         Einträge kommen aus widget_confirm_* (#85), nicht von hier. -->
+    <string name="widget_lock_title">%1$s · Schloss</string>
 
     <!-- Farbwahl einer farbfähigen Lampe (#87). %1$s = Gerätename. -->
     <string name="widget_color_title">%1$s · Farbe</string>

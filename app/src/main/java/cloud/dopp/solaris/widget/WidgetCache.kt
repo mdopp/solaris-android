@@ -53,6 +53,10 @@ object WidgetCache {
         card.colorMode?.let { o.put("colorMode", it) }
         card.colorTemp?.let { o.put("colorTemp", it) }
         card.updatedAtMs?.let { o.put("updatedAtMs", it) }
+        // The capability bitmask rides along (#92): the lock chooser reads it from
+        // here, so it must survive a process restart — otherwise a cold tap would
+        // silently drop the "Tür öffnen" entry on a lock that has a latch.
+        card.supportedFeatures?.let { o.put("supportedFeatures", it) }
         write(ctx, "card_$id", o)
     }
 
@@ -74,6 +78,7 @@ object WidgetCache {
                 colorMode = o.optStringOrNull("colorMode"),
                 colorTemp = if (o.has("colorTemp")) o.optInt("colorTemp") else null,
                 updatedAtMs = if (o.has("updatedAtMs")) o.optLong("updatedAtMs") else null,
+                supportedFeatures = if (o.has("supportedFeatures")) o.optInt("supportedFeatures") else null,
             )
         } catch (e: Exception) {
             null
