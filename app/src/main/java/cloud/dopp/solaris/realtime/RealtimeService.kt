@@ -30,6 +30,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
+ * Solaris blue, the accent every notification of this package carries (#88).
+ * Android masks the small icon to a white silhouette, so the brand colour can
+ * only come back through [androidx.core.app.NotificationCompat.Builder.setColor].
+ */
+internal const val NOTIF_ACCENT = 0xFF3B82F6.toInt()
+
+/**
  * Embedded realtime foreground service (#48). Holds a single long-lived **SSE**
  * connection to `GET {baseUrl}/napi/portal/events` (Bearer device-token +
  * `Accept: text/event-stream`) and, on each `card_state` frame, wakes the bound
@@ -343,7 +350,8 @@ class RealtimeService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(NOTIF_ACCENT)
             .setContentTitle(getString(R.string.appName))
             .setContentText(status)
             .setOngoing(true)
@@ -370,7 +378,8 @@ class RealtimeService : Service() {
         )
         val body = ev.summary.ifBlank { getString(R.string.approval_notif_generic) }
         val notif = androidx.core.app.NotificationCompat.Builder(this, APPROVAL_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(NOTIF_ACCENT)
             .setContentTitle(getString(R.string.approval_notif_title))
             .setContentText(body)
             .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
