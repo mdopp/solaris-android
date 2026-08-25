@@ -15,6 +15,8 @@ object DeviceIcons {
         "switch" -> R.drawable.ic_switch
         "cover" -> R.drawable.ic_cover
         "climate" -> R.drawable.ic_climate
+        // A door with a keyhole (#84) — the padlock ic_lock stays the confirm badge.
+        "lock" -> R.drawable.ic_door_lock
         else -> R.drawable.ic_device
     }
 }

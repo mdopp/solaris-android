@@ -29,6 +29,8 @@ object ActiveSummary {
     fun verbFor(domain: String): String = when (domain) {
         "cover" -> "offen"
         "climate" -> "aktiv"
+        // A lock only reaches this list while it is NOT locked (#84).
+        "lock" -> "aufgeschlossen"
         else -> "an" // light, switch, fan, … read as "an"
     }
 }

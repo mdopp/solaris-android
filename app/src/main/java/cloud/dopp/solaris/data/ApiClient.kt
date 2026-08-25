@@ -406,10 +406,42 @@ class ApiClient(private val ctx: Context) {
             brightness = o.optInt("brightness", -1).takeIf { it >= 0 },
             position = o.optInt("current_position", -1).takeIf { it in 0..100 },
             temperature = o.optDouble("current_temperature", Double.NaN).takeIf { !it.isNaN() },
+            // Light colour (#87): sent by `card_spec` all along (and since
+            // solarisbay v0.42.1 on `/napi/portal/active` too) — the client just
+            // dropped it. Absent keys stay null/empty, so a plain bulb is unchanged.
+            rgbColor = packRgb(o.optJSONArray("rgb_color")),
+            supportedColorModes = stringList(o.optJSONArray("supported_color_modes")),
+            colorMode = o.optString("color_mode").ifBlank { null },
+            colorTemp = o.optInt("color_temp", -1).takeIf { it > 0 },
             // Server-forwarded HA `last_updated` (epoch-ms) — the ordering stamp for
             // the staleness guard. Absent on legacy servers → null → guard inert.
             updatedAtMs = o.optLong("updated_at_ms", -1L).takeIf { it >= 0 },
         )
+
+        /**
+         * HA's `rgb_color` (`[r, g, b]`) packed into 0xRRGGBB. Null for a missing,
+         * short or out-of-range triple — a half-read colour must not become a
+         * wrong one.
+         */
+        internal fun packRgb(a: org.json.JSONArray?): Int? {
+            if (a == null || a.length() < 3) return null
+            val r = a.optInt(0, -1)
+            val g = a.optInt(1, -1)
+            val b = a.optInt(2, -1)
+            if (r !in 0..255 || g !in 0..255 || b !in 0..255) return null
+            return (r shl 16) or (g shl 8) or b
+        }
+
+        /** A JSON string array (e.g. `supported_color_modes`) as a lower-case list. */
+        internal fun stringList(a: org.json.JSONArray?): List<String> {
+            if (a == null) return emptyList()
+            val out = ArrayList<String>(a.length())
+            for (i in 0 until a.length()) {
+                val s = a.optString(i).trim().lowercase()
+                if (s.isNotEmpty()) out.add(s)
+            }
+            return out
+        }
 
         /**
          * Build the `POST /napi/portal/watch` body: `{"entity_ids":[…]}` (#48).

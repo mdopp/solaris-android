@@ -42,6 +42,30 @@ class WidgetCacheTest {
         assertNull(back.unit)
         assertNull(back.position)
         assertNull(back.temperature)
+        // …including the colour ones (#87): a white bulb stays a white bulb.
+        assertNull(back.rgbColor)
+        assertNull(back.colorMode)
+        assertNull(back.colorTemp)
+        assertEquals(emptyList<String>(), back.supportedColorModes)
+    }
+
+    /** #87: the stale render must keep the swatch, not fall back to plain −/+. */
+    @Test fun colourCardKeepsItsColour() {
+        WidgetCache.putCard(
+            ctx, 11,
+            Card(
+                entityId = "light.esszimmer", name = "Esszimmer", domain = "light",
+                deviceClass = null, state = "on", unit = null, brightness = 200,
+                rgbColor = 0xFFA020, supportedColorModes = listOf("rgb", "color_temp"),
+                colorMode = "rgb", colorTemp = 366,
+            ),
+        )
+        val back = WidgetCache.getCard(ctx, 11)!!
+        assertEquals(0xFFA020, back.rgbColor)
+        assertEquals(listOf("rgb", "color_temp"), back.supportedColorModes)
+        assertEquals("rgb", back.colorMode)
+        assertEquals(366, back.colorTemp)
+        assertEquals(true, back.isColorCapable)
     }
 
     @Test fun coverCardKeepsPositionAndClass() {

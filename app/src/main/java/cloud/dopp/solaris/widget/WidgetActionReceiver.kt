@@ -10,9 +10,10 @@ import org.json.JSONObject
 import kotlin.concurrent.thread
 
 /**
- * Headless handler for every device-widget control — toggle, brightness ±, and
- * cover up/stop/down. Runs in the background with **no visible UI** (so taps
- * don't flash a screen). Only a garage/door open confirm defers to
+ * Headless handler for every device-widget control — toggle, brightness ±,
+ * cover up/stop/down, and the lock's bolt (#84). Runs in the background with
+ * **no visible UI** (so taps don't flash a screen). Only the server's 403
+ * confirm gate — a garage/door open, any `lock.*` — defers to
  * [WidgetActionActivity].
  */
 class WidgetActionReceiver : BroadcastReceiver() {
@@ -41,6 +42,8 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     OP_COVER_STOP -> { api.call(entityId, "cover.stop_cover"); true }
                     OP_COVER_CLOSE -> { api.call(entityId, "cover.close_cover"); true }
                     OP_COVER_OPEN -> callOrConfirm(api, app, id, entityId, "cover.open_cover")
+                    OP_LOCK -> callOrConfirm(api, app, id, entityId, "lock.lock")
+                    OP_UNLOCK -> callOrConfirm(api, app, id, entityId, "lock.unlock")
                     else -> when (domain) { // OP_TOGGLE
                         "light", "switch" -> { api.call(entityId, "$domain.toggle"); true }
                         "cover" -> {
@@ -48,6 +51,9 @@ class WidgetActionReceiver : BroadcastReceiver() {
                             val service = if (card?.isOn == true) "cover.close_cover" else "cover.open_cover"
                             callOrConfirm(api, app, id, entityId, service)
                         }
+                        "lock" -> callOrConfirm(
+                            api, app, id, entityId, lockToggleService(api.getCard(entityId)?.state),
+                        )
                         else -> true
                     }
                 }
@@ -102,7 +108,19 @@ class WidgetActionReceiver : BroadcastReceiver() {
         const val OP_COVER_OPEN = "cover_open"
         const val OP_COVER_STOP = "cover_stop"
         const val OP_COVER_CLOSE = "cover_close"
+        const val OP_LOCK = "lock_lock"
+        const val OP_UNLOCK = "lock_unlock"
 
         private const val STEP = 20 // brightness step, %
+
+        /**
+         * Which bolt service a lock's toggle runs (#84). Only a confirmed `locked`
+         * unlocks; every other reading — `unlocked`, `jammed`, `unknown`, a missing
+         * state — falls to `lock.lock`, the securing direction. It never returns
+         * `lock.open`: that pulls the latch and opens the door, which no widget tap
+         * may reach. Pure → JVM-testable.
+         */
+        fun lockToggleService(state: String?): String =
+            if (state?.trim()?.lowercase() == "locked") "lock.unlock" else "lock.lock"
     }
 }

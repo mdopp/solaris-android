@@ -29,6 +29,23 @@
     <string name="widget_confirm_neutral">Schalten</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
+    <!-- Schloss-Kachel (#84): der Riegel, nicht die Tür. -->
+    <string name="widget_lock_lock">Abschließen</string>
+    <string name="widget_lock_unlock">Aufschließen</string>
+
+    <!-- Farbwahl einer farbfähigen Lampe (#87). %1$s = Gerätename. -->
+    <string name="widget_color_title">%1$s · Farbe</string>
+    <string name="color_warm_white">Warmweiß</string>
+    <string name="color_neutral_white">Neutralweiß</string>
+    <string name="color_cool_white">Kaltweiß</string>
+    <string name="color_red">Rot</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Gelb</string>
+    <string name="color_green">Grün</string>
+    <string name="color_turquoise">Türkis</string>
+    <string name="color_blue">Blau</string>
+    <string name="color_violet">Violett</string>
+
     <string name="widget_config_loading">Geräte werden geladen …</string>
     <string name="widget_config_pick">Gerät wählen:</string>
     <string name="widget_config_search_hint">Gerät oder Raum suchen …</string>

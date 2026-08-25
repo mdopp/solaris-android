@@ -118,6 +118,8 @@ object ActiveDevicesRender {
                 else -> "$p % offen"
             }
         } ?: "offen"
+        // The bolt, never the door (#84) — and "unbekannt" stays visibly its own.
+        "lock" -> WidgetRender.lockLabel(card.state)
         "climate" -> card.temperature?.let { String.format(Locale.GERMANY, "%.1f °", it) } ?: (card.state ?: "an")
         else -> {
             val s = card.state ?: "an"
