@@ -214,6 +214,8 @@ class WidgetConfigActivity : AppCompatActivity() {
         DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
         // Refresh the native SSE watch-set now that one more entity is bound (#48).
         cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(applicationContext)
+        // …and the app-icon long-press menu, which is that same device set (#97).
+        AppShortcuts.refreshAsync(applicationContext)
         setResult(
             RESULT_OK,
             Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import groovy.xml.MarkupBuilder
-
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -35,12 +33,8 @@ def twaManifest = [
     navigationDividerColorDark: '#000000', // The dark navbar divider color.
     backgroundColor: '#070709', // The color used for the splash screen background.
     enableNotifications: true, // Set to true to enable notification delegation.
-    // Every shortcut must include the following fields:
-    // - name: String that will show up in the shortcut.
-    // - short_name: Shorter string used if |name| is too long.
-    // - url: Absolute path of the URL to launch the app with (e.g '/create').
-    // - icon: Name of the resource in the drawable folder to use as an icon.
-    shortcuts: [],
+    // (removed: the TWA `shortcuts` list — app-icon shortcuts are published at
+    // runtime from the user's own devices, see AppShortcuts, #97.)
     // The duration of fade out animation in milliseconds to be played when removing splash screen.
     splashScreenFadeOutDuration: 300,
     generatorApp: 'bubblewrap-cli', // Application that generated the Android Project
@@ -129,11 +123,6 @@ android {
         // attributes
         resValue "bool", "enableNotification", twaManifest.enableNotifications.toString()
 
-        twaManifest.shortcuts.eachWithIndex { shortcut, index ->
-            resValue "string", "shortcut_name_$index", "$shortcut.name"
-            resValue "string", "shortcut_short_name_$index", "$shortcut.short_name"
-        }
-
         // The splashScreenFadeOutDuration resource is used to set the duration of fade out animation in milliseconds
         // to be played when removing splash screen. The default is 0 (no animation).
         resValue "integer", "splashScreenFadeOutDuration", twaManifest.splashScreenFadeOutDuration.toString()
@@ -188,42 +177,11 @@ android {
     }
 }
 
-task generateShorcutsFile {
-    assert twaManifest.shortcuts.size() < 5, "You can have at most 4 shortcuts."
-    twaManifest.shortcuts.eachWithIndex { s, i ->
-        assert s.name != null, 'Missing `name` in shortcut #' + i
-        assert s.short_name != null, 'Missing `short_name` in shortcut #' + i
-        assert s.url != null, 'Missing `icon` in shortcut #' + i
-        assert s.icon != null, 'Missing `url` in shortcut #' + i
-    }
-
-    def shortcutsFile = new File("$projectDir/src/main/res/xml", "shortcuts.xml")
-
-    def xmlWriter = new StringWriter()
-    def xmlMarkup = new MarkupBuilder(new IndentPrinter(xmlWriter, "    ", true))
-
-    xmlMarkup
-        .'shortcuts'('xmlns:android': 'http://schemas.android.com/apk/res/android') {
-            twaManifest.shortcuts.eachWithIndex { s, i ->
-                'shortcut'(
-                        'android:shortcutId': 'shortcut' + i,
-                        'android:enabled': 'true',
-                        'android:icon': '@drawable/' + s.icon,
-                        'android:shortcutShortLabel': '@string/shortcut_short_name_' + i,
-                        'android:shortcutLongLabel': '@string/shortcut_name_' + i) {
-                    'intent'(
-                            'android:action': 'android.intent.action.MAIN',
-                            'android:targetPackage': twaManifest.applicationId,
-                            'android:targetClass': twaManifest.applicationId + '.LauncherActivity',
-                            'android:data': s.url)
-                    'categories'('android:name': 'android.intent.category.LAUNCHER')
-                }
-            }
-        }
-    shortcutsFile.text = xmlWriter.toString() + '\n'
-}
-
-preBuild.dependsOn(generateShorcutsFile)
+// (removed: the Bubblewrap generateShorcutsFile task — #97. It rewrote
+// res/xml/shortcuts.xml on every build from the empty twaManifest.shortcuts
+// list, and pointed the entries at the retired TWA LauncherActivity. The
+// app-icon long-press menu is published dynamically at runtime instead
+// (AppShortcuts), because a build-time list cannot know the user's devices.)
 
 repositories {
     

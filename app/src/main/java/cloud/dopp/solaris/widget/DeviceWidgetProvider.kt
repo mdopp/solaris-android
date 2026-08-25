@@ -38,8 +38,10 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             WidgetStore.unbind(context, it)
             WidgetCache.clear(context, it) // drop the last-good render cache (#46)
         }
-        // The bound set shrank → refresh the native SSE watch-set (#48).
+        // The bound set shrank → refresh the native SSE watch-set (#48) and drop
+        // the removed devices from the app-icon long-press menu (#97).
         cloud.dopp.solaris.realtime.WatchSet.postCurrentAsync(context)
+        AppShortcuts.refreshAsync(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
