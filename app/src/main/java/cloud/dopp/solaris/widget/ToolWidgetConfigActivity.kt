@@ -145,17 +145,18 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
         status.setText(
             if (entry.isReconfigure) R.string.tool_config_change else R.string.tool_config_pick,
         )
-        list.adapter = ToolAdapter(this, defs, boundToolId)
+        // Reconfigure: mark the tool the widget currently shows and open on it (#96).
+        val marked = ConfigPrefill.markedIndex(entry, defs) { it.id == boundToolId }
+        list.adapter = ToolAdapter(this, defs, marked)
         list.setOnItemClickListener { _, _, pos, _ -> pick(defs[pos]) }
-        // Reconfigure: open on the tool the widget currently shows (#96).
-        defs.indexOfFirst { it.id == boundToolId }.takeIf { it >= 0 }?.let { list.setSelection(it) }
+        ConfigPrefill.scrollTo(list, marked)
     }
 
     private class ToolAdapter(
         private val ctx: Context,
         private val defs: List<ToolDef>,
         /** The instance's current tool, marked in the list on reconfigure (#96). */
-        private val currentToolId: String?,
+        private val markedPosition: Int,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
@@ -166,13 +167,11 @@ class ToolWidgetConfigActivity : AppCompatActivity() {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
             val v = convertView ?: inflater.inflate(R.layout.item_widget_type, parent, false)
             val def = defs[position]
+            val current = position == markedPosition
             v.findViewById<ImageView>(R.id.type_icon).setImageResource(R.drawable.ic_services)
             v.findViewById<TextView>(R.id.type_label).text =
-                if (def.id == currentToolId) {
-                    ctx.getString(R.string.widget_config_current, def.label)
-                } else {
-                    def.label
-                }
+                if (current) ctx.getString(R.string.widget_config_current, def.label) else def.label
+            ConfigPrefill.paint(v, current, v.findViewById(R.id.type_current))
             return v
         }
     }

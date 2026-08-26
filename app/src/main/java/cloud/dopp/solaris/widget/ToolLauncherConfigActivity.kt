@@ -134,20 +134,21 @@ class ToolLauncherConfigActivity : AppCompatActivity() {
         status.setText(
             if (entry.isReconfigure) R.string.tool_launch_change else R.string.tool_launch_pick,
         )
-        list.adapter = TileAdapter(this, tiles, boundToolId, boundMode)
+        // Reconfigure: mark the entry the tile currently uses and open on it (#96).
+        // Tool AND mode — the same tool appears twice, once per mode.
+        val marked = ConfigPrefill.markedIndex(entry, tiles) {
+            it.toolId == boundToolId && it.mode == boundMode
+        }
+        list.adapter = TileAdapter(this, tiles, marked)
         list.setOnItemClickListener { _, _, pos, _ -> pick(tiles[pos]) }
-        // Reconfigure: open on the entry the tile currently uses (#96). Tool AND
-        // mode — the same tool appears twice, once per mode.
-        tiles.indexOfFirst { it.toolId == boundToolId && it.mode == boundMode }
-            .takeIf { it >= 0 }?.let { list.setSelection(it) }
+        ConfigPrefill.scrollTo(list, marked)
     }
 
     private class TileAdapter(
         private val ctx: Context,
         private val tiles: List<ToolLaunchTile>,
         /** The tile's current binding, marked in the list on reconfigure (#96). */
-        private val currentToolId: String?,
-        private val currentMode: ToolLaunchMode,
+        private val markedPosition: Int,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
@@ -158,16 +159,14 @@ class ToolLauncherConfigActivity : AppCompatActivity() {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
             val v = convertView ?: inflater.inflate(R.layout.item_widget_type, parent, false)
             val tile = tiles[position]
+            val current = position == markedPosition
             v.findViewById<ImageView>(R.id.type_icon).setImageResource(tile.mode.iconRes)
             val label = ctx.getString(
                 R.string.tool_launch_entry, tile.label, ctx.getString(tile.mode.ctaRes),
             )
             v.findViewById<TextView>(R.id.type_label).text =
-                if (tile.toolId == currentToolId && tile.mode == currentMode) {
-                    ctx.getString(R.string.widget_config_current, label)
-                } else {
-                    label
-                }
+                if (current) ctx.getString(R.string.widget_config_current, label) else label
+            ConfigPrefill.paint(v, current, v.findViewById(R.id.type_current))
             return v
         }
     }

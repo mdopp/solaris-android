@@ -45,4 +45,15 @@
             android:textColor="@color/solaris_text_muted"
             android:textSize="13sp" />
     </LinearLayout>
+
+    <!-- Shown only on the row this widget is currently bound to (#96). -->
+    <ImageView
+        android:id="@+id/row_current"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="12dp"
+        android:tint="@color/solaris_accent"
+        android:src="@drawable/ic_check"
+        android:visibility="gone"
+        android:contentDescription="@null" />
 </LinearLayout>

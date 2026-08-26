@@ -29,4 +29,15 @@
         android:ellipsize="end"
         android:textColor="@color/solaris_text"
         android:textSize="16sp" />
+
+    <!-- Shown only on the entry this instance is currently bound to (#96). -->
+    <ImageView
+        android:id="@+id/type_current"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="12dp"
+        android:tint="@color/solaris_accent"
+        android:src="@drawable/ic_check"
+        android:visibility="gone"
+        android:contentDescription="@null" />
 </LinearLayout>
