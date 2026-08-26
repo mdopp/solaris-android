@@ -14,6 +14,8 @@ import java.io.File
  * emulator test catches it, so the rule is asserted over the sources themselves:
  * every `setSmallIcon` must point at the transparent-background vector, and that
  * vector must not grow an opaque backing tile (which would recreate the blob).
+ * The figure (#99) is head+body as two subpaths of ONE white path, so the
+ * single-fill rule below still holds.
  */
 class NotificationIconTest {
 
@@ -57,7 +59,7 @@ class NotificationIconTest {
         val fills = Regex("""android:fillColor="([^"]+)"""").findAll(text)
             .map { it.groupValues[1].uppercase() }
             .toList()
-        assertEquals("expected exactly one path — a bare bolt, no backing tile", 1, fills.size)
+        assertEquals("expected exactly one path — a bare figure, no backing tile", 1, fills.size)
         assertEquals("the small icon may only be white", "#FFFFFF", fills.single())
         assertFalse("a stroked shape would thicken into a blob too", text.contains("strokeColor"))
 
