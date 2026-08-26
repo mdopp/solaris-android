@@ -57,6 +57,55 @@ object WidgetStore {
 
     private const val KEY_ACTIVE_CACHE = "active_cache_json"
 
+    // --- app-icon shortcut menu (#97/#100) -----------------------------------
+
+    /** Last-seen household catalogue for the app-icon menu — see [ShortcutCatalog]. */
+    fun shortcutCatalog(ctx: Context): List<ShortcutDevice> =
+        ShortcutCatalog.decode(p(ctx).getString(KEY_SHORTCUT_CATALOG, null))
+
+    fun setShortcutCatalog(ctx: Context, devices: List<ShortcutDevice>) {
+        p(ctx).edit()
+            .putString(KEY_SHORTCUT_CATALOG, ShortcutCatalog.encode(devices))
+            .putLong(KEY_SHORTCUT_CATALOG_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    /**
+     * Is the cached catalogue recent enough to publish from without asking the
+     * server? The menu is republished on every widget change and every visit to
+     * the hub, and a household roster changes in days, not minutes — refetching
+     * each time would spend a request on an answer we already have.
+     */
+    fun shortcutCatalogFresh(ctx: Context): Boolean {
+        if (p(ctx).getString(KEY_SHORTCUT_CATALOG, null).isNullOrBlank()) return false
+        val at = p(ctx).getLong(KEY_SHORTCUT_CATALOG_AT, 0L)
+        return System.currentTimeMillis() - at in 0..SHORTCUT_CATALOG_TTL_MS
+    }
+
+    /** Entity ids by last switched, most recent first — see [ShortcutUsage]. */
+    fun recentEntities(ctx: Context): List<String> =
+        ShortcutUsage.decode(p(ctx).getString(KEY_SHORTCUT_RECENT, null))
+
+    /**
+     * Remember that [entityId] was just switched, so the app-icon menu can order
+     * by last use (#100). Called from every path that actually runs a service —
+     * [WidgetActionReceiver] and [WidgetActionActivity] — whether the tap came
+     * from a widget, a tile or a shortcut: "zuletzt benutzt" means the device,
+     * not the surface.
+     */
+    fun noteEntityUsed(ctx: Context, entityId: String) {
+        if (entityId.isBlank()) return
+        val next = ShortcutUsage.record(recentEntities(ctx), entityId)
+        p(ctx).edit().putString(KEY_SHORTCUT_RECENT, ShortcutUsage.encode(next)).apply()
+    }
+
+    private const val KEY_SHORTCUT_CATALOG = "shortcut_catalog_json"
+    private const val KEY_SHORTCUT_CATALOG_AT = "shortcut_catalog_at"
+    private const val KEY_SHORTCUT_RECENT = "shortcut_recent_json"
+
+    /** How long a cached catalogue is published from before it is refetched. */
+    const val SHORTCUT_CATALOG_TTL_MS = 6 * 60 * 60 * 1000L
+
     // --- generic .tool widget (#70/#72) --------------------------------------
 
     /** Bind [id] to a `tool-id` from the catalog, with its label for the header. */

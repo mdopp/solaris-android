@@ -30,8 +30,18 @@ class WidgetActionReceiver : BroadcastReceiver() {
             DeviceWidgetProvider.requestRefresh(context.applicationContext, id)
             return
         }
-        val entityId = WidgetStore.entityId(context, id) ?: return
-        val domain = WidgetStore.domain(context, id)
+        // With a widget, identity comes from the store — the intent's own entity is
+        // ignored, as it always was. Without one (an app-icon shortcut for a device
+        // that is not on the home screen, #100) the entity id *is* the identity and
+        // the domain is its prefix, so nothing here can be pointed at a device the
+        // caller did not name. This receiver is not exported.
+        val hasWidget = id != AppWidgetManager.INVALID_APPWIDGET_ID
+        val entityId = if (hasWidget) {
+            WidgetStore.entityId(context, id) ?: return
+        } else {
+            intent.getStringExtra(EXTRA_ENTITY)?.takeIf { it.isNotBlank() } ?: return
+        }
+        val domain = if (hasWidget) WidgetStore.domain(context, id) else DeviceShortcuts.domainOf(entityId)
         // The 1×1 lock tile never acts on a tap (#92): it opens the chooser, and
         // the pick made there is the confirmation. Handled before the worker
         // thread — no fetch, no service call, so nothing can fire on this path.
@@ -74,7 +84,12 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         else -> true
                     }
                 }
-                if (done) DeviceWidgetProvider.requestRefresh(app, id)
+                if (done) {
+                    // Ordering fuel for the app-icon menu (#100) — the device was
+                    // switched, whichever surface asked for it.
+                    WidgetStore.noteEntityUsed(app, entityId)
+                    if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
+                }
             } catch (e: ApiClient.NotConfiguredException) {
                 openHome(app)
             } catch (e: ApiClient.NotPairedException) {

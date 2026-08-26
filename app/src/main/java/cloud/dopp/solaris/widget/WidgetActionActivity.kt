@@ -51,18 +51,21 @@ class WidgetActionActivity : Activity() {
             return
         }
         // App-icon shortcut tap (#97). A shortcut cannot start a BroadcastReceiver,
-        // so this invisible screen hands the tap to the widget's own tap handler —
-        // the same op, the same 403 confirm path, no second code path to keep safe.
-        // Re-checked against the *store's* domain, not the intent's: a stale or
-        // forged shortcut aimed at a lock must do nothing at all here.
+        // so this invisible screen hands the tap to the same tap handler the widget
+        // uses — the same op, the same 403 confirm path, no second code path to
+        // keep safe.
+        //
+        // The domain is **never taken from the intent**: with a widget it is read
+        // back from the store, and without one (#100) it is the entity id's own
+        // prefix, i.e. the very string the call would be made against. Either way a
+        // stale or forged shortcut aimed at a lock does nothing at all here.
         if (intent.getBooleanExtra(EXTRA_SHORTCUT_TOGGLE, false)) {
-            if (DeviceShortcuts.actsDirectly(WidgetStore.domain(this, appWidgetId))) {
-                sendBroadcast(
-                    Intent(this, WidgetActionReceiver::class.java)
-                        .setAction(WidgetActionReceiver.ACTION_TAP)
-                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                        .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE),
-                )
+            if (hasWidget(appWidgetId)) {
+                if (DeviceShortcuts.actsDirectly(WidgetStore.domain(this, appWidgetId))) {
+                    sendBroadcast(tap(appWidgetId, null))
+                }
+            } else if (entityId != null && DeviceShortcuts.actsDirectly(DeviceShortcuts.domainOf(entityId))) {
+                sendBroadcast(tap(appWidgetId, entityId))
             }
             finish()
             return
@@ -80,7 +83,7 @@ class WidgetActionActivity : Activity() {
         val positive = ConfirmWording.positiveRes(action)
         AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
             .setTitle(R.string.widget_confirm_title)
-            .setMessage(getString(R.string.widget_confirm_msg, WidgetStore.name(this, appWidgetId), verb))
+            .setMessage(getString(R.string.widget_confirm_msg, label(appWidgetId, entityId), verb))
             .setPositiveButton(positive) { _, _ -> runService(entityId, service, appWidgetId) }
             .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
             .setOnCancelListener { finish() }
@@ -103,11 +106,15 @@ class WidgetActionActivity : Activity() {
      * or gain the door-opening entry.
      */
     private fun showLockChooser(entityId: String, appWidgetId: Int) {
-        val entries = LockChooser.entries(WidgetCache.getCard(this, appWidgetId)?.supportedFeatures)
+        // Without a widget there is no render cache to read the latch bit from, so
+        // LockChooser sees null capabilities and offers no "Tür öffnen" — the
+        // conservative direction, and the one #100 must not quietly reverse.
+        val cached = if (hasWidget(appWidgetId)) WidgetCache.getCard(this, appWidgetId) else null
+        val entries = LockChooser.entries(cached?.supportedFeatures)
         val rows = entries.filter { it != LockChoice.OPEN }
         val labels = rows.map { getString(it.labelRes) }.toTypedArray()
         val builder = AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
-            .setTitle(getString(R.string.widget_lock_title, WidgetStore.name(this, appWidgetId)))
+            .setTitle(getString(R.string.widget_lock_title, label(appWidgetId, entityId)))
             .setItems(labels) { _, which -> runService(entityId, rows[which].service, appWidgetId) }
             // Abbrechen does nothing at all — no call, no refresh.
             .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
@@ -133,10 +140,38 @@ class WidgetActionActivity : Activity() {
             } catch (e: Exception) {
                 // ignore — the tile keeps its last known state
             }
-            DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+            // The device was used, whatever the call's outcome — that is what the
+            // app-icon menu orders by (#100).
+            WidgetStore.noteEntityUsed(applicationContext, entityId)
+            // Nothing to re-render when the action came from a catalogue shortcut.
+            if (hasWidget(appWidgetId)) {
+                DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+            }
             runOnUiThread { finish() }
         }
     }
+
+    private fun hasWidget(appWidgetId: Int) =
+        appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /**
+     * What to call the device in a dialog: the widget's stored name, else the
+     * label the shortcut carried, else the entity id. A device without a widget
+     * has no store row, and a nameless "Wirklich …?" is worse than a technical
+     * one.
+     */
+    private fun label(appWidgetId: Int, entityId: String?): String =
+        WidgetStore.name(this, appWidgetId)
+            .ifBlank { intent.getStringExtra(EXTRA_NAME).orEmpty() }
+            .ifBlank { entityId.orEmpty() }
+
+    /** The widget's own tap, as a broadcast — [entityId] only when no widget backs it. */
+    private fun tap(appWidgetId: Int, entityId: String?): Intent =
+        Intent(this, WidgetActionReceiver::class.java)
+            .setAction(WidgetActionReceiver.ACTION_TAP)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .putExtra(WidgetActionReceiver.EXTRA_OP, WidgetActionReceiver.OP_TOGGLE)
+            .apply { entityId?.let { putExtra(WidgetActionReceiver.EXTRA_ENTITY, it) } }
 
     /**
      * The named-colour list for a colour-capable light (#87). Picking one sends
@@ -180,5 +215,12 @@ class WidgetActionActivity : Activity() {
          * directly — never for a lock.
          */
         const val EXTRA_SHORTCUT_TOGGLE = "shortcut_toggle"
+
+        /**
+         * String extra: the device's name as the shortcut published it (#100).
+         * A catalogue device has no [WidgetStore] row to read a name from, and
+         * this is only ever used for wording — never to decide anything.
+         */
+        const val EXTRA_NAME = "device_name"
     }
 }

@@ -21,6 +21,27 @@ object DeviceIcons {
     }
 
     /**
+     * Domain → **app-icon shortcut** badge (#99). Deliberately *not* [forDomain]:
+     * those glyphs are white on transparent because they sit on the widget's dark
+     * field and are tinted there. The launcher draws a shortcut icon on a light
+     * background under a round adaptive mask, so a white glyph with no background
+     * of its own collapses into a plain white disc — the reported symptom.
+     *
+     * The `ic_shortcut_*` drawables are therefore self-contained: the same glyph,
+     * but on an opaque Solaris-blue field and inset into the mask's safe zone.
+     * [forDomain] stays exactly as it is — it is right for the widgets.
+     */
+    @DrawableRes
+    fun forShortcut(domain: String?): Int = when (domain) {
+        "light" -> R.drawable.ic_shortcut_light
+        "switch" -> R.drawable.ic_shortcut_switch
+        "cover" -> R.drawable.ic_shortcut_cover
+        "climate" -> R.drawable.ic_shortcut_climate
+        "lock" -> R.drawable.ic_shortcut_lock
+        else -> R.drawable.ic_shortcut_device
+    }
+
+    /**
      * Type icon for a **live** card (#91). Everything but a lock is a domain, so
      * it falls through to [forDomain]; a lock is drawn by its *state*, because on
      * a home screen a tile is read in passing and `aufgeschlossen` vs `entriegelt`
