@@ -127,6 +127,9 @@ class WidgetConfigActivity : AppCompatActivity() {
             return
         }
         allDevices = devices
+        // The app-icon menu is built from this same household (#100) — hand it the
+        // list we just fetched instead of making it ask again.
+        AppShortcuts.rememberCatalog(applicationContext, devices)
         status.setText(pickPrompt())
 
         val search = findViewById<EditText>(R.id.config_search)
