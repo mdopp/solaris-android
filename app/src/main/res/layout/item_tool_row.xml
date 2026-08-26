@@ -7,22 +7,27 @@
      collection's PendingIntentTemplate + a per-row fill-in intent.
      The action button (#90) carries its OWN fill-in so a tap on it runs the
      declared action while a tap anywhere else on the row still opens the PWA;
-     it is hidden unless the catalog declared params the row can fill. -->
+     it is hidden unless the catalog declared params the row can fill.
+     That only works if the button *claims* the touch (#90 again): in a collection
+     whose row root is itself a click target, a non-clickable child lets the press
+     bubble to the root, which opened the PWA instead of acting. Hence the explicit
+     `clickable` below and a 48dp target — the row's vertical padding sits on the
+     text column so the bigger hit area costs the row no visible height. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tw_item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:baselineAligned="false"
-    android:paddingTop="9dp"
-    android:paddingBottom="9dp">
+    android:baselineAligned="false">
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingTop="9dp"
+        android:paddingBottom="9dp">
 
         <TextView
             android:id="@+id/tw_item_title"
@@ -56,12 +61,19 @@
         android:textSize="13sp"
         android:visibility="gone" />
 
+    <!-- 48dp of touch, 20dp of ink: the padding grows the target to the platform
+         minimum while the check mark keeps exactly the size it had. `clickable`
+         is what makes the press stop here instead of reaching tw_item_root. -->
     <ImageView
         android:id="@+id/tw_item_action"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginStart="8dp"
-        android:padding="5dp"
+        android:layout_width="48dp"
+        android:layout_height="match_parent"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:padding="14dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_check"
         android:tint="#FF7E9CFF"
         android:contentDescription="@string/tool_action_cd"

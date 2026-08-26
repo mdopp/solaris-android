@@ -218,21 +218,34 @@ object WidgetRender {
     /**
      * The empty 1×1 tile (#94): nothing is bound yet, so the tile says so and
      * behaves as a single button. [onBodyTap] is the picker intent in this state
-     * (see [build]); it goes on **`w_root`**, and the two sub-regions that would
-     * otherwise act — the name (opens the PWA) and the toggle icon (fires an op
-     * with no entity behind it) — are disarmed with a `null` intent, the same way
-     * a stopped cover button is. The state bar stays hidden: there is no state.
+     * (see [build]).
+     *
+     * #104 — it must go on **child** views. It used to sit on `w_root`, the
+     * RemoteViews *root*, with the name and the toggle icon disarmed by a `null`
+     * intent; the launcher hosts that root inside a container of its own and does
+     * not reliably deliver a click there, so on the device the tile showed
+     * "einrichten" and a plus and a tap did nothing at all. Every visible child is
+     * armed with the picker instead — `w_tiny_body` fills the tile so the gaps
+     * between the rows respond too, and the name and the icon carry it themselves
+     * so a launcher that lets a child consume the touch still opens the picker
+     * (a `null` intent is not a reliable "pass it upward" below API 30 either).
+     * The state bar stays hidden: there is no state.
      */
     private fun tinySetup(v: RemoteViews, onBodyTap: PendingIntent, load: Load): RemoteViews {
         v.setTextViewText(R.id.w_name, stateLabel(null, load))
         v.setImageViewResource(R.id.w_tiny_toggle, R.drawable.ic_plus)
         v.setInt(R.id.w_tiny_toggle, "setColorFilter", OFF)
         v.setViewVisibility(R.id.w_bar, View.GONE)
-        v.setOnClickPendingIntent(R.id.w_name, null)
-        v.setOnClickPendingIntent(R.id.w_tiny_toggle, null)
-        v.setOnClickPendingIntent(R.id.w_root, onBodyTap)
+        for (id in TINY_SETUP_TARGETS) v.setOnClickPendingIntent(id, onBodyTap)
         return v
     }
+
+    /**
+     * Every view the picker tap is armed on while the 1×1 tile is empty (#104) —
+     * the full-bleed body plus each visible child inside it. Public so the guard
+     * test can enumerate it instead of re-listing ids of its own.
+     */
+    val TINY_SETUP_TARGETS = listOf(R.id.w_tiny_body, R.id.w_name, R.id.w_tiny_toggle)
 
     /**
      * Where a tap on the 1×1 tile goes, decided by the load state alone (#94).
