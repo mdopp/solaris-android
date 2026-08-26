@@ -1,0 +1,17 @@
+<!-- Vordergrund des Shortcut-Icons "cover" (#99): derselbe Glyph wie
+     @drawable/ic_cover, aber in ein 108er-Viewport skaliert und zentriert, damit die
+     Adaptive-Maske ihn nicht beschneidet. Skalierung 1.9 um 31.2 versetzt
+     haelt jeden Punkt hoechstens 22,8 vom Zentrum entfernt — Ecken inklusive
+     32,2 < 33, dem Radius der garantiert sichtbaren Zone. Die Pfade sind mit
+     dem Widget-Glyph identisch (ShortcutIconTest). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group
+        android:translateX="31.2" android:translateY="31.2"
+        android:scaleX="1.9" android:scaleY="1.9">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M22,9L12,5 2,9v11h6v-6h8v6h6V9zM8,12H6v-1h2v1zM18,12h-2v-1h2v1z" />
+    </group>
+</vector>

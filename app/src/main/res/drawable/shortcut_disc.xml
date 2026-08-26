@@ -1,0 +1,7 @@
+<!-- Das deckende Feld unter einem Shortcut-Glyph auf Launchern ohne
+     Adaptive-Icons — dasselbe Blau, das die Adaptive-Variante als Hintergrund
+     setzt. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/shortcut_icon_background" />
+</shape>

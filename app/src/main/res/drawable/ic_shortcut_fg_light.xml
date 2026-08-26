@@ -1,0 +1,17 @@
+<!-- Vordergrund des Shortcut-Icons "light" (#99): derselbe Glyph wie
+     @drawable/ic_light, aber in ein 108er-Viewport skaliert und zentriert, damit die
+     Adaptive-Maske ihn nicht beschneidet. Skalierung 1.9 um 31.2 versetzt
+     haelt jeden Punkt hoechstens 22,8 vom Zentrum entfernt — Ecken inklusive
+     32,2 < 33, dem Radius der garantiert sichtbaren Zone. Die Pfade sind mit
+     dem Widget-Glyph identisch (ShortcutIconTest). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group
+        android:translateX="31.2" android:translateY="31.2"
+        android:scaleX="1.9" android:scaleY="1.9">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1L9,20v1zM12,2C8.14,2 5,5.14 5,9c0,2.38 1.19,4.47 3,5.74V17c0,0.55 0.45,1 1,1h6c0.55,0 1,-0.45 1,-1v-2.26c1.81,-1.27 3,-3.36 3,-5.74 0,-3.86 -3.14,-7 -7,-7z" />
+    </group>
+</vector>

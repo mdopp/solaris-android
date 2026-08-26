@@ -1,0 +1,8 @@
+<!-- Shortcut-Icon "device" (#99): weisser Glyph auf deckendem Solaris-Blau,
+     als Adaptive Icon, damit der Launcher seine eigene Maske anlegt statt den
+     transparenten Widget-Glyph in eine weisse Scheibe zu wickeln. Deckender
+     Hintergrund = auf hellem wie dunklem Launcher lesbar. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/shortcut_icon_background" />
+    <foreground android:drawable="@drawable/ic_shortcut_fg_device" />
+</adaptive-icon>

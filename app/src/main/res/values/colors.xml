@@ -6,6 +6,11 @@
     <!-- Adaptive launcher-icon background: solid ServiceBay blue (blue-500). -->
     <color name="ic_launcher_background">#3B82F6</color>
 
+    <!-- Das Feld unter einem Shortcut-Glyph (#99). Ein Alias, kein zweiter Wert:
+         die Eintraege im App-Icon-Menue stehen direkt unter dem App-Icon und
+         muessen dessen Blau tragen, auch wenn das eines Tages ein anderes ist. -->
+    <color name="shortcut_icon_background">@color/ic_launcher_background</color>
+
     <!-- ── Solaris palette ─────────────────────────────────────────────────
          Mirrors the Solaris web frontend + the ServiceBay blue used across
          the widgets. Backgrounds are the same deep near-black as the splash

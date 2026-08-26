@@ -1,0 +1,8 @@
+<!-- Shortcut-Icon "cover" fuer Launcher ohne Adaptive-Icons (API 25 —
+     darunter veroeffentlicht ShortcutManagerCompat ohnehin nichts). Der weisse
+     Glyph bekommt hier seine eigene deckende Scheibe, statt sich auf den
+     Hintergrund des Launchers zu verlassen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/shortcut_disc" />
+    <item android:drawable="@drawable/ic_shortcut_fg_cover" />
+</layer-list>

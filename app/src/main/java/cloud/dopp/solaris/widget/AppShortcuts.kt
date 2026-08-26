@@ -78,7 +78,9 @@ object AppShortcuts {
         ShortcutInfoCompat.Builder(ctx, entry.id)
             .setShortLabel(entry.label)
             .setLongLabel(entry.label)
-            .setIcon(IconCompat.createWithResource(ctx, DeviceIcons.forDomain(entry.device.domain)))
+            // [ShortcutIcons], not [DeviceIcons] (#99) — the widget glyphs are white
+            // on transparency and the launcher would show them as a white dot.
+            .setIcon(IconCompat.createWithResource(ctx, ShortcutIcons.forDomain(entry.device.domain)))
             .setRank(rank)
             .setIntent(intentFor(ctx, entry))
             .build()
