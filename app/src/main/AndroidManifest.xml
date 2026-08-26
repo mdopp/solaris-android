@@ -108,6 +108,14 @@
             android:name=".widget.WidgetActionReceiver"
             android:exported="false" />
 
+        <!-- successCallback of requestPinAppWidget (#105): the only place the app
+             learns the appWidgetId the host just assigned, so this is where a
+             pinned tool widget gets bound. Not exported — it fires only through
+             our own PendingIntent, which runs with our identity. -->
+        <receiver
+            android:name=".widget.WidgetPinReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".widget.WidgetActionActivity"
             android:exported="false"

@@ -28,6 +28,15 @@ object WidgetStore {
     fun deviceClass(ctx: Context, id: Int): String? =
         p(ctx).getString("c_$id", "")?.ifBlank { null }
 
+    /**
+     * Does [id] already carry a binding of **any** kind — device, tool, or 1×1
+     * launcher tile? The exactly-once guard of the pin path (#105): the
+     * `successCallback` and the config activity can both reach a freshly placed
+     * instance, so whoever arrives first binds and the other steps aside.
+     */
+    fun isBound(ctx: Context, id: Int): Boolean =
+        entityId(ctx, id) != null || toolId(ctx, id) != null || toolLaunchId(ctx, id) != null
+
     fun unbind(ctx: Context, id: Int) {
         p(ctx).edit()
             .remove("e_$id").remove("n_$id").remove("d_$id").remove("c_$id")
@@ -162,6 +171,11 @@ object WidgetStore {
      * `tool-id` is parked here and consumed by the config activity, which then
      * binds without asking again. Pinning from the launcher's widget tray leaves it
      * unset, so that path still shows the tool list.
+     *
+     * Since #105 this is the **fallback**, not the binding path: most hosts never
+     * start the config activity after a pin, so the primary redemption runs off the
+     * pin `successCallback` ([WidgetPin]) — which spends this id via
+     * [clearPendingToolId] so the two paths bind exactly once between them.
      */
     fun setPendingToolId(ctx: Context, toolId: String) {
         p(ctx).edit()
@@ -183,6 +197,16 @@ object WidgetStore {
         }
         val fresh = System.currentTimeMillis() - at in 0..PENDING_TOOL_TTL_MS
         return if (fresh) v?.ifBlank { null } else null
+    }
+
+    /**
+     * Drop the parked id **iff** it is still [toolId] — the pin callback (#105) has
+     * just bound that tool, so the fallback has nothing left to do. Scoped to the
+     * id it recognises so a later pin, already parked, keeps its own hand-off.
+     */
+    fun clearPendingToolId(ctx: Context, toolId: String) {
+        if (p(ctx).getString(KEY_PENDING_TOOL, null) != toolId) return
+        p(ctx).edit().remove(KEY_PENDING_TOOL).remove(KEY_PENDING_TOOL_AT).apply()
     }
 
     // --- 1x1 tool launcher tile (#71) ----------------------------------------
