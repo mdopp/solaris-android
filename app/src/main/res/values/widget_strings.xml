@@ -109,6 +109,8 @@
     <string name="tool_launch_pick">Kachel wählen:</string>
     <string name="tool_launch_empty">Keine Tools gefunden.</string>
     <string name="tool_launch_change">Kachel ändern:</string>
+    <!-- Noch nicht gebundene Kachel (#105): der Tipp führt in die Auswahl. -->
+    <string name="tool_launch_setup">einrichten</string>
     <!-- %1$s = Tool-Name, %2$s = tool_launch_cta_*. -->
     <string name="tool_launch_entry">%1$s · %2$s</string>
 

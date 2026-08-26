@@ -131,6 +131,7 @@ class ToolWidgetProvider : AppWidgetProvider() {
         context: Context, appWidgetId: Int, label: String, count: Int,
     ): RemoteViews {
         val v = RemoteViews(context.packageName, R.layout.widget_tool)
+        val bound = WidgetStore.toolId(context, appWidgetId) != null
         val title = label.ifBlank { context.getString(R.string.tool_widget_label) }
         v.setTextViewText(
             R.id.tw_title,
@@ -139,13 +140,7 @@ class ToolWidgetProvider : AppWidgetProvider() {
         v.setViewVisibility(R.id.tw_empty, View.GONE)
         v.setTextViewText(
             R.id.tw_empty,
-            context.getString(
-                if (WidgetStore.toolId(context, appWidgetId) == null) {
-                    R.string.tool_unbound
-                } else {
-                    R.string.tool_empty
-                },
-            ),
+            context.getString(if (bound) R.string.tool_empty else R.string.tool_unbound),
         )
 
         val svc = Intent(context, ToolRemoteViewsService::class.java)
@@ -155,11 +150,35 @@ class ToolWidgetProvider : AppWidgetProvider() {
         v.setEmptyView(R.id.tw_list, R.id.tw_empty)
         v.setPendingIntentTemplate(R.id.tw_list, rowTemplate(context, appWidgetId))
 
-        v.setOnClickPendingIntent(
-            R.id.tw_root, PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT),
-        )
+        // Where a body tap goes (#105): bound → the tool's card in the PWA, unbound
+        // → this instance's picker. A widget that says "Tool wählen" must let the
+        // tap *do* that, exactly like the empty 1×1 device tile (#104) — it used to
+        // open the chat instead, which is the one thing the user did not ask for.
+        // Armed on the header/empty children too, since a launcher does not reliably
+        // deliver a click on the RemoteViews root (#104 again).
+        val tap = if (bound) {
+            PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT)
+        } else {
+            configPending(context, appWidgetId)
+        }
+        for (id in BODY_TAP_TARGETS) v.setOnClickPendingIntent(id, tap)
         v.setOnClickPendingIntent(R.id.tw_refresh, refreshPending(context, appWidgetId))
         return v
+    }
+
+    /**
+     * Unbound instances route their tap to their own config activity — the way out
+     * of the empty state, for a widget pinned from the launcher's tray as much as
+     * one from the in-app offer.
+     */
+    private fun configPending(context: Context, appWidgetId: Int): PendingIntent {
+        val i = Intent(context, ToolWidgetConfigActivity::class.java)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return PendingIntent.getActivity(
+            context, 420_000 + appWidgetId, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     /**
@@ -192,6 +211,13 @@ class ToolWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_REFRESH = "cloud.dopp.solaris.widget.TOOL_REFRESH"
+
+        /**
+         * Every view the body tap is armed on — the root plus the two children that
+         * cover the card while it has no rows. Public so the guard test enumerates
+         * this list instead of re-listing ids of its own.
+         */
+        val BODY_TAP_TARGETS = listOf(R.id.tw_root, R.id.tw_title, R.id.tw_empty)
 
         /** Re-run one instance (used by the config screen after binding). */
         fun requestRefresh(context: Context, appWidgetId: Int) {

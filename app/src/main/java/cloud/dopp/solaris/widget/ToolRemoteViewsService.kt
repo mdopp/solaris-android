@@ -28,6 +28,37 @@ class ToolRemoteViewsService : RemoteViewsService() {
     }
 }
 
+/**
+ * The two fill-in intents of a tool row (#90) — the only thing that tells the row
+ * body and the action button apart, because a collection has exactly one
+ * `PendingIntentTemplate` and both taps arrive at [ToolActionActivity].
+ *
+ * Split out of the factory so a JVM test can assert the rule that ticket turns on:
+ * only the **button's** fill-in carries [ToolActionActivity.EXTRA_ACTION_ID], so a
+ * press that lands on the row body can never run the action, and a press on the
+ * button can never fall through to the PWA. (Whether the press *lands* on the
+ * button is the layout's job — `item_tool_row.xml`, `tw_item_action`.)
+ */
+object ToolRow {
+
+    /** Row body → open the item's tool in the PWA. No action extras, ever. */
+    fun bodyFillIn(): Intent =
+        Intent().putExtra(ToolActionActivity.EXTRA_PATH, PwaLauncher.Routes.ROOT)
+
+    /**
+     * The action button's fill-in, or `null` when this row has no action to offer
+     * — the caller hides the button then, rather than showing a dead one.
+     */
+    fun actionFillIn(cell: ToolCell, appWidgetId: Int): Intent? {
+        if (cell.actionId.isNullOrBlank()) return null
+        return Intent()
+            .putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
+            .putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
+            .putExtra(ToolActionActivity.EXTRA_TITLE, cell.title)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+    }
+}
+
 private class ToolCellFactory(
     private val ctx: Context,
     private val appWidgetId: Int,
@@ -73,26 +104,17 @@ private class ToolCellFactory(
         // Body tap → the PWA, unchanged: the web card stays the place to read and
         // edit an item. Both fill-ins merge into the same template
         // (ToolActionActivity), which tells them apart by the action extras.
-        row.setOnClickFillInIntent(
-            R.id.tw_item_root,
-            Intent().putExtra(ToolActionActivity.EXTRA_PATH, PwaLauncher.Routes.ROOT),
-        )
+        row.setOnClickFillInIntent(R.id.tw_item_root, ToolRow.bodyFillIn())
 
         // The action button (#90) appears only for a row whose action the catalog
         // declared params for and whose fields actually filled them — a tool
         // without `tool-action-params` shows no empty placeholder.
-        if (cell.actionId.isNullOrBlank()) {
+        val action = ToolRow.actionFillIn(cell, appWidgetId)
+        if (action == null) {
             row.setViewVisibility(R.id.tw_item_action, View.GONE)
         } else {
             row.setViewVisibility(R.id.tw_item_action, View.VISIBLE)
-            row.setOnClickFillInIntent(
-                R.id.tw_item_action,
-                Intent()
-                    .putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
-                    .putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
-                    .putExtra(ToolActionActivity.EXTRA_TITLE, cell.title)
-                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId),
-            )
+            row.setOnClickFillInIntent(R.id.tw_item_action, action)
         }
         return row
     }

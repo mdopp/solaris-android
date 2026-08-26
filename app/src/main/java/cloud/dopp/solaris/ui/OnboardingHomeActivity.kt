@@ -3,7 +3,6 @@ package cloud.dopp.solaris.ui
 import android.appwidget.AppWidgetManager
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -37,6 +36,7 @@ import cloud.dopp.solaris.widget.AppShortcuts
 import cloud.dopp.solaris.widget.PwaLauncher
 import cloud.dopp.solaris.widget.ToolLauncherWidgetProvider
 import cloud.dopp.solaris.widget.ToolWidgetProvider
+import cloud.dopp.solaris.widget.WidgetPin
 import cloud.dopp.solaris.widget.WidgetStore
 import cloud.dopp.solaris.widget.WidgetTypes
 import java.io.File
@@ -244,22 +244,19 @@ class OnboardingHomeActivity : AppCompatActivity() {
         row.findViewById<TextView>(R.id.type_label).setText(R.string.tool_launch_label)
         row.setOnClickListener {
             val mgr = pinManagerOrToast() ?: return@setOnClickListener
-            mgr.requestPinAppWidget(
-                ComponentName(this, ToolLauncherWidgetProvider::class.java), null, null,
-            )
+            WidgetPin.request(this, mgr, ToolLauncherWidgetProvider::class.java)
         }
         group.addView(row)
     }
 
     /**
-     * Pin the generic tool widget bound to [def]. `requestPinAppWidget` cannot hand
-     * an extra to the new instance, so the picked id is parked for
-     * [ToolWidgetConfigActivity], which binds without asking again.
+     * Pin the generic tool widget bound to [def]. The picked id rides the pin's
+     * `successCallback`, which binds the instance the host assigns (#105); parking
+     * it for [ToolWidgetConfigActivity] stays as the fallback. See [WidgetPin].
      */
     private fun pinTool(def: ToolDef) {
         val mgr = pinManagerOrToast() ?: return
-        WidgetStore.setPendingToolId(this, def.id)
-        mgr.requestPinAppWidget(ComponentName(this, ToolWidgetProvider::class.java), null, null)
+        WidgetPin.request(this, mgr, ToolWidgetProvider::class.java, def.id, def.label)
     }
 
     /** Guards against a second catalog fetch while one is in flight (onResume). */
@@ -411,8 +408,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.home_pick_widget_title)
             .setAdapter(adapter) { _, which ->
-                val provider = entries[which].provider
-                mgr.requestPinAppWidget(ComponentName(this, provider), null, null)
+                WidgetPin.request(this, mgr, entries[which].provider)
             }
             .setNegativeButton(R.string.home_pick_widget_cancel, null)
             .show()
@@ -434,10 +430,10 @@ class OnboardingHomeActivity : AppCompatActivity() {
         return mgr
     }
 
-    /** Quick-add (#37): pin one specific widget type via requestPinAppWidget. */
+    /** Quick-add (#37): pin one specific widget type — callback-completed (#105). */
     private fun pinTile(provider: Class<*>) {
         val mgr = pinManagerOrToast() ?: return
-        mgr.requestPinAppWidget(ComponentName(this, provider), null, null)
+        WidgetPin.request(this, mgr, provider)
     }
 
     /**

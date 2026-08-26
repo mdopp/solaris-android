@@ -153,11 +153,15 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun applyFilter(list: ListView, status: TextView, query: String) {
         val matches = DeviceSearch.filter(allDevices, query)
         status.setText(if (matches.isEmpty()) R.string.widget_config_no_match else pickPrompt())
-        val adapter = SectionedDeviceAdapter(this, groupByRoom(matches), boundEntityId)
-        list.adapter = adapter
-        // Reconfigure: start on the device the widget currently shows instead of
-        // at the top of the household (#96).
-        adapter.indexOf(boundEntityId).takeIf { it >= 0 }?.let { list.setSelection(it) }
+        val rows = groupByRoom(matches)
+        // Reconfigure: mark the device the widget currently shows and start on it
+        // instead of at the top of the household (#96). A filter that hides it
+        // yields NONE — nothing marked, no scroll.
+        val marked = ConfigPrefill.markedIndex(entry, rows) {
+            it is Row.DeviceRow && it.device.entityId == boundEntityId
+        }
+        list.adapter = SectionedDeviceAdapter(this, rows, marked)
+        ConfigPrefill.scrollTo(list, marked)
     }
 
     /** "Gerät wählen" on a fresh widget, "Gerät ändern" when re-configuring. */
@@ -198,19 +202,11 @@ class WidgetConfigActivity : AppCompatActivity() {
         private val ctx: Context,
         private val items: List<Row>,
         /** The instance's current binding, marked in the list on reconfigure (#96). */
-        private val currentEntityId: String?,
+        private val markedPosition: Int,
     ) : BaseAdapter() {
         private val inflater = LayoutInflater.from(ctx)
 
         fun deviceAt(position: Int): Device? = (items.getOrNull(position) as? Row.DeviceRow)?.device
-
-        /** Row index of [entityId], or -1 when it isn't in the current filter. */
-        fun indexOf(entityId: String?): Int =
-            if (entityId == null) {
-                -1
-            } else {
-                items.indexOfFirst { it is Row.DeviceRow && it.device.entityId == entityId }
-            }
 
         override fun getCount() = items.size
         override fun getItem(position: Int) = items[position]
@@ -233,15 +229,15 @@ class WidgetConfigActivity : AppCompatActivity() {
                 is Row.DeviceRow -> {
                     val v = convertView ?: inflater.inflate(R.layout.item_device_row, parent, false)
                     val d = row.device
+                    val current = position == markedPosition
                     v.findViewById<ImageView>(R.id.row_icon).setImageResource(DeviceIcons.forDomain(d.domain))
                     v.findViewById<TextView>(R.id.row_name).text = d.name
                     val where = d.room ?: d.domain
+                    // The name line is a device's own, so the marker rides the room
+                    // line, where a long name can't push it out of view (#96).
                     v.findViewById<TextView>(R.id.row_room).text =
-                        if (d.entityId == currentEntityId) {
-                            ctx.getString(R.string.widget_config_current, where)
-                        } else {
-                            where
-                        }
+                        if (current) ctx.getString(R.string.widget_config_current, where) else where
+                    ConfigPrefill.paint(v, current, v.findViewById(R.id.row_current))
                     v
                 }
             }
