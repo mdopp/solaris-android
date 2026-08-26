@@ -8,11 +8,18 @@
      The action button (#90) carries its OWN fill-in so a tap on it runs the
      declared action while a tap anywhere else on the row still opens the PWA;
      it is hidden unless the catalog declared params the row can fill.
-     That only works if the button *claims* the touch (#90 again): in a collection
-     whose row root is itself a click target, a non-clickable child lets the press
-     bubble to the root, which opened the PWA instead of acting. Hence the explicit
-     `clickable` below and a 48dp target — the row's vertical padding sits on the
-     text column so the bigger hit area costs the row no visible height. -->
+
+     Two attempts made the button *bigger* and *clickable* and it still lost the
+     press — because the contest itself was the defect: `tw_item_root` carried a
+     fill-in too, so the button had to win bubbling against its own ancestor. The
+     third attempt dissolves the contest instead of trying to win it: the row root
+     carries NO fill-in at all, the PWA fill-in sits on the text column
+     (`tw_item_body`, which fills the row up to the button) and the action fill-in
+     stays on `tw_item_action`. They are siblings now, not child versus parent, and
+     a press has exactly one view that can claim it. `focusable` is gone with the
+     same reasoning — a focusable child in a ListView row is a known way to break
+     click delivery. The row's vertical padding sits on the text column so the
+     48dp target costs the row no visible height. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tw_item_root"
     android:layout_width="match_parent"
@@ -21,7 +28,10 @@
     android:gravity="center_vertical"
     android:baselineAligned="false">
 
+    <!-- The row's PWA tap target (#90): the fill-in lives here, not on the root,
+         so the action button next to it is a sibling and not a descendant. -->
     <LinearLayout
+        android:id="@+id/tw_item_body"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
@@ -63,7 +73,8 @@
 
     <!-- 48dp of touch, 20dp of ink: the padding grows the target to the platform
          minimum while the check mark keeps exactly the size it had. `clickable`
-         is what makes the press stop here instead of reaching tw_item_root. -->
+         keeps the press here; there is no longer an ancestor fill-in for it to
+         bubble to, and deliberately no `focusable`. -->
     <ImageView
         android:id="@+id/tw_item_action"
         android:layout_width="48dp"
@@ -72,7 +83,6 @@
         android:minHeight="48dp"
         android:padding="14dp"
         android:clickable="true"
-        android:focusable="true"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_check"
         android:tint="#FF7E9CFF"
