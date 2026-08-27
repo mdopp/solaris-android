@@ -43,7 +43,8 @@ class SbServicesWidgetProvider : AppWidgetProvider() {
 
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
-        val tap = PwaLauncher.tapPending(context, 340_000 + appWidgetId, PwaLauncher.Routes.SERVICEBAY)
+        // Tap → the ServiceBay admin host the counts come from, not Solaris chat (#109).
+        val tap = PwaLauncher.serviceBayTap(context, 340_000 + appWidgetId)
         // Seed the immediate render from the last-good cache (#46) instead of "—".
         val cached = WidgetCache.getServiceCounts(context, appWidgetId)
         try {

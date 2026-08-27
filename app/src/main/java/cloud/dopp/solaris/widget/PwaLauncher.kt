@@ -31,9 +31,10 @@ object PwaLauncher {
         const val ROOT = "/"
 
         /**
-         * ServiceBay widgets (#42/#43/#44/#45) tap → the ServiceBay view in the
-         * PWA. Exact deep-link still to be confirmed server-side; opens the PWA
-         * root for now so the tap always lands somewhere sensible.
+         * ServiceBay tap **fallback** for an unpaired install (#109): with no base
+         * there is no admin host to derive, so the tap keeps the old behaviour and
+         * lands on the PWA root (which bounces to onboarding). The paired case does
+         * NOT come through here — see [serviceBayUrl].
          */
         const val SERVICEBAY = "/"
 
@@ -197,6 +198,31 @@ object PwaLauncher {
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+    }
+
+    /**
+     * The ServiceBay tap target derived from the paired Solaris [base] (#109).
+     *
+     * ServiceBay lives on its **own host** (`admin.<apex>`, see
+     * [cloud.dopp.solaris.SolarisConfig.adminUrl]) — the decision already taken for
+     * the updates notification (#45): a ServiceBay surface is never a path under the
+     * Solaris base, so joining [Routes.SERVICEBAY] onto it lands in the chat instead.
+     * Returns null when no server is paired; the caller then keeps the old
+     * base-relative fallback. Pure / Android-free so it's unit-testable.
+     */
+    fun serviceBayUrl(base: String?): String? =
+        if (base.isNullOrBlank()) null else cloud.dopp.solaris.SolarisConfig.adminUrl(base)
+
+    /**
+     * A tap [PendingIntent] onto the ServiceBay surface (#109) — the absolute admin
+     * URL when a server is paired, the base-relative fallback otherwise. Shared by
+     * the two ServiceBay widgets and the updates notification so all three land on
+     * the same place. `reqCode` unique per use.
+     */
+    fun serviceBayTap(ctx: Context, reqCode: Int): PendingIntent {
+        val url = serviceBayUrl(ServerStore.baseUrl(ctx))
+        return if (url != null) tapPendingUrl(ctx, reqCode, url)
+        else tapPending(ctx, reqCode, Routes.SERVICEBAY)
     }
 
     /**
