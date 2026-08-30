@@ -32,11 +32,15 @@ object WidgetRender {
     private const val LOCK_JAMMED = 0xFFEF5350.toInt()    // klemmt
 
     /**
-     * The tint of a tile whose data has aged out (#111). Dimmer than [OFF], so a
-     * stale tile reads as *unlit* rather than as "off", and — the point of the
-     * exercise — a stale lock can never wear [LOCK_SECURED]'s calm green.
+     * The tint of a tile that has **no state to show** (#120) — nothing was ever
+     * fetched, or a lock's reading has aged past the point where it may still
+     * assert itself. Dimmer than [OFF] and deliberately not equal to it: [OFF] is
+     * a *measured* "aus", this one is the absence of a measurement, and a tile
+     * that paints the second like the first tells the user something nobody
+     * checked. It is also what keeps a stale lock off [LOCK_SECURED]'s calm
+     * green (#84/#111).
      */
-    private const val STALE = 0xFF6B7280.toInt()
+    private const val UNKNOWN = 0xFF6B7280.toInt()
 
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
     enum class Tier { TINY, SMALL, WIDE, MEDIUM }
@@ -112,9 +116,10 @@ object WidgetRender {
         }
         val v = RemoteViews(ctx.packageName, layout)
 
-        // A stale tile keeps its value and its icon and loses its colour: the
-        // accent is what claims "this is the state right now" (#111).
-        val accent = if (stale != null) STALE else accentFor(dom, card, on)
+        // A stale tile keeps its value, its icon **and its colour** (#120) — the
+        // mark above it is what says "as of a while ago"; only a lock gives its
+        // colour up, because that one asserts security (#84).
+        val accent = accentFor(dom, card, on, stale != null)
 
         v.setImageViewResource(R.id.w_icon, iconFor(dom, card))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
@@ -207,7 +212,7 @@ object WidgetRender {
 
         if (tinyTap(load) == TinyTap.SETUP) return tinySetup(v, onBodyTap, load)
 
-        val accent = if (stale != null) STALE else accentFor(dom, card, on)
+        val accent = accentFor(dom, card, on, stale != null)
 
         // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
@@ -493,9 +498,28 @@ object WidgetRender {
      * The tile's accent. A lock is coloured by its **state** rather than by the
      * on/off flag ([lockAccent]) — everything else keeps the domain accent when
      * active and the neutral grey when not.
+     *
+     * Two rules on top of that, both from #120:
+     *
+     * - **No card, no colour.** With nothing fetched — a freshly bound tile, or a
+     *   failed first load — `on` is `false` for want of data, not because anyone
+     *   measured "aus". Painting [OFF] there turns missing data into a claim: the
+     *   flight-mode report was a lamp that had been on for hours and rendered
+     *   grey. So a missing card is [UNKNOWN] in every domain, not just `light` —
+     *   on a lock it would be the most dangerous of the lot. Same rule as
+     *   `unknown` never looking *abgeschlossen* (#84).
+     * - **Stale keeps its colour.** Age is not a reason to unpaint a value we do
+     *   have: *mark, don't replace* (#111) — the mark line above says how old it
+     *   is and the yellow still says the lamp was on. The one exception stays the
+     *   lock, whose calm green would assert a security state nobody verified;
+     *   that one drops to [UNKNOWN] and its wording gains a `?`
+     *   ([Staleness.staleValue]).
+     *
+     * Pure → JVM-testable.
      */
-    private fun accentFor(domain: String, card: Card?, on: Boolean): Int = when {
-        domain == "lock" -> lockAccent(card?.state)
+    fun accentFor(domain: String, card: Card?, on: Boolean, stale: Boolean = false): Int = when {
+        card == null -> UNKNOWN
+        domain == "lock" -> if (stale) UNKNOWN else lockAccent(card.state)
         on -> accentFor(domain)
         else -> OFF
     }

@@ -122,16 +122,18 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                 // remembered one) — never a stale overwrite (multi-device race).
                 val resolved = card?.let { StateEpochGuard.resolve(it) }
                 // On success cache the fresh card; on failure fall back to the
-                // last-good card (#46) so a transient net/token hiccup never flips
-                // the widget to "↻ tippen" — only a never-loaded widget shows FAILED.
-                val render = resolved ?: cached
-                val load = if (render != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED
+                // last known one (#46/#120) so a transient net/token hiccup never
+                // flips the widget to "↻ tippen" — and never repaints a lit lamp
+                // as "aus". The cache is re-read here rather than reusing the
+                // snapshot taken before the fetch: a realtime push may have landed
+                // meanwhile, and the newer of the two is the one to keep.
+                val drawn = drawn(resolved, WidgetCache.getCard(context, appWidgetId) ?: cached)
                 if (resolved != null) WidgetCache.putCard(context, appWidgetId, resolved)
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
-                        context, appWidgetId, render,
-                        WidgetStore.name(context, appWidgetId), domain, tap, load,
+                        context, appWidgetId, drawn.card,
+                        WidgetStore.name(context, appWidgetId), domain, tap, drawn.load,
                     ),
                 )
             } catch (t: Throwable) {
@@ -171,6 +173,28 @@ class DeviceWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_REFRESH = "cloud.dopp.solaris.widget.REFRESH"
+
+        /** What a refresh ends up drawing: a card (possibly the old one) and why. */
+        data class Drawn(val card: Card?, val load: WidgetRender.Load)
+
+        /**
+         * Which card a finished refresh renders (#120).
+         *
+         * [fresh] is what this fetch brought back, [cached] the last one that ever
+         * landed. The rule the flight-mode report is about: a failed fetch is **no
+         * news about the device**, so the tile keeps drawing the last known card —
+         * marked as stale/unreachable by [Staleness], never redrawn as if the
+         * state had been read and found "aus". Only a tile that has *never* loaded
+         * has nothing to draw: that state is genuinely unknown
+         * ([WidgetRender.Load.FAILED] → "↻ tippen" and the neutral accent), and
+         * saying so is honest where painting "aus" would not be.
+         *
+         * Pure → JVM-testable.
+         */
+        fun drawn(fresh: Card?, cached: Card?): Drawn {
+            val card = fresh ?: cached
+            return Drawn(card, if (card != null) WidgetRender.Load.LOADED else WidgetRender.Load.FAILED)
+        }
 
         /** Ask a bound instance to re-fetch and re-render (explicit self-broadcast). */
         fun requestRefresh(context: Context, appWidgetId: Int) {

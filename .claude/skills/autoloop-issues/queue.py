@@ -120,6 +120,25 @@ class Cache:
         }
 
 
+def _next_seq(units: dict) -> int:
+    """The sequence number a newly planned unit gets — planning order is build order."""
+    seqs = [int(u.get("seq") or 0) for u in units.values() if isinstance(u, dict)]
+    return (max(seqs) + 1) if seqs else 1
+
+
+def _planned(d: dict) -> list[dict]:
+    """Planned units in PLANNING order.
+
+    Unit ids sort alphabetically; dependencies do not. The planner plans a
+    foundation unit before the units that build on it, so the builder must
+    consume them in that order — hence `seq`, stamped at plan time. Legacy
+    entries without a `seq` keep their insertion order (seq 0) and come first.
+    """
+    units = list((d.get("units") or {}).values())
+    ordered = sorted(enumerate(units), key=lambda t: (int(t[1].get("seq") or 0), t[0]))
+    return [u for _, u in ordered if u.get("status") == "planned"]
+
+
 def prune_state(d: dict) -> dict:
     """Enforce the caps in code so the cache can never grow unbounded."""
     notes = d.get("notes") or []
@@ -138,7 +157,7 @@ def v_summary(c: Cache, a) -> None:
     d = c.load()
     batch = d.get("batch")
     verify = d.get("verify")
-    planned = [u for u in d["units"].values() if u.get("status") == "planned"]
+    planned = _planned(d)
     out = {
         "batch": None if not batch else {"branch": batch["branch"], "count": batch["count"]},
         "verify": None if not verify else {"sha": verify.get("sha"), "status": verify.get("status")},
@@ -191,6 +210,10 @@ def v_plan(c: Cache, a) -> None:
     unit.setdefault("pr", None)
     uid = str(unit["id"])
     d = c.load()
+    # Planning order is build order: a unit keeps the seq it was first given,
+    # a newly planned one lands at the end of the queue.
+    prev = d["units"].get(uid) or {}
+    unit["seq"] = int(unit.get("seq") or prev.get("seq") or _next_seq(d["units"]))
     d["units"][uid] = unit
     c.save(d)
     if not a.offline:
@@ -200,10 +223,8 @@ def v_plan(c: Cache, a) -> None:
 
 
 def v_next(c: Cache, a) -> None:
-    """The next planned unit the builder should implement (or nothing)."""
-    d = c.load()
-    planned = [u for u in d["units"].values() if u.get("status") == "planned"]
-    planned.sort(key=lambda u: str(u["id"]))
+    """The next planned unit the builder should implement, in planning order."""
+    planned = _planned(c.load())
     print(json.dumps(planned[0] if planned else None, ensure_ascii=False, indent=2))
 
 
@@ -228,11 +249,14 @@ def v_built(c: Cache, a) -> None:
     u = d["units"].get(str(a.unit))
     if not u:
         sys.exit(f"queue.py: no unit {a.unit}")
-    u["status"] = "built"
+    u["status"] = "done" if a.done else "built"
     if a.pr:
         u["pr"] = a.pr
     b = d.get("batch")
-    if b and str(a.unit) not in [str(x) for x in b["unit_ids"]]:
+    # A review-gated unit rides its OWN branch and its own draft PR — it never
+    # joins the batch, so it must not count toward the 8 nor be swept by
+    # `batch reset`. Enforced here, not in prose a stage has to remember.
+    if b and not u.get("security") and str(a.unit) not in [str(x) for x in b["unit_ids"]]:
         b["unit_ids"].append(str(a.unit))
         b["count"] = len(b["unit_ids"])
     c.save(d)
@@ -397,6 +421,44 @@ def v_selftest(c: Cache, a) -> None:
             self.assertIsNone(back["batch"])
             self.assertNotIn("u1", back["units"])
 
+        def test_next_follows_planning_order_not_alphabetical(self):
+            d = self.c.load()
+            # ids chosen so alphabetical order contradicts planning order
+            d["units"] = {
+                "z-foundation": {"id": "z-foundation", "status": "planned", "seq": 1},
+                "a-depends-on-it": {"id": "a-depends-on-it", "status": "planned", "seq": 2},
+            }
+            self.c.save(d)
+            self.assertEqual([u["id"] for u in _planned(self.c.load())],
+                             ["z-foundation", "a-depends-on-it"])
+
+        def test_plan_stamps_increasing_seq(self):
+            def ns(unit):
+                return argparse.Namespace(unit=unit, offline=True, repo=None)
+            v_plan(self.c, ns('{"id": "z-first", "issues": []}'))
+            v_plan(self.c, ns('{"id": "a-second", "issues": []}'))
+            units = self.c.load()["units"]
+            self.assertLess(units["z-first"]["seq"], units["a-second"]["seq"])
+            self.assertEqual([u["id"] for u in _planned(self.c.load())],
+                             ["z-first", "a-second"])
+            # re-planning keeps the position it was first given
+            v_plan(self.c, ns('{"id": "z-first", "issues": [7]}'))
+            self.assertEqual([u["id"] for u in _planned(self.c.load())],
+                             ["z-first", "a-second"])
+
+        def test_review_gated_unit_stays_out_of_the_batch(self):
+            d = self.c.load()
+            d["units"] = {"u-sec": {"id": "u-sec", "status": "planned", "security": True},
+                          "u-ord": {"id": "u-ord", "status": "planned", "security": False}}
+            d["batch"] = {"branch": "batch/x", "count": 0, "unit_ids": []}
+            self.c.save(d)
+            v_built(self.c, argparse.Namespace(unit="u-sec", pr=5, done=True))
+            v_built(self.c, argparse.Namespace(unit="u-ord", pr=None, done=False))
+            back = self.c.load()
+            self.assertEqual(back["batch"]["unit_ids"], ["u-ord"])
+            self.assertEqual(back["batch"]["count"], 1)
+            self.assertNotIn("u-sec", back["units"])  # done -> pruned, lives on as the draft PR
+
         def test_verify_labels(self):
             self.assertEqual(_verify_labels("owed"), ([L_VERIFY_PENDING], [L_VERIFY_FAILED]))
             self.assertEqual(_verify_labels("green"), ([], [L_VERIFY_PENDING, L_VERIFY_FAILED]))
@@ -428,6 +490,8 @@ def main() -> None:
     add("next", v_next)
     sp = add("claim", v_claim); sp.add_argument("unit")
     sp = add("built", v_built); sp.add_argument("unit"); sp.add_argument("--pr", type=int)
+    sp.add_argument("--done", action="store_true",
+                    help="finished outside the batch (review-gated solo PR) — drop from the cache")
     sp = add("batch", v_batch); sp.add_argument("action", choices=["new", "seal", "reset"])
     sp.add_argument("--branch", default="")
     sp = add("verify-set", v_verify_set)
