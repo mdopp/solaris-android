@@ -111,6 +111,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             render()
             // If Live-Updates is on and we're paired, make sure the service runs.
             RealtimeService.ensure(this)
+            openSurfaceOnLaunch(savedInstanceState)
         } catch (e: Throwable) {
             showError("onCreate", e)
         }
@@ -441,13 +442,41 @@ class OnboardingHomeActivity : AppCompatActivity() {
      * where chat & push notifications live. Opens the server root in the browser so
      * the site's `beforeinstallprompt` / "add to home screen" affordance appears.
      */
+    /**
+     * The install-PWA hint (#11) stays a **browser tab on purpose**, even now that
+     * the app has its own surface (#115): "Zum Startbildschirm hinzufügen" only
+     * exists in the browser, and the standalone PWA is still the channel that
+     * delivers timer/reminder Web Push until the app takes those over natively
+     * (#116). Nothing here tells the user to remove it yet.
+     */
     private fun installPwa() {
+        val base = ServerStore.baseUrl(this) ?: return
+        PwaLauncher.customTab(this, PwaLauncher.url(base, PwaLauncher.Routes.ROOT))
+    }
+
+    /** "Solaris öffnen" — the in-app surface, the same view the app icon opens. */
+    private fun openSolaris() {
         PwaLauncher.open(this, PwaLauncher.Routes.ROOT)
     }
 
-    private fun openSolaris() {
-        val base = ServerStore.baseUrl(this) ?: return
-        openUrl(Uri.parse("$base/"))
+    /**
+     * One icon instead of two (#115): a tap on the app icon opens the Solaris
+     * surface. The hub stays the launcher activity and stays underneath, so
+     * backing out of the surface lands on it (widgets, Live-Updates, diagnostics)
+     * and the next back leaves the app.
+     *
+     * Only on a fresh `ACTION_MAIN` start, and only when the install is actually
+     * paired — an unpaired or half-paired install must reach onboarding, which is
+     * this screen. A recreated instance (rotation, process restart) and every
+     * internally started intent (the surface's own fallback to onboarding, a
+     * pairing deep link) are left alone, which is also what keeps the two screens
+     * from bouncing off each other.
+     */
+    private fun openSurfaceOnLaunch(savedInstanceState: Bundle?) {
+        if (savedInstanceState != null) return
+        if (intent?.action != Intent.ACTION_MAIN) return
+        if (!ServerStore.isConfigured(this) || !TokenStore.isPaired(this)) return
+        startActivity(Intent(this, SolarisSurfaceActivity::class.java))
     }
 
     private fun logout() {

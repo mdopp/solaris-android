@@ -129,6 +129,26 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- The Solaris surface inside the app (#115): hosts the Trusted Web
+             Activity that shows the paired server full-screen, without a URL bar
+             and on Chrome's existing Authelia session. Default task affinity, so
+             it lives in the app's own task and shows up in Recents as Solaris;
+             singleTop so a second tap re-navigates the open surface.
+
+             DELIBERATELY not exported and carrying NO intent-filter for
+             https://chat.dopp.cloud: an exported (let alone autoVerify'd) filter
+             would make the app a system-wide handler for that address, and any
+             app on the phone could push a URL into the signed-in household view.
+             The surface is opened by the app itself — launcher, widgets,
+             shortcuts, notifications — and by nothing else. -->
+        <activity
+            android:name=".ui.SolarisSurfaceActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:label="@string/appName"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.Solaris" />
+
         <!-- Invisible trampoline: a widget body tap opens the PWA in a Custom Tab (#27). -->
         <activity
             android:name=".widget.PwaTrampolineActivity"

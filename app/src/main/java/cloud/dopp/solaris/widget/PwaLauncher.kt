@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.browser.customtabs.CustomTabsIntent
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
+import cloud.dopp.solaris.ui.SolarisSurface
 
 /**
  * Opens the Solaris **PWA** in a Custom Tab from a widget tap (#27) — so tapping a
@@ -133,8 +134,8 @@ object PwaLauncher {
     }
 
     /**
-     * Open `baseUrl + path` in a Custom Tab (VIEW-intent fallback). If no server is
-     * configured, bounce to the onboarding hub so the user can pair first.
+     * Open `baseUrl + path` in the app's own Solaris surface (#115). If no server
+     * is configured, bounce to the onboarding hub so the user can pair first.
      */
     fun open(ctx: Context, path: String) {
         val base = ServerStore.baseUrl(ctx)
@@ -142,29 +143,33 @@ object PwaLauncher {
             openHome(ctx)
             return
         }
-        val uri = Uri.parse(url(base, path))
-        val app = ctx.applicationContext
-        try {
-            val ct = CustomTabsIntent.Builder().build()
-            ct.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            ct.launchUrl(app, uri)
-        } catch (e: Exception) {
-            try {
-                app.startActivity(
-                    Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            } catch (e2: Exception) {
-                openHome(app)
-            }
-        }
+        openAbsolute(ctx, url(base, path))
     }
 
     /**
-     * Open an **absolute** [url] on any host in a Custom Tab — NOT joined to the
-     * paired Solaris base (#45). For ServiceBay-host targets (e.g. `admin.…`) the
-     * update notification opens directly; VIEW-intent fallback, then onboarding.
+     * Open an **absolute** [url] on any host — NOT joined to the paired Solaris
+     * base (#45). A URL on the paired server's own origin is shown **inside the
+     * app** ([SolarisSurface], #115), so a widget tap, a shortcut and a
+     * notification all land in the same view as the app icon does. Every other
+     * host — the ServiceBay admin surface (#45/#109) above all — keeps the Custom
+     * Tab, because our assetlinks handshake does not cover it.
      */
     fun openAbsolute(ctx: Context, url: String) {
+        if (url.isBlank()) { openHome(ctx); return }
+        if (SolarisSurface.isOwnOrigin(ServerStore.baseUrl(ctx), url) &&
+            SolarisSurface.start(ctx, url)
+        ) {
+            return
+        }
+        customTab(ctx, url)
+    }
+
+    /**
+     * The pre-#115 path, still the fallback: a Custom Tab, then a plain VIEW
+     * intent, then the onboarding hub. Used for foreign hosts and whenever the
+     * in-app surface can't be shown.
+     */
+    fun customTab(ctx: Context, url: String) {
         if (url.isBlank()) { openHome(ctx); return }
         val uri = Uri.parse(url)
         val app = ctx.applicationContext
