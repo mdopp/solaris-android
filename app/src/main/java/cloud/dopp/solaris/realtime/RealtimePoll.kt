@@ -33,6 +33,10 @@ object RealtimePoll {
     private const val UPDATES_CHANNEL = "solaris_updates"
     private const val NOTIF_ID = 4910
     private const val NOTIF_ID_UPDATES = 4911
+    // Own ids for the diagnostics test notifications (#110) so a self-test never
+    // replaces — or is replaced by — a real pending alert.
+    private const val NOTIF_ID_TEST_APPROVALS = 4912
+    private const val NOTIF_ID_TEST_UPDATES = 4913
 
     private fun eligible(ctx: Context): Boolean =
         ServerStore.realtimeEnabled(ctx) && ServerStore.isConfigured(ctx) && TokenStore.isPaired(ctx)
@@ -98,14 +102,44 @@ object RealtimePoll {
         schedule(ctx) // re-arm the next pass
     }
 
-    private fun notifyApprovals(ctx: Context, count: Int) {
+    /**
+     * Diagnostics (#110): deliver ONE clearly marked test notification per kind
+     * through the **real** builders — same channel, same icon, same tap intent — so
+     * the two things that have actually broken on this path (the icon #88/#89 and
+     * the tap target #45/#109) are checkable in five seconds instead of waiting for
+     * the box to have an update pending. The counts are the ones just fetched; when
+     * nothing is pending the test shows 1 (a "0 Updates" alert would be nonsense).
+     * Real alerts still carry real counts only — the invented part is the marker.
+     */
+    fun notifyTest(context: Context, approvals: Int, updates: Int) {
+        val ctx = context.applicationContext
+        notifyApprovals(ctx, approvals.coerceAtLeast(1), test = true)
+        notifyUpdates(ctx, updates.coerceAtLeast(1), test = true)
+    }
+
+    /**
+     * Diagnostics (#110): forget the persisted rise baseline so a **standing** count
+     * counts as a rise again on the next screen-off pass. Without this a missed rise
+     * never comes back — the baseline outlives it (see [run]).
+     */
+    fun resetBaseline(context: Context) {
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().remove(K_LAST_APPROVALS).remove(K_LAST_UPDATES).apply()
+    }
+
+    /** Suffix that makes a diagnostics notification unmistakably a test (#110). */
+    private fun mark(ctx: Context, text: String, test: Boolean): String =
+        if (test) ctx.getString(R.string.diag_test_notif_fmt, text) else text
+
+    private fun notifyApprovals(ctx: Context, count: Int, test: Boolean = false) {
         ensureChannel(ctx)
+        val id = if (test) NOTIF_ID_TEST_APPROVALS else NOTIF_ID
         val tap = PendingIntent.getActivity(
-            ctx, NOTIF_ID,
+            ctx, id,
             Intent(ctx, ApprovalsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val text = ctx.resources.getQuantityString(R.plurals.approvals_pending, count, count)
+        val text = mark(ctx, ctx.resources.getQuantityString(R.plurals.approvals_pending, count, count), test)
         val n = NotificationCompat.Builder(ctx, APPROVAL_CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(NOTIF_ACCENT)
@@ -115,7 +149,7 @@ object RealtimePoll {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(tap)
             .build()
-        runCatching { ctx.getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, n) }
+        runCatching { ctx.getSystemService(NotificationManager::class.java)?.notify(id, n) }
     }
 
     private fun ensureChannel(ctx: Context) {
@@ -134,18 +168,15 @@ object RealtimePoll {
      * the ServiceBay surface in the PWA Custom Tab. Own DEFAULT-importance channel so
      * updates and approvals are separately mutable in system settings.
      */
-    private fun notifyUpdates(ctx: Context, count: Int) {
+    private fun notifyUpdates(ctx: Context, count: Int, test: Boolean = false) {
         ensureUpdatesChannel(ctx)
         // Tap opens the ServiceBay admin (where updates are applied), NOT Solaris
         // chat (#45). Admin is on a different host than the paired Solaris base, so
-        // this is an absolute URL derived from it (admin.<apex>).
-        val base = ServerStore.baseUrl(ctx)
-        val tap = if (!base.isNullOrBlank()) {
-            PwaLauncher.tapPendingUrl(ctx, NOTIF_ID_UPDATES, cloud.dopp.solaris.SolarisConfig.adminUrl(base))
-        } else {
-            PwaLauncher.tapPending(ctx, NOTIF_ID_UPDATES, PwaLauncher.Routes.SERVICEBAY)
-        }
-        val text = ctx.resources.getQuantityString(R.plurals.updates_pending, count, count)
+        // this is an absolute URL derived from it (admin.<apex>) — the same helper
+        // the two ServiceBay widgets tap through since #109.
+        val id = if (test) NOTIF_ID_TEST_UPDATES else NOTIF_ID_UPDATES
+        val tap = PwaLauncher.serviceBayTap(ctx, id)
+        val text = mark(ctx, ctx.resources.getQuantityString(R.plurals.updates_pending, count, count), test)
         val n = NotificationCompat.Builder(ctx, UPDATES_CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(NOTIF_ACCENT)
@@ -155,7 +186,7 @@ object RealtimePoll {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(tap)
             .build()
-        runCatching { ctx.getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID_UPDATES, n) }
+        runCatching { ctx.getSystemService(NotificationManager::class.java)?.notify(id, n) }
     }
 
     private fun ensureUpdatesChannel(ctx: Context) {

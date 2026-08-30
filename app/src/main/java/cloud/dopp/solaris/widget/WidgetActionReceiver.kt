@@ -4,6 +4,10 @@ import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import org.json.JSONObject
@@ -63,16 +67,20 @@ class WidgetActionReceiver : BroadcastReceiver() {
         thread {
             try {
                 val api = ApiClient(app)
-                val done = when (op) {
-                    OP_BRIGHT_UP -> { api.call(entityId, "light.turn_on", data = step(+STEP)); true }
-                    OP_BRIGHT_DOWN -> { api.call(entityId, "light.turn_on", data = step(-STEP)); true }
-                    OP_COVER_STOP -> { api.call(entityId, "cover.stop_cover"); true }
-                    OP_COVER_CLOSE -> { api.call(entityId, "cover.close_cover"); true }
+                // `api.call` RETURNS false on a non-2xx — during the outage of
+                // 29./30.08. `/napi/ha/call` answered 500 to every tap and this
+                // block threw nothing, so the result was dropped and the tap looked
+                // like it had worked (#111). Every branch now carries its outcome.
+                val outcome = when (op) {
+                    OP_BRIGHT_UP -> tapOutcome(api.call(entityId, "light.turn_on", data = step(+STEP)))
+                    OP_BRIGHT_DOWN -> tapOutcome(api.call(entityId, "light.turn_on", data = step(-STEP)))
+                    OP_COVER_STOP -> tapOutcome(api.call(entityId, "cover.stop_cover"))
+                    OP_COVER_CLOSE -> tapOutcome(api.call(entityId, "cover.close_cover"))
                     OP_COVER_OPEN -> callOrConfirm(api, app, id, entityId, "cover.open_cover")
                     OP_LOCK -> callOrConfirm(api, app, id, entityId, "lock.lock")
                     OP_UNLOCK -> callOrConfirm(api, app, id, entityId, "lock.unlock")
                     else -> when (domain) { // OP_TOGGLE
-                        "light", "switch" -> { api.call(entityId, "$domain.toggle"); true }
+                        "light", "switch" -> tapOutcome(api.call(entityId, "$domain.toggle"))
                         "cover" -> {
                             val card = api.getCard(entityId)
                             val service = if (card?.isOn == true) "cover.close_cover" else "cover.open_cover"
@@ -81,32 +89,52 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         "lock" -> callOrConfirm(
                             api, app, id, entityId, lockToggleService(api.getCard(entityId)?.state),
                         )
-                        else -> true
+                        else -> Tap.DONE
                     }
                 }
-                if (done) {
+                if (outcome != Tap.CONFIRMING) {
                     // Ordering fuel for the app-icon menu (#100) — the device was
-                    // switched, whichever surface asked for it.
+                    // used, whichever surface asked and whatever the server said.
                     WidgetStore.noteEntityUsed(app, entityId)
-                    if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
+                }
+                when (outcome) {
+                    Tap.DONE -> if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
+                    // A refused/failed call must not look like nothing happened.
+                    Tap.FAILED -> reportFailure(app, label(app, id, entityId))
+                    Tap.CONFIRMING -> Unit // the dialog is the feedback
                 }
             } catch (e: ApiClient.NotConfiguredException) {
                 openHome(app)
             } catch (e: ApiClient.NotPairedException) {
                 openHome(app)
+            } catch (e: ApiClient.SensitiveException) {
+                // A directly-called domain turned out to be gated after all: the
+                // call did not run, but the reason is the confirm gate, not a dead
+                // server — so no "Solaris antwortet nicht" here.
             } catch (e: Exception) {
-                // network/other — keep the last rendered state
+                // Network or server error: the tile keeps its last rendered state
+                // (#46) — but the user gets told the tap went nowhere (#111).
+                reportFailure(app, label(app, id, entityId))
             } finally {
                 pending?.finish()
             }
         }
     }
 
+    /**
+     * What one tap achieved. [CONFIRMING] is not a failure — the confirm dialog is
+     * on screen and the user has yet to answer — and telling it apart from
+     * [FAILED] is the whole point: only [FAILED] earns a "did not work" (#111).
+     */
+    private enum class Tap { DONE, CONFIRMING, FAILED }
+
+    /** A plain `api.call` result as an outcome: `false` = the server refused it. */
+    private fun tapOutcome(ok: Boolean): Tap = if (ok) Tap.DONE else Tap.FAILED
+
     /** Run the service; on the 403 sensitive gate, launch the confirm dialog. */
-    private fun callOrConfirm(api: ApiClient, app: Context, id: Int, entityId: String, service: String): Boolean {
+    private fun callOrConfirm(api: ApiClient, app: Context, id: Int, entityId: String, service: String): Tap {
         return try {
-            api.call(entityId, service)
-            true
+            tapOutcome(api.call(entityId, service))
         } catch (e: ApiClient.SensitiveException) {
             app.startActivity(
                 Intent(app, WidgetActionActivity::class.java)
@@ -115,9 +143,17 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     .putExtra(EXTRA_SERVICE, service)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
-            false
+            Tap.CONFIRMING
         }
     }
+
+    /** What to call the device when reporting a failed tap. */
+    private fun label(app: Context, id: Int, entityId: String): String =
+        if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            WidgetStore.name(app, id).ifBlank { entityId }
+        } else {
+            entityId
+        }
 
     private fun step(pct: Int) = JSONObject().put("brightness_step_pct", pct)
 
@@ -147,6 +183,24 @@ class WidgetActionReceiver : BroadcastReceiver() {
         const val OP_LOCK_CHOOSE = "lock_choose"
 
         private const val STEP = 20 // brightness step, %
+
+        /**
+         * Say out loud that a tap did **not** land (#111). The user's account of
+         * the outage was "ich tippe und nichts passiert": the call 500'd, the tile
+         * kept its (correct-looking, day-old) value and nothing else happened, so
+         * there was no way to tell a dead server from a slow one.
+         *
+         * A text toast, not a dialog: the tap already cost the user a touch, and a
+         * modal per failed tap during an hours-long outage is its own punishment.
+         * Best-effort — a failure to complain never breaks the tap path.
+         */
+        fun reportFailure(ctx: Context, deviceLabel: String) {
+            val app = ctx.applicationContext
+            val text = app.getString(R.string.widget_action_failed, deviceLabel.ifBlank { "Gerät" })
+            Handler(Looper.getMainLooper()).post {
+                runCatching { Toast.makeText(app, text, Toast.LENGTH_LONG).show() }
+            }
+        }
 
         /**
          * Which bolt service a lock's toggle runs (#84). Only a confirmed `locked`

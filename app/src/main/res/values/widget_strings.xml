@@ -31,6 +31,11 @@
     <string name="widget_confirm_neutral">Schalten</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
+    <!-- Fehlgeschlagener Tipp (#111): waehrend des Ausfalls antwortete
+         /napi/ha/call mit 500, die Kachel schwieg und der Tipp sah folgenlos aus.
+         %1$s = Geraetename. -->
+    <string name="widget_action_failed">%1$s nicht geschaltet – Solaris antwortet nicht</string>
+
     <!-- Schloss-Kachel (#84): der Riegel, nicht die Tür. -->
     <string name="widget_lock_lock">Abschließen</string>
     <string name="widget_lock_unlock">Aufschließen</string>

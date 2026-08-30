@@ -134,12 +134,17 @@ class WidgetActionActivity : Activity() {
      * user first (the confirm button, or the chooser's pick).
      */
     private fun runService(entityId: String, service: String, appWidgetId: Int) {
+        val name = label(appWidgetId, entityId)
         thread {
-            try {
+            // The call's own answer decides (#111): `call` returns false on a
+            // non-2xx — the outage's 500s came back this way — so a confirmed
+            // "Abschließen" that the server refused must not end in silence.
+            val ok = try {
                 ApiClient(applicationContext).call(entityId, service, confirmed = true)
             } catch (e: Exception) {
-                // ignore — the tile keeps its last known state
+                false // the tile keeps its last known state; the user hears about it
             }
+            if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
             // The device was used, whatever the call's outcome — that is what the
             // app-icon menu orders by (#100).
             WidgetStore.noteEntityUsed(applicationContext, entityId)
@@ -185,14 +190,17 @@ class WidgetActionActivity : Activity() {
             .setTitle(getString(R.string.widget_color_title, WidgetStore.name(this, appWidgetId)))
             .setItems(labels) { _, which ->
                 val swatch = LightColors.PALETTE[which]
+                val name = WidgetStore.name(this, appWidgetId)
                 thread {
-                    try {
+                    val ok = try {
                         ApiClient(applicationContext).call(
                             entityId, "light.turn_on", data = LightColors.data(swatch),
                         )
                     } catch (e: Exception) {
-                        // ignore — the tile keeps its last known colour
+                        false // the tile keeps its last known colour
                     }
+                    // A colour that never arrived is still a tap that did nothing (#111).
+                    if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
                     DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
                     runOnUiThread { finish() }
                 }

@@ -46,7 +46,9 @@ class SbOverviewWidgetProvider : AppWidgetProvider() {
 
     private fun refresh(context: Context, appWidgetId: Int) {
         val mgr = AppWidgetManager.getInstance(context)
-        val tap = PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.SERVICEBAY)
+        // Tap → the ServiceBay admin host the numbers come from, not Solaris chat
+        // (#109; same target as the updates notification, #45).
+        val tap = PwaLauncher.serviceBayTap(context, appWidgetId)
         // Immediate render from the last-good cache (#46) — show the last numbers
         // instantly, not "—", even after a reboot/process death — then live fetch.
         val cached = WidgetCache.getHome(context, appWidgetId)

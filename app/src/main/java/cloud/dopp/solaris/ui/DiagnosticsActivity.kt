@@ -8,18 +8,31 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationManagerCompat
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisApp
+import cloud.dopp.solaris.data.SbApiClient
+import cloud.dopp.solaris.data.SbHome
+import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.realtime.RealtimeLog
+import cloud.dopp.solaris.realtime.RealtimePoll
 import java.io.File
+import kotlin.concurrent.thread
 
 /**
  * A no-frills diagnostics screen (#48): app version + device, the last crash trace
  * (if any, from [SolarisApp.CRASH_FILE]), and the realtime connection log
  * ([RealtimeLog]) — so "app keeps stopping" or reconnect churn is inspectable and
- * shareable without adb. Reached by tapping the version line on the home screen.
+ * shareable without adb. Reached by tapping the version line on the home screen —
+ * deliberately discreet, this is a service hatch, not a feature.
+ *
+ * Since #110 it also holds the **notification self-test** ([runNotifyCheck]): the
+ * one way to see the #45 alert path end-to-end without an update pending on the box.
  */
 class DiagnosticsActivity : AppCompatActivity() {
+
+    /** Result of the last "Meldungen prüfen" run (#110), shown above the log. */
+    private var lastCheck: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +49,47 @@ class DiagnosticsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.diag_clear).setOnClickListener {
             RealtimeLog.clear(this)
             runCatching { File(filesDir, SolarisApp.CRASH_FILE).delete() }
+            lastCheck = null
             render()
+        }
+        findViewById<Button>(R.id.diag_notify_check).setOnClickListener { runNotifyCheck(it as Button) }
+    }
+
+    /**
+     * The notification self-test (#110): fetch `/napi/servicebay/home` **once**,
+     * bypassing the screen-off + rise gate that makes #45 unprovokable, report the
+     * counts and the tap target, deliver one marked test alert per kind through the
+     * real builders, and drop the persisted baseline so a standing count alerts
+     * again. Nothing about the trigger condition itself changes.
+     */
+    private fun runNotifyCheck(btn: Button) {
+        btn.isEnabled = false
+        btn.setText(R.string.diag_notify_running)
+        val app = applicationContext
+        thread {
+            val base = ServerStore.baseUrl(app)
+            var home: SbHome? = null
+            var error: String? = null
+            try {
+                home = SbApiClient(app).getHome()
+            } catch (e: Exception) {
+                error = e.message ?: e.javaClass.simpleName
+            }
+            if (home == null && error == null) error = "keine Antwort vom Server"
+            RealtimePoll.notifyTest(app, home?.pendingApprovals ?: 0, home?.pendingUpdates ?: 0)
+            RealtimePoll.resetBaseline(app)
+            val enabled = runCatching {
+                NotificationManagerCompat.from(app).areNotificationsEnabled()
+            }.getOrDefault(true)
+            val text = NotifyCheckReport.format(
+                base, home?.pendingApprovals, home?.pendingUpdates, error, enabled,
+            )
+            runOnUiThread {
+                lastCheck = text
+                render()
+                btn.setText(R.string.diag_notify_check)
+                btn.isEnabled = true
+            }
         }
     }
 
@@ -50,6 +103,7 @@ class DiagnosticsActivity : AppCompatActivity() {
             .append("  ·  ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
             .append("  ·  Android ").append(Build.VERSION.RELEASE)
             .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n\n")
+        lastCheck?.let { sb.append(it).append("\n\n") }
         readCrash()?.let { sb.append("── Letzter Absturz ──\n").append(it.trim()).append("\n\n") }
         sb.append("── Verbindungs-Log ──\n")
         val log = RealtimeLog.formatted(this)

@@ -31,6 +31,13 @@ object WidgetRender {
     private const val LOCK_MOVING = 0xFF7E9CFF.toInt()    // schließt ab/auf
     private const val LOCK_JAMMED = 0xFFEF5350.toInt()    // klemmt
 
+    /**
+     * The tint of a tile whose data has aged out (#111). Dimmer than [OFF], so a
+     * stale tile reads as *unlit* rather than as "off", and — the point of the
+     * exercise — a stale lock can never wear [LOCK_SECURED]'s calm green.
+     */
+    private const val STALE = 0xFF6B7280.toInt()
+
     /** The widget size tiers. Selected by [sizeTier] from the host's min size. */
     enum class Tier { TINY, SMALL, WIDE, MEDIUM }
 
@@ -84,11 +91,16 @@ object WidgetRender {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
         val on = card?.isOn == true
+        // How long since we last successfully heard from the server for this tile
+        // (#111) — null while it is fresh, or while there is nothing to date.
+        val staleAge = staleAge(ctx, appWidgetId, card)
 
         // TINY (1×1, #31) has its own shape: name instead of icon, one primary
         // toggle, and the state docked as a bottom bar. Built separately — and
         // without the confirm badge (#95), which does not fit a single cell.
-        if (tier == Tier.TINY) return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, load)
+        if (tier == Tier.TINY) {
+            return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, load, staleAge)
+        }
 
         val sensitive = isSensitive(ctx, appWidgetId, card, dom)
 
@@ -100,13 +112,16 @@ object WidgetRender {
         }
         val v = RemoteViews(ctx.packageName, layout)
 
-        val accent = accentFor(dom, card, on)
+        // A stale tile keeps its value and its icon and loses its colour: the
+        // accent is what claims "this is the state right now" (#111).
+        val accent = if (staleAge != null) STALE else accentFor(dom, card, on)
 
         v.setImageViewResource(R.id.w_icon, iconFor(dom, card))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
-        v.setTextViewText(R.id.w_state, stateLabel(card, load))
+        v.setTextViewText(R.id.w_state, stateLabel(card, load, staleAge != null, dom))
         v.setTextColor(R.id.w_state, accent)
+        markStale(v, Staleness.mark(staleAge))
 
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
         v.setViewVisibility(R.id.w_lock, if (showsLockBadge(tier, sensitive)) View.VISIBLE else View.GONE)
@@ -186,16 +201,20 @@ object WidgetRender {
         on: Boolean,
         onBodyTap: PendingIntent,
         load: Load,
+        staleAge: String? = null,
     ): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
 
         if (tinyTap(load) == TinyTap.SETUP) return tinySetup(v, onBodyTap, load)
 
-        val accent = accentFor(dom, card, on)
+        val accent = if (staleAge != null) STALE else accentFor(dom, card, on)
 
         // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
+        // One cell has room for the age and nothing else (#111) — the icon's
+        // dropped tint carries the rest of the message.
+        markStale(v, Staleness.mark(staleAge, compact = true))
 
         // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
         // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
@@ -236,6 +255,7 @@ object WidgetRender {
         v.setImageViewResource(R.id.w_tiny_toggle, R.drawable.ic_plus)
         v.setInt(R.id.w_tiny_toggle, "setColorFilter", OFF)
         v.setViewVisibility(R.id.w_bar, View.GONE)
+        markStale(v, null) // nothing bound → nothing to be stale about (#111)
         for (id in TINY_SETUP_TARGETS) v.setOnClickPendingIntent(id, onBodyTap)
         return v
     }
@@ -521,12 +541,50 @@ object WidgetRender {
         else -> OFF
     }
 
-    private fun stateLabel(card: Card?, load: Load = Load.LOADED): String {
+    /**
+     * The age to show on this tile, or `null` when it must not be marked (#111).
+     *
+     * Marked only when there **is** a value to qualify: an empty tile already says
+     * "lädt…" / "↻ tippen" / "einrichten", and dating a value we never had would
+     * be noise. The time asked for is [WidgetCache.fetchedAt] — when *we* last
+     * heard from the server — never `Card.updatedAtMs`, which is when the entity
+     * last changed and says nothing about the connection.
+     */
+    private fun staleAge(ctx: Context, appWidgetId: Int, card: Card?): String? {
+        if (card == null) return null
+        val at = WidgetCache.fetchedAt(ctx, appWidgetId) ?: return null
+        val now = System.currentTimeMillis()
+        return if (Staleness.isStale(at, now)) Staleness.ageLabel(at, now) else null
+    }
+
+    /** Show or hide the tile's stale line; [text] `null` = fresh, nothing to say. */
+    private fun markStale(v: RemoteViews, text: String?) {
+        if (text == null) {
+            v.setViewVisibility(R.id.w_stale, View.GONE)
+        } else {
+            v.setTextViewText(R.id.w_stale, text)
+            v.setViewVisibility(R.id.w_stale, View.VISIBLE)
+        }
+    }
+
+    private fun stateLabel(
+        card: Card?,
+        load: Load = Load.LOADED,
+        stale: Boolean = false,
+        domain: String = "",
+    ): String {
         if (card == null) return when (load) {
             Load.UNCONFIGURED -> "einrichten"
             Load.FAILED -> "↻ tippen"
             else -> "lädt…"
         }
+        val value = valueLabel(card)
+        // Mark, don't replace (#111): the last known value stays; only a lock's
+        // reading becomes a question, because that one asserts security.
+        return if (stale) Staleness.staleValue(value, domain.ifBlank { card.domain }) else value
+    }
+
+    private fun valueLabel(card: Card): String {
         return when (card.domain) {
             // On + a brightness %: show just the % (the accent colour already says "on").
             "light" -> if (card.isOn) card.brightnessPct?.let { "$it %" } ?: "an" else "aus"

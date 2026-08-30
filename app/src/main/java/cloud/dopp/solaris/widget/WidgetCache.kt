@@ -58,6 +58,7 @@ object WidgetCache {
         // silently drop the "Tür öffnen" entry on a lock that has a latch.
         card.supportedFeatures?.let { o.put("supportedFeatures", it) }
         write(ctx, "card_$id", o)
+        noteFetch(ctx, id)
     }
 
     fun getCard(ctx: Context, id: Int): Card? {
@@ -95,6 +96,7 @@ object WidgetCache {
             .put("pendingApprovals", home.pendingApprovals)
             .put("pendingUpdates", home.pendingUpdates)
         write(ctx, "sbhome_$id", o)
+        noteFetch(ctx, id)
     }
 
     fun getHome(ctx: Context, id: Int): SbHome? {
@@ -120,6 +122,7 @@ object WidgetCache {
             .put("warn", counts.second)
             .put("fail", counts.third)
         write(ctx, "sbsvc_$id", o)
+        noteFetch(ctx, id)
     }
 
     fun getServiceCounts(ctx: Context, id: Int): Triple<Int, Int, Int>? {
@@ -131,6 +134,31 @@ object WidgetCache {
         }
     }
 
+    // --- freshness: when did we last hear from the server (#111) -------------
+
+    /**
+     * Remember that a fetch for [id] **succeeded** at [atMs]. Every `put*` above
+     * calls this, and only they do — a payload landing here *is* a successful
+     * round-trip, whether it came from a poll or from the realtime push. A failed
+     * fetch writes nothing, so the recorded time keeps ageing and [Staleness]
+     * eventually marks the tile.
+     *
+     * This is deliberately **not** `Card.updatedAtMs`: that is Home Assistant's
+     * state time (ordering fuel for `StateEpochGuard`), and a lamp unchanged for a
+     * week is not stale. What matters here is when *we* last heard anything.
+     */
+    fun noteFetch(ctx: Context, id: Int, atMs: Long = System.currentTimeMillis()) {
+        runCatching { p(ctx).edit().putLong("fetch_$id", atMs).apply() }
+    }
+
+    /**
+     * When the last successful fetch for [id] landed, or `null` when there is no
+     * record — a freshly bound tile, or a cache written before #111 tracked this.
+     * "No record" is not "stale": see [Staleness.State.UNKNOWN].
+     */
+    fun fetchedAt(ctx: Context, id: Int): Long? =
+        runCatching { p(ctx).getLong("fetch_$id", 0L) }.getOrNull()?.takeIf { it > 0L }
+
     // --- lifecycle -----------------------------------------------------------
 
     /** Drop every cached payload for [id] (widget removed / re-bound). */
@@ -139,6 +167,9 @@ object WidgetCache {
             .remove("card_$id")
             .remove("sbhome_$id")
             .remove("sbsvc_$id")
+            // The fetch time goes with the payload it dated (#111): a re-bound
+            // tile must start with no history, not inherit the old one's age.
+            .remove("fetch_$id")
             .apply()
     }
 

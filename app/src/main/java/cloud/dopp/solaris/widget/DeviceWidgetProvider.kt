@@ -194,6 +194,11 @@ class DeviceWidgetProvider : AppWidgetProvider() {
             )
             val domain = WidgetStore.domain(context, appWidgetId)
             try {
+                // Persist the pushed state so a later failed poll keeps it (#46) —
+                // *before* rendering, because that write is also what dates the
+                // tile (#111): a push IS hearing from the server, and a tile drawn
+                // from it must not be judged by the previous fetch's age.
+                WidgetCache.putCard(context, appWidgetId, card)
                 mgr.updateAppWidget(
                     appWidgetId,
                     WidgetRender.build(
@@ -201,8 +206,6 @@ class DeviceWidgetProvider : AppWidgetProvider() {
                         WidgetStore.name(context, appWidgetId), domain, tap,
                     ),
                 )
-                // Persist the pushed state so a later failed poll keeps it (#46).
-                WidgetCache.putCard(context, appWidgetId, card)
             } catch (t: Throwable) {
                 requestRefresh(context, appWidgetId)
             }
