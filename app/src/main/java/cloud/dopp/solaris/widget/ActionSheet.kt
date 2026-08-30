@@ -100,10 +100,28 @@ data class ActionSheet(
 }
 
 /**
+ * What one entry of a **tool row's** sheet does (#90/#107).
+ *
+ * The row itself can no longer carry two targets: three attempts to put a second
+ * click target inside a collection row — attributes, then structure — all ended
+ * with the press arriving at the row's own fill-in, so this launcher delivers one
+ * target per row and no fourth guess will change that. The two things a row can
+ * offer therefore become two entries of the sheet the row tap opens, which is the
+ * pattern the lock chooser (#92) already proves on this device.
+ */
+enum class ToolRowChoice(val labelRes: Int, val tone: ActionTone) {
+    /** Run the action the tool's def declared for this row (#90). */
+    RUN(R.string.tool_action_do, ActionTone.PRIMARY),
+
+    /** Open this item's own card in the PWA (#107). */
+    OPEN(R.string.tool_row_open, ActionTone.NORMAL),
+}
+
+/**
  * Every action dialog the app shows, assembled in one place (#113).
  *
- * A fourth dialog (the tool action sheet, #90) has to slot in here rather than
- * grow a fourth layout next to the others — that is the point of this object.
+ * The tool row's sheet (#90) slots in here rather than growing a fourth layout
+ * next to the others — that is the point of this object.
  */
 object ActionSheets {
 
@@ -132,6 +150,19 @@ object ActionSheets {
      */
     fun toolConfirm(): ActionSheet =
         ActionSheet(listOf(ActionItem(R.string.tool_action_do, ActionTone.PRIMARY)))
+
+    /**
+     * The tool row's sheet (#90/#107) — what a tap on one row of a tool widget
+     * offers, in the order [ToolRowChoice] declares. Running the row's action is
+     * the primary entry; opening the item is an ordinary one; Abbrechen is the
+     * footer [ActionSheet] appends, in the same place as in every other dialog.
+     *
+     * Nothing here is dangerous: a catalog action is whatever the plugin declared,
+     * and the server — not the widget — decides which of them need confirming
+     * (the `confirm_required` 403, answered by [toolConfirm]).
+     */
+    fun toolRow(choices: List<ToolRowChoice>): ActionSheet =
+        ActionSheet(choices.map { ActionItem(labelRes = it.labelRes, tone = it.tone) })
 
     /**
      * The 1×1 lock tile's chooser (#92). What is offered still comes from

@@ -105,10 +105,10 @@
     <string name="tool_config_pick">Tool wählen:</string>
     <string name="tool_config_empty">Keine listenfähigen Tools gefunden.</string>
     <string name="tool_config_change">Tool ändern:</string>
-    <!-- Aktions-Knopf in der Zeile (#90). %1$s = Titel der Zeile. -->
-    <string name="tool_action_cd">Aktion ausführen</string>
+    <!-- Aktionsblatt der Zeile (#90/#107). %1$s = Titel der Zeile. -->
     <string name="tool_action_confirm">„%1$s“ wirklich ausführen?</string>
     <string name="tool_action_do">Ausführen</string>
+    <string name="tool_row_open">Eintrag öffnen</string>
 
     <!-- 1x1-Tool-Kachel (#71): Erfassen bzw. Chat mit geöffneter Karte. -->
     <string name="tool_launch_label">Solaris · Tool-Kachel</string>

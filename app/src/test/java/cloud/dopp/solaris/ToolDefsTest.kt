@@ -33,7 +33,7 @@ class ToolDefsTest {
           {"id":"task-tool","name":"solaris-task-tool","kind":"tool","tool-id":"task",
            "tool-label":"Aufgabe","command":".task",
            "tool-api-path":"/api/portal/tasks?done=1","tool-search-path":"",
-           "tool-compose-path":"#/p/task/new",
+           "tool-compose-path":"#/p/task/new","tool-item-id-field":"id",
            "tool-actions":["task.set_status","task.add","task.update"],
            "tool-cell-schema":{"title":"title","meta":["due"],"actions":["task.set_status"]},
            "tool-action-params":{"task.set_status":{"entity_id":"${'$'}id","status":"done"},
@@ -41,17 +41,17 @@ class ToolDefsTest {
              "task.update":{"entity_id":"${'$'}id","title":"${'$'}title","due":"${'$'}due"}}},
           {"id":"contacts-tool","name":"solaris-contacts-tool","kind":"tool","tool-id":"contacts",
            "tool-label":"Kontakt","tool-api-path":"/api/portal/persons",
-           "tool-compose-path":"#/p/contacts/new",
+           "tool-compose-path":"#/p/contacts/new","tool-item-id-field":"id",
            "tool-actions":["contact.add","person.update"],
            "tool-cell-schema":{"title":"name","meta":["phone","email"]}},
           {"id":"doc-tool","name":"solaris-doc-tool","kind":"tool","tool-id":"doc",
            "tool-label":"Dokument","tool-api-path":"/api/portal/documents/search",
-           "tool-compose-path":"#/p/doc/new",
+           "tool-compose-path":"#/p/doc/new","tool-item-id-field":"entity_id",
            "tool-actions":["doc.classify"],
            "tool-cell-schema":{"title":"title","meta":["category"]}},
           {"id":"photo-tool","name":"solaris-photo-tool","kind":"tool","tool-id":"photo",
            "tool-label":"Foto","tool-api-path":"/api/photo","tool-actions":[],
-           "tool-compose-path":"#/p/photo/new",
+           "tool-compose-path":"#/p/photo/new","tool-item-id-field":"id",
            "tool-cell-schema":{"title":"name","meta":["people"]}},
           {"id":"note-tool","name":"solaris-note-tool","kind":"tool","tool-id":"note",
            "tool-label":"Notiz","tool-api-path":"","tool-actions":["note.add"],
@@ -239,6 +239,45 @@ class ToolDefsTest {
         assertNull(ToolDefs.composePath("   "))
         // Off-server — never open a tile at someone else's host.
         assertNull(ToolDefs.composePath("https://example.com/#/p/x/new"))
+    }
+
+    // --- tool-item-id-field (#107, solarisbay#1256) ---------------------------
+
+    /**
+     * Which tool carries its item id in which field — read off the def, never
+     * guessed. The names genuinely differ (`doc` says `entity_id`, the rest say
+     * `id`), which is exactly why the old try-them-in-turn list could only ever be
+     * right by luck; and `note`/`home`/`energy` declare none, so a row of theirs
+     * gets **no** item route rather than an invented one.
+     */
+    @Test
+    fun onlyDeclaringToolsCarryAnItemIdField() {
+        val byId = ToolDefs.parseCatalog(shippedCatalog).associateBy { it.id }
+        assertEquals("id", byId.getValue("task").itemIdField)
+        assertEquals("id", byId.getValue("contacts").itemIdField)
+        assertEquals("id", byId.getValue("photo").itemIdField)
+        assertEquals("entity_id", byId.getValue("doc").itemIdField)
+        assertNull(byId.getValue("note").itemIdField)
+        assertNull(byId.getValue("home").itemIdField)
+        assertNull(byId.getValue("energy").itemIdField)
+    }
+
+    /**
+     * A declaration is a plain field name. Anything that isn't one degrades to
+     * "this tool has no item route" — the one thing it must never degrade to is a
+     * guess at what was meant.
+     */
+    @Test
+    fun anUnusableItemIdFieldDeclarationIsRefused() {
+        assertEquals("entity_id", ToolDefs.itemIdField("  entity_id  "))
+        assertNull(ToolDefs.itemIdField(null))
+        assertNull(ToolDefs.itemIdField(""))
+        assertNull(ToolDefs.itemIdField("   "))
+        // A `$` source belongs to tool-action-params, not here.
+        assertNull(ToolDefs.itemIdField("${'$'}id"))
+        // A path is not a field name.
+        assertNull(ToolDefs.itemIdField("item/id"))
+        assertNull(ToolDefs.itemIdField("entity id"))
     }
 
     // --- tool-action-params (#90, solarisbay#1214) ----------------------------

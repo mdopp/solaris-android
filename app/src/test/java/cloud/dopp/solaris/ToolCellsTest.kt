@@ -27,8 +27,13 @@ class ToolCellsTest {
 
     private fun schema(json: String): ToolCellSchema = ToolDefs.parseSchema(JSONObject(json))
 
-    private fun map(schemaJson: String, rowJson: String): ToolCell? =
-        ToolCells.map(schema(schemaJson), JSONObject(rowJson))
+    private fun map(
+        schemaJson: String,
+        rowJson: String,
+        itemIdField: String? = null,
+    ): ToolCell? = ToolCells.map(
+        schema(schemaJson), JSONObject(rowJson), itemIdField = itemIdField,
+    )
 
     // --- the six real shipped schemas ----------------------------------------
 
@@ -37,10 +42,11 @@ class ToolCellsTest {
         val cell = map(
             """{"title":"title","meta":["due"]}""",
             """{"entity_id":"task.42","title":"Müll rausbringen","due":"2026-08-25"}""",
+            itemIdField = "entity_id",
         )!!
         assertEquals("Müll rausbringen", cell.title)
         assertEquals("2026-08-25", cell.meta)
-        assertEquals("task.42", cell.id)
+        assertEquals("task.42", cell.itemId)
         assertNull(cell.subtitle)
         assertNull(cell.badge)
     }
@@ -50,10 +56,11 @@ class ToolCellsTest {
         val cell = map(
             """{"title":"name","meta":["phone","email"]}""",
             """{"id":"p7","name":"Anna","phone":"0170 1234","email":"anna@example.org"}""",
+            itemIdField = "id",
         )!!
         assertEquals("Anna", cell.title)
         assertEquals("0170 1234${ToolCells.META_SEP}anna@example.org", cell.meta)
-        assertEquals("p7", cell.id)
+        assertEquals("p7", cell.itemId)
     }
 
     @Test
@@ -263,17 +270,70 @@ class ToolCellsTest {
         )
     }
 
+    // --- the declared item id field (#107) ------------------------------------
+
+    /**
+     * The core rule of #107: the id comes out of the field the **def named**. The
+     * task fixture carries both an `entity_id` and an `id`, and which one the row
+     * offers is decided by the declaration alone — that is what a guess list can
+     * never get right for every tool at once.
+     */
+    @Test
+    fun theItemIdComesOutOfTheDeclaredFieldOnly() {
+        val row = """{"title":"Müll","entity_id":"task.42","id":"77"}"""
+        assertEquals("77", map("""{"title":"title"}""", row, itemIdField = "id")!!.itemId)
+        assertEquals(
+            "task.42",
+            map("""{"title":"title"}""", row, itemIdField = "entity_id")!!.itemId,
+        )
+    }
+
+    /** A tool that declares no field (`note`, `home`, `energy`) offers no id. */
+    @Test
+    fun aToolWithoutADeclaredFieldOffersNoItemId() {
+        val row = """{"title":"Müll","entity_id":"task.42","id":"77"}"""
+        assertNull(map("""{"title":"title"}""", row)!!.itemId)
+        assertNull(map("""{"title":"title"}""", row, itemIdField = "")!!.itemId)
+    }
+
+    /** Declared but absent, blank, or not a scalar → no id, and no second try. */
+    @Test
+    fun aMissingFieldValueYieldsNoItemIdRatherThanAFallback() {
+        val schema = """{"title":"title"}"""
+        assertNull(map(schema, """{"title":"A","id":"7"}""", itemIdField = "uid")!!.itemId)
+        assertNull(map(schema, """{"title":"A","uid":"  "}""", itemIdField = "uid")!!.itemId)
+        assertNull(map(schema, """{"title":"A","uid":null}""", itemIdField = "uid")!!.itemId)
+        assertNull(map(schema, """{"title":"A","uid":{"x":1}}""", itemIdField = "uid")!!.itemId)
+        // A numeric id is an id — it just has to become a string to ride a route.
+        assertEquals("42", map(schema, """{"title":"A","uid":42}""", itemIdField = "uid")!!.itemId)
+    }
+
+    /** The whole def path: `mapAll` hands each row the tool's own declaration. */
+    @Test
+    fun mapAllReadsTheFieldOffTheDef() {
+        val defs = ToolDefs.parseCatalog(
+            """{"defs":[{"tool-id":"doc","tool-cell-schema":{"title":"title"},
+               "tool-item-id-field":"entity_id"}]}""",
+        )
+        val cells = ToolCells.mapAll(
+            defs.single(),
+            listOf(JSONObject("""{"title":"Rechnung","entity_id":"doc.2026-08.rechnung"}""")),
+        )
+        assertEquals("doc.2026-08.rechnung", cells.single().itemId)
+    }
+
     // --- cache codec ----------------------------------------------------------
 
     @Test
     fun cellsSurviveTheCacheRoundTrip() {
         val cells = listOf(
-            ToolCell(id = "1", title = "A", subtitle = "s", meta = "m", badge = "b"),
-            ToolCell(id = "", title = "B", subtitle = null, meta = null, badge = null),
+            ToolCell(itemId = "1", title = "A", subtitle = "s", meta = "m", badge = "b"),
+            ToolCell(itemId = null, title = "B", subtitle = null, meta = null, badge = null),
         )
         val back = ToolCells.decode(ToolCells.encode(cells))
         assertEquals(2, back.size)
         assertEquals(cells[0].copy(actions = emptyList()), back[0])
+        assertNull("a row without an id keeps none", back[1].itemId)
         assertEquals("B", back[1].title)
         assertNull(back[1].meta)
     }
@@ -283,11 +343,11 @@ class ToolCellsTest {
     fun theResolvedActionSurvivesTheCacheRoundTrip() {
         val cells = listOf(
             ToolCell(
-                id = "t42", title = "Müll", subtitle = null, meta = "morgen", badge = null,
+                itemId = "t42", title = "Müll", subtitle = null, meta = "morgen", badge = null,
                 actionId = "task.set_status",
                 actionParams = """{"entity_id":"t42","status":"done"}""",
             ),
-            ToolCell(id = "p7", title = "Anna", subtitle = null, meta = null, badge = null),
+            ToolCell(itemId = "p7", title = "Anna", subtitle = null, meta = null, badge = null),
         )
         val back = ToolCells.decode(ToolCells.encode(cells))
         assertEquals("task.set_status", back[0].actionId)

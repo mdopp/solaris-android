@@ -16,6 +16,7 @@ import cloud.dopp.solaris.widget.ActionTone
 import cloud.dopp.solaris.widget.ConfirmVerb
 import cloud.dopp.solaris.widget.LightColors
 import cloud.dopp.solaris.widget.LockChoice
+import cloud.dopp.solaris.widget.ToolRowChoice
 import cloud.dopp.solaris.widget.WidgetActionActivity
 import cloud.dopp.solaris.widget.WidgetActionReceiver
 import org.junit.Assert.assertEquals
@@ -61,6 +62,14 @@ class ActionSheetTest {
         add("lock/no-latch-0" to ActionSheets.lock(0))
         add("lock/latch" to ActionSheets.lock(1))
         add("colors" to ActionSheets.colors())
+        // The tool row's sheet (#90) is the fourth dialog and must obey the same
+        // rules as the other three — that is what keeps it from becoming a fourth
+        // *form*.
+        add("tool-row/run" to ActionSheets.toolRow(listOf(ToolRowChoice.RUN)))
+        add(
+            "tool-row/run+open" to
+                ActionSheets.toolRow(listOf(ToolRowChoice.RUN, ToolRowChoice.OPEN)),
+        )
     }
 
     // --- the shape ------------------------------------------------------------
@@ -173,6 +182,7 @@ class ActionSheetTest {
         assertEquals("Tür öffnen", ctx.getString(ActionSheets.confirm(ConfirmVerb.UNLATCH).items.single().labelRes))
         assertEquals("Abschließen", ctx.getString(ActionSheets.lock(null).items[1].labelRes))
         assertEquals("Ausführen", ctx.getString(ActionSheets.toolConfirm().items.single().labelRes))
+        assertEquals("Eintrag öffnen", ctx.getString(ToolRowChoice.OPEN.labelRes))
         // Abbrechen is one string for every sheet — one place, one word.
         assertEquals("Abbrechen", ctx.getString(R.string.widget_confirm_no))
     }

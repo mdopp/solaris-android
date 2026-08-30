@@ -13,8 +13,14 @@ import org.json.JSONObject
  * has no formatting logic of its own.
  */
 data class ToolCell(
-    /** The item's own id, when it carries one — the row tap/action key. */
-    val id: String,
+    /**
+     * The item's id **as the tool's def named it** (`tool-item-id-field`, #107),
+     * or null when the def declares no field or this row doesn't carry it. It is
+     * what builds `#/p/<tool-id>/item/<item-id>` — and it is deliberately not a
+     * lookup through a list of likely spellings: a guessed id opens the wrong
+     * card or none, and the def is there precisely so nobody has to guess.
+     */
+    val itemId: String?,
     /** Primary line — a row without one is never emitted. */
     val title: String,
     val subtitle: String?,
@@ -25,7 +31,7 @@ data class ToolCell(
     /** Action ids the schema declares for this row. */
     val actions: List<String> = emptyList(),
     /**
-     * The one action this row offers as a button (#90), or null when the tool
+     * The one action this row offers as a sheet entry (#90), or null when the tool
      * declares none — or when the row lacks a field the action's params need.
      */
     val actionId: String? = null,
@@ -66,7 +72,7 @@ object ToolCells {
 
     /** Map every item through [map], dropping the ones that yield no title. */
     fun mapAll(def: ToolDef, rows: List<JSONObject>): List<ToolCell> =
-        rows.mapNotNull { map(def.schema, it, def.actions, def.actionParams) }
+        rows.mapNotNull { map(def.schema, it, def.actions, def.actionParams, def.itemIdField) }
 
     /**
      * One item → one cell, or null when the schema's `title` field is missing on
@@ -77,6 +83,7 @@ object ToolCells {
         row: JSONObject,
         declaredActions: List<String> = emptyList(),
         actionParams: Map<String, Map<String, String>> = emptyMap(),
+        itemIdField: String? = null,
     ): ToolCell? {
         val title = value(row, schema.title) ?: return null
         val meta = schema.meta
@@ -87,7 +94,7 @@ object ToolCells {
         val actions = schema.actions.filter { it in declaredActions }
         val action = resolveAction(actions, row, actionParams)
         return ToolCell(
-            id = idOf(row),
+            itemId = itemId(row, itemIdField),
             title = title,
             subtitle = value(row, schema.subtitle),
             meta = meta,
@@ -99,11 +106,11 @@ object ToolCells {
     }
 
     /**
-     * The row's button (#90): the first schema-declared action whose params the
+     * The row's action (#90): the first schema-declared action whose params the
      * catalog declares **and** this row can fill. Everything else yields null —
-     * no button rather than one that would 400 on a missing `entity_id`. A tool
+     * no entry rather than one that would 400 on a missing `entity_id`. A tool
      * that declares no `tool-action-params` (today: all but `.task`) therefore
-     * behaves exactly as before.
+     * offers nothing but the row's own card.
      */
     fun resolveAction(
         actions: List<String>,
@@ -172,16 +179,16 @@ object ToolCells {
         }
     }
 
-    /** Item id under any of the usual spellings — "" when the item has none. */
-    private fun idOf(row: JSONObject): String {
-        for (k in ID_KEYS) {
-            val v = row.optString(k).trim()
-            if (v.isNotEmpty()) return v
-        }
-        return ""
+    /**
+     * The item's id out of the **declared** field (#107). Null when the tool
+     * declares no field, when this row doesn't carry it, or when the value isn't
+     * a scalar — each of which means "no item route for this row", never "try
+     * another field name".
+     */
+    fun itemId(row: JSONObject, field: String?): String? {
+        if (field.isNullOrBlank()) return null
+        return raw(row, field)?.toString()?.trim()?.ifBlank { null }
     }
-
-    private val ID_KEYS = listOf("entity_id", "id", "item_id", "uid", "key")
 
     /** Whole numbers lose the ".0" a JSON double would otherwise show. */
     private fun number(n: Number): String {
@@ -221,13 +228,16 @@ object ToolCells {
         val arr = JSONArray()
         for (c in cells) {
             val o = JSONObject()
-            o.put("i", c.id)
+            // A new key on purpose (#107): a cache written before the def-declared
+            // field existed holds a *guessed* id, and that must decode to "no item
+            // route" rather than to a route built on the old guess.
+            c.itemId?.let { o.put("iid", it) }
             o.put("t", c.title)
             c.subtitle?.let { o.put("s", it) }
             c.meta?.let { o.put("m", it) }
             c.badge?.let { o.put("b", it) }
-            // The row's resolved action rides into the cache with it — the button
-            // must work off a cold redraw, without re-reading the catalog.
+            // The row's resolved action rides into the cache with it — the sheet
+            // must assemble off a cold redraw, without re-reading the catalog.
             c.actionId?.let { o.put("a", it) }
             c.actionParams?.let { o.put("p", it) }
             arr.put(o)
@@ -246,7 +256,7 @@ object ToolCells {
                 val title = o.optString("t").ifBlank { null } ?: continue
                 out.add(
                     ToolCell(
-                        id = o.optString("i"),
+                        itemId = o.optString("iid").ifBlank { null },
                         title = title,
                         subtitle = o.optString("s").ifBlank { null },
                         meta = o.optString("m").ifBlank { null },

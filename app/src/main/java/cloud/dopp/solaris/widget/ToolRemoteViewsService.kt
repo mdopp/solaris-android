@@ -16,8 +16,9 @@ import cloud.dopp.solaris.R
  * schema→cell mapping and persists the result per instance, so a redraw is
  * instant and survives process death. Which slots a row shows is decided entirely
  * by the tool's `tool-cell-schema` — an unused role simply arrives as null here
- * and its view is hidden. That now includes the action button (#90): the cell
- * arrives with its callback body already resolved, or with none at all.
+ * and its view is hidden. The cell also arrives with its action's callback body
+ * already resolved (#90) and with the id its def declared (#107), so a row tap
+ * assembles its sheet without touching the catalog.
  */
 class ToolRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
@@ -29,60 +30,78 @@ class ToolRemoteViewsService : RemoteViewsService() {
 }
 
 /**
- * The two fill-in intents of a tool row (#90) — the only thing that tells the row
- * body and the action button apart, because a collection has exactly one
- * `PendingIntentTemplate` and both taps arrive at [ToolActionActivity].
+ * A tool row's **one** tap target and what the tap offers (#90/#107).
  *
- * Split out of the factory so a JVM test can assert the rule that ticket turns on:
- * only the **button's** fill-in carries [ToolActionActivity.EXTRA_ACTION_ID], so a
- * press that lands on the row body can never run the action, and a press on the
- * button can never fall through to the PWA.
+ * Three attempts put the action on a button *inside* the row and all three lost
+ * the press on the device: first attributes (`clickable`, a 48dp target), then
+ * structure (no fill-in on the row root at all, text column and button as
+ * siblings with one fill-in each). The last one is disproved by the app itself —
+ * [ToolActionActivity] opens the PWA **only** when no action id arrived, so
+ * "Solaris opened" means the button's fill-in never came. Android documents
+ * several click targets per collection row; this launcher evidently delivers one.
  *
- * Which view the press *lands* on is the other half, and two attempts at it failed
- * by treating it as an attribute problem (make the button clickable, make it 48dp)
- * while the row **root** still carried a fill-in of its own. A child that has to
- * out-compete its own ancestor for the touch is the defect; so the root now carries
- * none at all and the PWA fill-in sits on [BODY_TAP_TARGETS] — the text column and
- * the badge beside it, both **siblings** of the button. Nothing bubbles past
- * anything any more.
+ * So the row carries exactly one fill-in again, and the two things it can offer
+ * are entries of a sheet instead of two targets: the check mark is **gone from
+ * the layout**, and a tap opens [ActionSheets.toolRow]. One tap more, and it does
+ * what it promises — the same shape the lock chooser (#92) uses, which is the one
+ * pattern proven to work on this device.
+ *
+ * Split out of the factory so the assembly is JVM-testable: which entries a row
+ * offers, and which route the open entry aims at.
  */
 object ToolRow {
 
-    /**
-     * The views that carry the row's PWA fill-in (#90). Deliberately **not**
-     * `tw_item_root`: the action button is its descendant, and a press on the
-     * button used to bubble to the root's fill-in and open the PWA instead of
-     * acting. These are the button's siblings, so a press has exactly one taker.
-     */
-    val BODY_TAP_TARGETS = listOf(R.id.tw_item_body, R.id.tw_item_badge)
-
-    /** Row body → open the item's tool in the PWA. No action extras, ever. */
-    fun bodyFillIn(): Intent =
-        Intent().putExtra(ToolActionActivity.EXTRA_PATH, bodyPath())
+    /** The row's single tap target — the whole row, nothing nested inside it. */
+    val TAP_TARGET = R.id.tw_item_root
 
     /**
-     * Where a row tap lands (#107). The PWA has **no** per-item route for a tool
-     * entry: `openPortal` resolves `#/p/device/<id>`, `#/p/camera/<id>`,
-     * `#/p/servicebay/approvals/<id>` and the catalog-driven `#/p/<tool-id>/new`,
-     * and every other sub-path falls through to the chat view. An item address is
-     * not ours to invent, so a row tap keeps landing on the PWA root until
-     * solarisbay declares one (mdopp/solarisbay#1256) — the start page beats a
-     * route that resolves to nothing.
+     * The one fill-in that completes the collection's template (#90). It carries
+     * everything the tap needs to assemble its sheet without a catalog lookup: the
+     * item route when the def declared an id field, the action when the def
+     * declared params this row could fill, and the row's title for the wording.
      */
-    fun bodyPath(): String = PwaLauncher.Routes.ROOT
-
-    /**
-     * The action button's fill-in, or `null` when this row has no action to offer
-     * — the caller hides the button then, rather than showing a dead one.
-     */
-    fun actionFillIn(cell: ToolCell, appWidgetId: Int): Intent? {
-        if (cell.actionId.isNullOrBlank()) return null
-        return Intent()
-            .putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
-            .putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
+    fun fillIn(cell: ToolCell, toolId: String?, appWidgetId: Int): Intent {
+        val i = Intent()
             .putExtra(ToolActionActivity.EXTRA_TITLE, cell.title)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        itemPath(toolId, cell.itemId)?.let { i.putExtra(ToolActionActivity.EXTRA_PATH, it) }
+        if (!cell.actionId.isNullOrBlank()) {
+            i.putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
+            i.putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
+        }
+        return i
     }
+
+    /**
+     * Where this row's "open" entry goes (#107), or **null** when there is no such
+     * entry to offer: the tool declared no `tool-item-id-field` (`note`, `home`,
+     * `energy`), the row doesn't carry the declared field, or the value can't ride
+     * in a route segment. A tool without the declaration gets no open entry rather
+     * than an address invented for it — the whole point of solarisbay#1256 is that
+     * the field is read, not guessed.
+     *
+     * Until #1256 is on solarisbay's `main` the server doesn't know the route yet
+     * and the PWA falls through to the chat view — no worse than today's landing
+     * on the start page, and it improves by itself with their merge.
+     */
+    fun itemPath(toolId: String?, itemId: String?): String? =
+        PwaLauncher.Routes.toolItem(toolId, itemId)
+            .takeIf { it != PwaLauncher.Routes.TOOL_START }
+
+    /** The entries a tap on this row offers, in the order the sheet lists them. */
+    fun choices(hasAction: Boolean, itemPath: String?): List<ToolRowChoice> = buildList {
+        if (hasAction) add(ToolRowChoice.RUN)
+        if (!itemPath.isNullOrBlank()) add(ToolRowChoice.OPEN)
+    }
+
+    /**
+     * Does the tap have to ask before it does anything? Only when it could
+     * **change** something. A tap that can merely navigate just navigates — a
+     * sheet whose single entry is "Eintrag öffnen" would cost a tap and answer a
+     * question nobody asked — while a tap that could tick off a task must never
+     * fire on a mis-touch.
+     */
+    fun asksFirst(choices: List<ToolRowChoice>): Boolean = ToolRowChoice.RUN in choices
 }
 
 private class ToolCellFactory(
@@ -92,10 +111,14 @@ private class ToolCellFactory(
 
     private var cells: List<ToolCell> = emptyList()
 
+    /** The tool this instance is bound to — half of a row's item route (#107). */
+    private var toolId: String? = null
+
     override fun onCreate() {}
 
     override fun onDataSetChanged() {
         cells = ToolCells.decode(WidgetStore.toolCellsJson(ctx, appWidgetId))
+        toolId = WidgetStore.toolId(ctx, appWidgetId)
     }
 
     override fun onDestroy() {
@@ -127,23 +150,12 @@ private class ToolCellFactory(
             row.setTextViewText(R.id.tw_item_badge, cell.badge)
         }
 
-        // Body tap → the PWA: the web card stays the place to read and edit an
-        // item. Both fill-ins merge into the same template (ToolActionActivity),
-        // which tells them apart by the action extras — and they now sit on
-        // sibling views, so the press never has to out-bubble an ancestor (#90).
-        val body = ToolRow.bodyFillIn()
-        for (id in ToolRow.BODY_TAP_TARGETS) row.setOnClickFillInIntent(id, body)
-
-        // The action button (#90) appears only for a row whose action the catalog
-        // declared params for and whose fields actually filled them — a tool
-        // without `tool-action-params` shows no empty placeholder.
-        val action = ToolRow.actionFillIn(cell, appWidgetId)
-        if (action == null) {
-            row.setViewVisibility(R.id.tw_item_action, View.GONE)
-        } else {
-            row.setViewVisibility(R.id.tw_item_action, View.VISIBLE)
-            row.setOnClickFillInIntent(R.id.tw_item_action, action)
-        }
+        // One tap target for the whole row (#90). What the tap then offers — run
+        // the declared action, open the item's card, or simply open the PWA when
+        // it offers neither — is decided in ToolActionActivity off these extras,
+        // because a collection has exactly one PendingIntentTemplate and this
+        // launcher delivers exactly one target per row.
+        row.setOnClickFillInIntent(ToolRow.TAP_TARGET, ToolRow.fillIn(cell, toolId, appWidgetId))
         return row
     }
 

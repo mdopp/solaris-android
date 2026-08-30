@@ -2,15 +2,16 @@ package cloud.dopp.solaris
 
 import android.appwidget.AppWidgetManager
 import android.view.LayoutInflater
-import android.view.View
-import cloud.dopp.solaris.widget.ToolActionActivity
+import android.view.ViewGroup
+import cloud.dopp.solaris.widget.ActionRow
+import cloud.dopp.solaris.widget.ActionSheets
 import cloud.dopp.solaris.widget.PwaLauncher
+import cloud.dopp.solaris.widget.ToolActionActivity
 import cloud.dopp.solaris.widget.ToolCell
 import cloud.dopp.solaris.widget.ToolRow
+import cloud.dopp.solaris.widget.ToolRowChoice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,194 +22,230 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * The tool row's two tap targets (#90). On v2.32.1 *and* v2.32.2 the action button
- * ran the PWA instead of the action: the params were there and the button was
- * visible and 48dp and clickable, yet the press ended up on `tw_item_root`, whose
- * fill-in carries `EXTRA_PATH`, and [ToolActionActivity] does exactly what such an
- * intent asks for.
+ * What a tap on a tool widget row offers (#90/#107).
  *
- * Two attempts lost that contest; the third removes it. The root carries **no**
- * fill-in any more — the PWA fill-in sits on the text column and the badge, the
- * action fill-in on the button, and those are **siblings**. So three halves are
- * guarded here: the **intents** stay distinguishable (only the button's carries
- * `EXTRA_ACTION_ID`), the **structure** keeps no fill-in on an ancestor of the
- * button, and the **layout** keeps the button a 48dp clickable target that no
- * longer steals focus.
+ * #90 was attempted three times as a *second click target* inside the row —
+ * attributes (clickable, 48dp), then structure (no fill-in on the root, text
+ * column and button as siblings) — and every attempt lost the press on the
+ * device. The last one is disproved by the app's own code path: [ToolActionActivity]
+ * opens the PWA only when no action id arrived, so "Solaris opened" means the
+ * button's fill-in never reached it. This launcher delivers one target per
+ * collection row, so the fourth attempt stops guessing and moves the choice into
+ * the sheet the row tap opens — the lock chooser's pattern (#92), the one proven
+ * on this device.
+ *
+ * Asserted here, all of it pure: which entries a row offers (a row with no
+ * action, a tool with no item field, a field the row doesn't carry), which route
+ * the open entry aims at, that the sheet is the *shared* one (#113) rather than a
+ * fourth dialog form, and that the check mark is **gone from the layout** rather
+ * than hidden.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ToolRowTapTest {
 
-    private fun cell(actionId: String? = "task.done", params: String? = """{"id":"task.42"}""") =
-        ToolCell(
-            id = "task.42",
-            title = "Müll rausbringen",
-            subtitle = null,
-            meta = null,
-            badge = null,
-            actionId = actionId,
-            actionParams = params,
-        )
+    private fun cell(
+        actionId: String? = "task.set_status",
+        params: String? = """{"entity_id":"task.42","status":"done"}""",
+        itemId: String? = "task.42",
+    ) = ToolCell(
+        itemId = itemId,
+        title = "Müll rausbringen",
+        subtitle = null,
+        meta = null,
+        badge = null,
+        actionId = actionId,
+        actionParams = params,
+    )
 
-    // --- the intents ----------------------------------------------------------
+    // --- what the row offers --------------------------------------------------
 
-    /** The rule the whole ticket turns on. */
+    /** The everyday case: `.task` declares both, so the sheet has both entries. */
     @Test
-    fun onlyTheButtonsFillInCarriesTheActionId() {
-        val body = ToolRow.bodyFillIn()
-        val action = ToolRow.actionFillIn(cell(), 7)!!
-
-        assertNull(
-            "a body tap must never be able to run the action",
-            body.getStringExtra(ToolActionActivity.EXTRA_ACTION_ID),
-        )
-        assertEquals("task.done", action.getStringExtra(ToolActionActivity.EXTRA_ACTION_ID))
-    }
-
-    /** …and the button's tap must not fall through to the PWA path either. */
-    @Test
-    fun theTwoFillInsAreDistinguishable() {
-        val body = ToolRow.bodyFillIn()
-        val action = ToolRow.actionFillIn(cell(), 7)!!
-
-        assertNotEquals(
-            "ToolActionActivity tells the two taps apart by their extras alone",
-            body.extras?.keySet(), action.extras?.keySet(),
-        )
-        assertNull(
-            "the action carries no PWA route to fall back to",
-            action.getStringExtra(ToolActionActivity.EXTRA_PATH),
-        )
+    fun aTaskRowOffersTheActionAndTheItem() {
+        val path = ToolRow.itemPath("task", cell().itemId)
         assertEquals(
-            PwaLauncher.Routes.ROOT,
-            body.getStringExtra(ToolActionActivity.EXTRA_PATH),
+            listOf(ToolRowChoice.RUN, ToolRowChoice.OPEN),
+            ToolRow.choices(hasAction = true, itemPath = path),
+        )
+    }
+
+    /** A row whose tool declares no `tool-action-params` offers only the item. */
+    @Test
+    fun aRowWithoutAnActionOffersOnlyTheItem() {
+        val path = ToolRow.itemPath("doc", "doc.2026-08.rechnung")
+        assertEquals(
+            listOf(ToolRowChoice.OPEN),
+            ToolRow.choices(hasAction = false, itemPath = path),
         )
     }
 
     /**
-     * #107 asked for the row tap to open *that row's* item. The PWA has no route
-     * for one: `openPortal` knows `device/<id>`, `camera/<id>`,
-     * `servicebay/approvals/<id>` and `<tool-id>/new`, and everything else falls
-     * through to the chat view. Inventing an address would trade a tap that lands
-     * on the start page for one that lands nowhere, so the target stays the root
-     * until solarisbay declares an item route (mdopp/solarisbay#1256). This test
-     * is the reminder: when that lands, [ToolRow.bodyPath] is the one place to
-     * change, and this assertion is the one to rewrite.
+     * `note`, `home` and `energy` declare no `tool-item-id-field`, so their rows
+     * get **no** open entry — an address is not invented for a tool that never
+     * claimed to have one (#107).
      */
     @Test
-    fun theRowTapStaysOnTheRootUntilAnItemRouteExists() {
-        assertEquals(PwaLauncher.Routes.ROOT, ToolRow.bodyPath())
+    fun aToolWithoutAnItemFieldOffersNoOpenEntry() {
+        assertNull("no declared field ⇒ no item route", ToolRow.itemPath("note", null))
+        assertTrue(ToolRow.choices(hasAction = false, itemPath = null).isEmpty())
+        assertEquals(
+            listOf(ToolRowChoice.RUN),
+            ToolRow.choices(hasAction = true, itemPath = null),
+        )
     }
 
+    /** A declared field the row doesn't carry is the same answer: no open entry. */
     @Test
-    fun theActionCarriesEverythingTheCallbackNeeds() {
-        val action = ToolRow.actionFillIn(cell(), 7)!!
-        assertEquals("""{"id":"task.42"}""", action.getStringExtra(ToolActionActivity.EXTRA_PARAMS))
-        assertEquals("Müll rausbringen", action.getStringExtra(ToolActionActivity.EXTRA_TITLE))
-        assertEquals(7, action.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
+    fun aMissingFieldValueOffersNoOpenEntry() {
+        assertNull(ToolRow.itemPath("task", null))
+        assertNull(ToolRow.itemPath("task", "   "))
+        // …and so is a tool id the widget never got bound to.
+        assertNull(ToolRow.itemPath(null, "task.42"))
     }
-
-    /** No action declared → no fill-in, and the caller hides the button. */
-    @Test
-    fun aRowWithoutAnActionOffersNoButton() {
-        assertNull(ToolRow.actionFillIn(cell(actionId = null), 7))
-        assertNull(ToolRow.actionFillIn(cell(actionId = "  "), 7))
-    }
-
-    // --- the structure: nobody has to out-bubble an ancestor ------------------
 
     /**
-     * The correction the third attempt turns on: the row root is no longer a tap
-     * target, so the button never competes with its own ancestor.
+     * A tap that could only navigate just navigates; a tap that could tick off a
+     * task asks first. That asymmetry is the whole justification for the extra
+     * tap — it buys deliberateness, not ceremony.
      */
     @Test
-    fun theRowRootCarriesNoFillIn() {
-        assertFalse(
-            "tw_item_root must not be a tap target — the button is its descendant (#90)",
-            R.id.tw_item_root in ToolRow.BODY_TAP_TARGETS,
-        )
-        assertTrue("the row body still has a tap target", ToolRow.BODY_TAP_TARGETS.isNotEmpty())
-        assertFalse(
-            "the action button carries its own fill-in, not the body's",
-            R.id.tw_item_action in ToolRow.BODY_TAP_TARGETS,
-        )
+    fun onlyATapThatCouldChangeSomethingAsksFirst() {
+        assertTrue(ToolRow.asksFirst(listOf(ToolRowChoice.RUN)))
+        assertTrue(ToolRow.asksFirst(listOf(ToolRowChoice.RUN, ToolRowChoice.OPEN)))
+        assertFalse(ToolRow.asksFirst(listOf(ToolRowChoice.OPEN)))
+        assertFalse(ToolRow.asksFirst(emptyList()))
     }
 
-    /** …and "not an ancestor" is a property of the layout, so assert it there. */
-    @Test
-    fun theTapTargetsAreSiblingsOfTheActionButton() {
-        val ctx = RuntimeEnvironment.getApplication()
-        val row = LayoutInflater.from(ctx).inflate(R.layout.item_tool_row, null)
-        val button = row.findViewById<View>(R.id.tw_item_action)
+    // --- the sheet is the shared one (#113) -----------------------------------
 
-        for (id in ToolRow.BODY_TAP_TARGETS) {
-            val target = row.findViewById<View>(id)
-            assertNotNull("BODY_TAP_TARGETS names a view the row layout has", target)
-            assertEquals(
-                "a PWA tap target must be a sibling of the button, never its ancestor (#90)",
-                button.parent, target.parent,
-            )
+    @Test
+    fun theSheetListsTheChoicesInOrderAndEndsWithCancel() {
+        val choices = listOf(ToolRowChoice.RUN, ToolRowChoice.OPEN)
+        val sheet = ActionSheets.toolRow(choices)
+
+        assertEquals(2, sheet.items.size)
+        assertEquals(R.string.tool_action_do, sheet.items[0].labelRes)
+        assertEquals(R.string.tool_row_open, sheet.items[1].labelRes)
+        // Abbrechen is the footer here exactly as in every other dialog (#113).
+        assertEquals(ActionRow.Cancel, sheet.rows.last())
+        assertEquals(sheet.rows.lastIndex, sheet.cancelIndex)
+        // The pick index maps straight back onto the choice list.
+        sheet.rows.filterIsInstance<ActionRow.Pick>().forEachIndexed { i, pick ->
+            assertEquals(choices[i].labelRes, pick.item.labelRes)
+            assertEquals(i, pick.index)
         }
     }
 
-    // --- the layout: the button has to *get* the touch ------------------------
-
-    /**
-     * A non-clickable child of a clickable row root never consumes the press —
-     * that was the first suspicion. It stays true regardless, and costs nothing.
-     */
+    /** Nothing a plugin declares is treated as dangerous — the server gates that. */
     @Test
-    fun theActionButtonClaimsTheTouch() {
-        val ctx = RuntimeEnvironment.getApplication()
-        val row = LayoutInflater.from(ctx).inflate(R.layout.item_tool_row, null)
-        val button = row.findViewById<View>(R.id.tw_item_action)
-
-        assertTrue("tw_item_action must be clickable (#90)", button.isClickable)
-    }
-
-    /**
-     * A focusable child in a ListView row is a known way to break click delivery,
-     * and nothing here needs the focus — the button must not ask for it.
-     */
-    @Test
-    fun theActionButtonDoesNotTakeFocus() {
-        val xml = File(locate("src/main"), "res/layout/item_tool_row.xml").readText()
-        val decl = xml.substringAfter("@+id/tw_item_action").substringBefore("/>")
-
+    fun theToolSheetCarriesNoDangerousEntry() {
         assertFalse(
-            "drop android:focusable on tw_item_action (#90)",
-            decl.contains("android:focusable"),
+            ActionSheets.toolRow(listOf(ToolRowChoice.RUN, ToolRowChoice.OPEN)).hasDangerous,
         )
     }
 
-    /** Android's minimum touch target, asserted on the declaration itself. */
-    @Test
-    fun theActionButtonIsAtLeastFortyEightDpOfTouch() {
-        val xml = File(locate("src/main"), "res/layout/item_tool_row.xml").readText()
-        val decl = xml.substringAfter("@+id/tw_item_action").substringBefore("/>")
+    // --- the route (#107) -----------------------------------------------------
 
-        val dps = Regex("""android:(layout_width|layout_height|minWidth|minHeight)="(\d+)dp"""")
-            .findAll(decl).associate { it.groupValues[1] to it.groupValues[2].toInt() }
-        assertTrue("declare a width for tw_item_action", dps.isNotEmpty())
-        for ((attr, dp) in dps) {
-            assertTrue("$attr is ${dp}dp — under the 48dp target (#90)", dp >= 48)
-        }
-        assertTrue("minHeight keeps the target 48dp tall in a short row", (dps["minHeight"] ?: 0) >= 48)
+    /** The literals solarisbay#1256 settled on, spelled out. */
+    @Test
+    fun theItemRouteIsToolThenItemThenId() {
+        assertEquals("/#/p/task/item/42", PwaLauncher.Routes.toolItem("task", "42"))
+        assertEquals(
+            "https://chat.dopp.cloud/#/p/task/item/42",
+            PwaLauncher.url("https://chat.dopp.cloud", PwaLauncher.Routes.toolItem("task", "42")),
+        )
     }
 
     /**
-     * …and it costs the row no visible height: the vertical padding moved off the
-     * root onto the text column, so the 48dp button spans the row instead of
-     * stacking on top of the padding.
+     * `item` is its own segment, which is what keeps an id with dots intact —
+     * `doc` ids look like this — and what keeps the route from colliding with
+     * `#/p/<tool-id>/new` (#1213).
      */
     @Test
-    fun theBiggerTargetDoesNotBloatTheRow() {
+    fun anIdWithDotsRidesThroughUntouched() {
+        assertEquals(
+            "/#/p/doc/item/doc.2026-08.rechnung",
+            PwaLauncher.Routes.toolItem("doc", "doc.2026-08.rechnung"),
+        )
+        assertEquals(
+            "/#/p/doc/item/doc.2026-08.rechnung",
+            ToolRow.itemPath("doc", "  doc.2026-08.rechnung  "),
+        )
+    }
+
+    /** Unknown tool, missing id, or an id that would break the route → the start page. */
+    @Test
+    fun anUnusableIdFallsBackToTheStartPage() {
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem(null, "42"))
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem("task", null))
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem("task", " "))
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem("task", "a/b"))
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem("task", "a b"))
+        assertEquals(PwaLauncher.Routes.TOOL_START, PwaLauncher.Routes.toolItem("task", "a#b"))
+    }
+
+    // --- the fill-in ----------------------------------------------------------
+
+    /** One fill-in carries everything the tap needs — there is no second one. */
+    @Test
+    fun theRowsFillInCarriesActionRouteAndTitle() {
+        val i = ToolRow.fillIn(cell(), "task", 7)
+        assertEquals("task.set_status", i.getStringExtra(ToolActionActivity.EXTRA_ACTION_ID))
+        assertEquals(
+            """{"entity_id":"task.42","status":"done"}""",
+            i.getStringExtra(ToolActionActivity.EXTRA_PARAMS),
+        )
+        assertEquals("/#/p/task/item/task.42", i.getStringExtra(ToolActionActivity.EXTRA_PATH))
+        assertEquals("Müll rausbringen", i.getStringExtra(ToolActionActivity.EXTRA_TITLE))
+        assertEquals(7, i.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
+    }
+
+    /** An absent extra is how "this row offers none" travels — not an empty one. */
+    @Test
+    fun aRowThatOffersNothingCarriesNeitherExtra() {
+        val i = ToolRow.fillIn(cell(actionId = null, params = null), "note", 7)
+        assertNull(i.getStringExtra(ToolActionActivity.EXTRA_ACTION_ID))
+        assertEquals("/#/p/note/item/task.42", i.getStringExtra(ToolActionActivity.EXTRA_PATH))
+
+        val bare = ToolRow.fillIn(cell(actionId = "  ", params = null, itemId = null), null, 7)
+        assertNull(bare.getStringExtra(ToolActionActivity.EXTRA_ACTION_ID))
+        assertNull(bare.getStringExtra(ToolActionActivity.EXTRA_PATH))
+    }
+
+    // --- the layout: the check mark is gone, not hidden -----------------------
+
+    /**
+     * "Removed from the layout, not hidden" is the user's own wording: a hidden
+     * view keeps inviting a fifth attempt at making it take the press.
+     */
+    @Test
+    fun theActionButtonIsGoneFromTheLayout() {
+        val xml = File(locate("src/main"), "res/layout/item_tool_row.xml").readText()
+        assertFalse(
+            "the check mark must be removed from item_tool_row.xml, not hidden (#90)",
+            xml.contains("@+id/tw_item_action"),
+        )
+    }
+
+    /** …and with it the second tap target: the row root is the only one left. */
+    @Test
+    fun theRowHasExactlyOneTapTarget() {
+        assertEquals(R.id.tw_item_root, ToolRow.TAP_TARGET)
+
         val ctx = RuntimeEnvironment.getApplication()
         val row = LayoutInflater.from(ctx).inflate(R.layout.item_tool_row, null)
-        assertEquals(
-            "row padding belongs to the text column now (#90)",
-            0, row.paddingTop + row.paddingBottom,
-        )
+        assertEquals(R.id.tw_item_root, row.id)
+        assertFalse("nothing inside the row claims the press", anyChildClickable(row as ViewGroup))
+    }
+
+    private fun anyChildClickable(group: ViewGroup): Boolean {
+        for (i in 0 until group.childCount) {
+            val child = group.getChildAt(i)
+            if (child.isClickable) return true
+            if (child is ViewGroup && anyChildClickable(child)) return true
+        }
+        return false
     }
 
     /** Unit tests run from the module dir, but don't depend on it. */
