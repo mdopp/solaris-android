@@ -1,6 +1,6 @@
 ---
 name: autoloop-issues
-description: Orchestrates an autonomous issue-resolution pipeline for mdopp/solaris-android — Planner → Builder → Verify — coordinated through a shared work queue, spawning each stage as a fresh sub-agent so the loop session stays clean. Adapted from the solarisbay autoloop for a native Android/Gradle app: "verify" is Gradle build + Robolectric tests + a signed release APK (there is no server/box to deploy to — on-device behaviour is human-gated by sideloading the APK). Cross-repo needs become tickets in solarisbay/servicebay, never built here. Signing-key / device-token-contract changes open as a DRAFT PR for human review. Core state lives in GitHub (autoloop:* labels/issues/PRs); a tiny gitignored cache holds only in-flight run state, brokered by queue.py and rebuildable from GitHub. Use when the user asks to "burn down the android backlog", "work the solaris-android issues autonomously", or invokes /loop with this skill.
+description: Orchestrates an autonomous issue-resolution pipeline for mdopp/solaris-android — Planner → Builder → Verify — coordinated through a shared work queue, spawning each stage as a fresh sub-agent so the loop session stays clean. Adapted from the solarisbay autoloop for a native Android/Gradle app: "verify" is Gradle build + Robolectric tests + a signed release APK (there is no server/box to deploy to — on-device behaviour is human-gated by sideloading the APK). Cross-repo needs become tickets in solarisbay/servicebay, never built here. Access-widening changes — a new path to a sensitive action, a secret made reachable — leave the batch and open as a DRAFT PR on their own branch for human review. Core state lives in GitHub (autoloop:* labels/issues/PRs); a tiny gitignored cache holds only in-flight run state, brokered by queue.py and rebuildable from GitHub. Use when the user asks to "burn down the android backlog", "work the solaris-android issues autonomously", or invokes /loop with this skill.
 ---
 
 # Autoloop orchestrator — mdopp/solaris-android
@@ -42,8 +42,8 @@ only the slice it needs. State splits by durability:
 labels, human questions/links as issue comments, completion as closed-issue + merged-PR.
 Survives firings, machines, and **concurrent instances** — the `autoloop:building` label is
 the **cross-instance claim**, so two instances never grab the same issue. Labels: `queued`
-(planned) · `building` (claimed) · `blocked` · `needs-refinement` · `review` (security
-draft-PR — never auto-merge) · `device-test` (sideload + confirm on the phone) ·
+(planned) · `building` (claimed) · `blocked` · `needs-refinement` · `review` (exposure:
+solo draft-PR — never auto-merge) · `device-test` (sideload + confirm on the phone) ·
 `upstream-wait` (blocked on an unmerged **solarisbay/servicebay** ticket — cross-repo =
 ticket only) · `verify-pending`/`verify-failed` (on the release PR).
 
@@ -54,8 +54,25 @@ theme, region, scope, acceptance, gate, security, status, pr}`), the `verify` st
 `notes` ring. A few KB, never committed, rebuildable from GitHub (`queue.py rebuild`).
 
 `queue.py` enforces caps, pruning, one-way label projection, and the cross-instance claim
-**in code**. `security:true` on a unit → a **draft** PR + `autoloop:review` label (never
-auto-merged), the app's pre-merge review path.
+**in code**. `security:true` on a unit → its **own branch**, a **draft** PR + `autoloop:review`
+label (never auto-merged, never in a batch), the app's pre-merge review path.
+
+## The two gates — decided by effect, never by file (see `stages/planner.md` § the two gates)
+The gates were once a list of *places* (keystore, `local.properties`, CI secrets, token
+contract). Three of those four are gitignored or live in GitHub settings, so they show up in
+**no diff** — the gate could not fire, and across a dozen units it never did, while **#92**
+(the only path from which `lock.open` pulls the front door's latch) auto-merged in an
+ordinary batch PR. Two gates, two **different** axes; never collapse them into one:
+
+- **Review gate — `security:true` — exposure.** *Does the change widen access to the
+  household, or make a secret reachable that was not?* A new path to a sensitive action
+  fires it regardless of which file it touches.
+- **Human gate — `gate:"verify"` — reversibility.** *If this is wrong, can it simply be
+  rolled back?* Data migration, consent-relevant change, anything one-way → a human.
+
+A review-gated unit **never rides in a batch**: a collective PR with eight issues gets a
+review of the whole, not of the one place that counts. It gets its own branch and its own
+draft PR (`stages/builder.md` Mode C); `queue.py built` keeps it out of `batch.count`.
 
 ### `queue.py` verbs — the only way stages touch state
 `python3 .claude/skills/autoloop-issues/queue.py <verb>` (`--offline` skips gh; covered by `selftest`):
@@ -71,10 +88,14 @@ per-issue side (fast compile gate, commit to batch, no push); **you** enforce th
 batch side: never dispatch a seal step while `batch.count < 8` AND planned units
 remain. Build-ahead is allowed; seal-ahead is not.
 
+**The one carve-out: a `security:true` unit rides alone.** It gets its own branch and
+its own draft PR immediately (builder Mode C) and does not count toward the 8 — the
+review gate is worth more than the saved CI run, and only there.
+
 ## Where human attention goes (the whole point)
 1. Drain `needs_refinement[]` — sharpen ambiguous issues.
-2. Review `review[]` — the signing/token-contract **draft** PRs (never auto-merge).
-3. Work `device_test[]` — sideload the built APK and confirm behaviour on the phone.
+2. Review `review[]` — the **draft** PRs that widen access to the household, each on its own branch (never auto-merge).
+3. Work `device_test[]` — sideload the built APK and confirm behaviour on the phone; here is where a one-way change gets caught before it is one-way.
 Everything else — grouping, building, compile/test gates, signing — runs without you.
 
 ## Step 0 — Preflight (every firing)
@@ -86,7 +107,7 @@ Everything else — grouping, building, compile/test gates, signing — runs wit
 ## Dispatch order (one per firing)
 1. If `verify-result.json` exists → fold it in, delete it.
 2. If `verify_state.status == "owed"` and a sealed batch exists → dispatch **Verify** (background).
-3. If planned units remain and (batch.count < 8) → dispatch **Builder** (build-ahead onto batch).
+3. If planned units remain and (batch.count < 8) → dispatch **Builder** (build-ahead onto batch; a `security:true` unit branches off alone instead — Mode C — and leaves `batch.count` untouched).
 4. If (batch.count ≥ 8 OR no planned units) and batch unsealed and `verify_state` clear → dispatch **Builder seal** (push → CI → merge → set `verify_state=owed`).
 5. Else → dispatch **Planner** (groom backlog, fill queue, file cross-repo tickets, park refinements).
 6. If nothing to do (queue dry, no batch, backlog groomed) → idle; `/loop` re-fires later.
