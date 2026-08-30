@@ -116,10 +116,17 @@
             android:name=".widget.WidgetPinReceiver"
             android:exported="false" />
 
+        <!-- taskAffinity="" (#114): without an affinity of its own this dialog
+             started INSIDE the app's task, and being translucent it showed
+             whatever screen was on top of it — the homescreen when no task
+             existed, the last open screen otherwise. Its own task also keeps a
+             second action from landing on the first one's. excludeFromRecents
+             stays, so the throwaway task never shows up in Recents. -->
         <activity
             android:name=".widget.WidgetActionActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- Invisible trampoline: a widget body tap opens the PWA in a Custom Tab (#27). -->
@@ -127,6 +134,7 @@
             android:name=".widget.PwaTrampolineActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- Energy statistics widget (#9): 48h house-consumption sparkline. -->
@@ -306,6 +314,7 @@
             android:name=".widget.ToolActionActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- 1x1 tool launcher tile (#71): a deep link into the PWA for one tool —

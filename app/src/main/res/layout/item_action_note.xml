@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The warning above the dangerous block of an action sheet (#92/#113). -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Text.Solaris.Body"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/space_xs"
+    android:layout_marginBottom="@dimen/space_xs"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:textSize="@dimen/text_label"
+    android:textColor="@color/solaris_warn" />

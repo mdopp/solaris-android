@@ -98,6 +98,33 @@ object PwaLauncher {
             "/#/?tool=" + java.net.URLEncoder.encode(toolId, "UTF-8")
 
         /**
+         * A single **item** of a tool (#107, solarisbay#1256):
+         * `#/p/<tool-id>/item/<item-id>`. `item` is its own path segment, which is
+         * what keeps it from colliding with the create route `#/p/<tool-id>/new`
+         * (#1213) and lets an id that contains dots — `doc` ids look like
+         * `doc.2026-08.rechnung` — pass through untouched.
+         *
+         * The id is **not** percent-encoded: the route is matched as literal
+         * segments, and `URLEncoder` would turn a space into `+`, which a hash
+         * router reads as a plus. An id carrying a separator of the route's own
+         * grammar is therefore refused instead, exactly like a missing one — both
+         * land on [TOOL_START], the fallback the PWA itself uses for an unknown
+         * tool or a deleted item.
+         */
+        fun toolItem(toolId: String?, itemId: String?): String {
+            val tool = toolId?.trim().orEmpty()
+            val item = itemId?.trim().orEmpty()
+            if (tool.isEmpty() || item.isEmpty()) return TOOL_START
+            if (ROUTE_UNSAFE.containsMatchIn(tool) || ROUTE_UNSAFE.containsMatchIn(item)) {
+                return TOOL_START
+            }
+            return "/#/p/$tool/item/$item"
+        }
+
+        /** Characters that would end the segment they sit in rather than ride in it. */
+        private val ROUTE_UNSAFE = Regex("[/?#\\s]")
+
+        /**
          * Where both tool deep links land when the id no longer resolves — a tile
          * outlives the `.tool` it points at (uninstalled, renamed). The PWA does
          * this fallback itself; the constant exists so the app can too.
@@ -178,7 +205,8 @@ object PwaLauncher {
     fun tapPending(ctx: Context, reqCode: Int, path: String): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
             .putExtra(PwaTrampolineActivity.EXTRA_PATH, path)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // Own task (#114) — the trampoline must not join the app's.
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -193,7 +221,7 @@ object PwaLauncher {
     fun tapPendingUrl(ctx: Context, reqCode: Int, url: String): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
             .putExtra(PwaTrampolineActivity.EXTRA_URL, url)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -233,7 +261,7 @@ object PwaLauncher {
      */
     fun rowTapTemplate(ctx: Context, reqCode: Int): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         val mutable =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         return PendingIntent.getActivity(

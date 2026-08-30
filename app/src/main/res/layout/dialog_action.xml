@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one shape every widget action dialog has (#113). Title + optional
+     question, the actions as a scrollable stack, and "Abbrechen" pinned below
+     the divider — outside the scroll, so the safe answer sits in the same place
+     whether the sheet offers one action or ten. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/card_solaris"
+    android:padding="@dimen/space_md">
+
+    <TextView
+        android:id="@+id/ad_title"
+        style="@style/Text.Solaris.Headline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:layout_marginBottom="@dimen/space_xs" />
+
+    <TextView
+        android:id="@+id/ad_message"
+        style="@style/Text.Solaris.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:layout_marginBottom="@dimen/space_sm" />
+
+    <ScrollView
+        android:id="@+id/ad_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/ad_items"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="@dimen/space_xs"
+        android:layout_marginBottom="@dimen/space_sm"
+        android:background="@color/solaris_divider" />
+
+    <Button
+        android:id="@+id/ad_cancel"
+        style="@style/Widget.Solaris.Button.Ghost"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_confirm_no" />
+
+</LinearLayout>

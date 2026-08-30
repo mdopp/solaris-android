@@ -57,7 +57,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                         .putExtra(EXTRA_ENTITY, entityId)
                         .putExtra(WidgetActionActivity.EXTRA_LOCK_CHOOSE, true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        .addFlags(ActionDialog.TASK_FLAGS),
                 )
             }
             return
@@ -97,10 +97,20 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     // used, whichever surface asked and whatever the server said.
                     WidgetStore.noteEntityUsed(app, entityId)
                 }
+                // The tap is also a measurement of the connection (#111) — the one
+                // that happens exactly while the user is looking. A CONFIRMING tap
+                // counts as reached: that dialog exists because the *server*
+                // answered 403.
+                ActionProbe.record(app, id, reachOf(outcome))
                 when (outcome) {
                     Tap.DONE -> if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
                     // A refused/failed call must not look like nothing happened.
-                    Tap.FAILED -> reportFailure(app, label(app, id, entityId))
+                    Tap.FAILED -> {
+                        reportFailure(app, label(app, id, entityId))
+                        // …and the tile says so too, without waiting out the 90 min:
+                        // this is not a guess about age, it is a failure just seen.
+                        if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
+                    }
                     Tap.CONFIRMING -> Unit // the dialog is the feedback
                 }
             } catch (e: ApiClient.NotConfiguredException) {
@@ -110,11 +120,17 @@ class WidgetActionReceiver : BroadcastReceiver() {
             } catch (e: ApiClient.SensitiveException) {
                 // A directly-called domain turned out to be gated after all: the
                 // call did not run, but the reason is the confirm gate, not a dead
-                // server — so no "Solaris antwortet nicht" here.
+                // server — so no "Solaris antwortet nicht" here, and the tile is
+                // not marked either. The 403 came *from* the server (#111).
+                ActionProbe.record(app, id, ActionProbe.Reach.REACHED)
             } catch (e: Exception) {
                 // Network or server error: the tile keeps its last rendered state
-                // (#46) — but the user gets told the tap went nowhere (#111).
+                // (#46) — but the user gets told the tap went nowhere (#111), and
+                // the tile is marked at once, because this is a measurement, not a
+                // guess about how old a value might be.
+                ActionProbe.record(app, id, ActionProbe.Reach.UNREACHABLE)
                 reportFailure(app, label(app, id, entityId))
+                if (hasWidget) DeviceWidgetProvider.requestRefresh(app, id)
             } finally {
                 pending?.finish()
             }
@@ -131,6 +147,14 @@ class WidgetActionReceiver : BroadcastReceiver() {
     /** A plain `api.call` result as an outcome: `false` = the server refused it. */
     private fun tapOutcome(ok: Boolean): Tap = if (ok) Tap.DONE else Tap.FAILED
 
+    /**
+     * What the tap measured about the connection (#111). Only [Tap.FAILED] is a
+     * failure to reach the server; [Tap.CONFIRMING] means the server answered 403,
+     * which is as alive as it gets.
+     */
+    private fun reachOf(outcome: Tap): ActionProbe.Reach =
+        if (outcome == Tap.FAILED) ActionProbe.Reach.UNREACHABLE else ActionProbe.Reach.REACHED
+
     /** Run the service; on the 403 sensitive gate, launch the confirm dialog. */
     private fun callOrConfirm(api: ApiClient, app: Context, id: Int, entityId: String, service: String): Tap {
         return try {
@@ -141,7 +165,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .putExtra(EXTRA_ENTITY, entityId)
                     .putExtra(EXTRA_SERVICE, service)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    .addFlags(ActionDialog.TASK_FLAGS),
             )
             Tap.CONFIRMING
         }

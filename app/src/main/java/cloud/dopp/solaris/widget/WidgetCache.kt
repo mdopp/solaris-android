@@ -148,8 +148,35 @@ object WidgetCache {
      * week is not stale. What matters here is when *we* last heard anything.
      */
     fun noteFetch(ctx: Context, id: Int, atMs: Long = System.currentTimeMillis()) {
-        runCatching { p(ctx).edit().putLong("fetch_$id", atMs).apply() }
+        // Hearing from the server clears the probe's mark in the same breath
+        // (#111): whatever the last failed tap knew, it is now out of date.
+        runCatching { p(ctx).edit().putLong("fetch_$id", atMs).remove("fail_$id").apply() }
     }
+
+    /**
+     * Remember that a **user-triggered action** for [id] did not reach the server
+     * at [atMs] (#111 follow-up). This is the active half of the freshness
+     * question: the tap itself measured the connection, and it measured it while
+     * the user was watching — so the tile may say so at once instead of waiting
+     * out [Staleness.THRESHOLD_MS].
+     *
+     * Only a genuine failure to reach the server gets here. A refusal the server
+     * *authored* — the 403 confirm gate, a forbidden action — proves it is very
+     * much alive; [ActionProbe] separates the two.
+     *
+     * The fetch time is deliberately left alone: the last known value keeps its
+     * honest age, and the next successful fetch clears this mark via [noteFetch].
+     */
+    fun noteUnreachable(ctx: Context, id: Int, atMs: Long = System.currentTimeMillis()) {
+        runCatching { p(ctx).edit().putLong("fail_$id", atMs).apply() }
+    }
+
+    /**
+     * When a user-triggered action last failed to reach the server for [id], or
+     * `null` when the connection has not been caught failing since.
+     */
+    fun unreachableSince(ctx: Context, id: Int): Long? =
+        runCatching { p(ctx).getLong("fail_$id", 0L) }.getOrNull()?.takeIf { it > 0L }
 
     /**
      * When the last successful fetch for [id] landed, or `null` when there is no
@@ -168,8 +195,10 @@ object WidgetCache {
             .remove("sbhome_$id")
             .remove("sbsvc_$id")
             // The fetch time goes with the payload it dated (#111): a re-bound
-            // tile must start with no history, not inherit the old one's age.
+            // tile must start with no history, not inherit the old one's age —
+            // nor a failed tap the previous device on this id had to endure.
             .remove("fetch_$id")
+            .remove("fail_$id")
             .apply()
     }
 

@@ -184,13 +184,14 @@ class ToolWidgetProvider : AppWidgetProvider() {
     /**
      * The ListView's one `PendingIntentTemplate` (#28 pattern). It aims at
      * [ToolActionActivity] rather than the plain PWA trampoline because a
-     * collection has exactly one template for the whole row: the body's fill-in
-     * carries a path, the action button's carries an action id, and that activity
-     * is what tells them apart. **Mutable** so the fill-in can merge.
+     * collection has exactly one template for the whole row: the row's fill-in
+     * says what that row can offer — an item route, a declared action, or neither
+     * — and that activity turns it into a sheet or a plain open (#90/#107).
+     * **Mutable** so the fill-in can merge.
      */
     private fun rowTemplate(context: Context, appWidgetId: Int): PendingIntent {
         val i = Intent(context, ToolActionActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         val mutable =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         return PendingIntent.getActivity(

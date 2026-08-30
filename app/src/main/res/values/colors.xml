@@ -24,6 +24,12 @@
     <color name="solaris_text_faint">#6B7280</color>   <!-- tertiary -->
 
     <color name="solaris_warn">#EF5350</color>         <!-- folgenschwere Aktion (#92) -->
+    <color name="solaris_warn_faint">#1FEF5350</color> <!-- 12% warn tint (#113) -->
+
+    <!-- Backdrop of an action dialog (#114). The action activities are
+         translucent; without a painted window they showed whatever sat on top of
+         the app's task. -->
+    <color name="solaris_scrim">#D9070709</color>
 
     <color name="solaris_field">#161620</color>        <!-- input field fill -->
     <color name="solaris_divider">#1AFFFFFF</color>    <!-- list divider -->

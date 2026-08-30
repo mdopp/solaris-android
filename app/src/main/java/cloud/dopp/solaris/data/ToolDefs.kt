@@ -45,6 +45,19 @@ data class ToolDef(
      * without knowing the tool — see `ToolCells.resolveParams`.
      */
     val actionParams: Map<String, Map<String, String>> = emptyMap(),
+    /**
+     * `tool-item-id-field` (#107, solarisbay#1256) — the name of the field one of
+     * this tool's items carries its **id** in, so a row can be opened at
+     * `#/p/<tool-id>/item/<item-id>`.
+     *
+     * The name differs per tool — `task`, `contacts` and `photo` declare `id`,
+     * `doc` declares `entity_id` — and it is **read, never guessed**: trying
+     * `id`/`entity_id`/`item_id`/`uid` in turn is exactly how a widget builds a
+     * route to something that isn't there. `note`, `home` and `energy` declare
+     * none, and a row of theirs therefore gets **no** open entry rather than an
+     * invented address.
+     */
+    val itemIdField: String? = null,
 ) {
     /**
      * Can this tool be offered as a **list widget** (archetype A)?
@@ -163,6 +176,7 @@ object ToolDefs {
             schema = schema.copy(actions = schema.actions.filter { it in actions }),
             composePath = composePath(o.optString("tool-compose-path")),
             actionParams = parseActionParams(o.optJSONObject("tool-action-params")),
+            itemIdField = itemIdField(o.optString("tool-item-id-field")),
         )
     }
 
@@ -175,6 +189,20 @@ object ToolDefs {
     fun composePath(declared: String?): String? {
         val raw = declared?.trim().orEmpty()
         if (raw.isEmpty() || "://" in raw) return null
+        return raw
+    }
+
+    /**
+     * The declared `tool-item-id-field` as a usable field name, or null when the
+     * tool declares none (#107). Only a plain field name is accepted: a path, a
+     * `$`-source or anything with whitespace is not what the def promises, and an
+     * unusable declaration has to degrade to "this tool has no item route" — the
+     * one thing it must never degrade to is a guess.
+     */
+    fun itemIdField(declared: String?): String? {
+        val raw = declared?.trim().orEmpty()
+        if (raw.isEmpty() || "/" in raw || raw.startsWith(FIELD_PREFIX)) return null
+        if (raw.any { it.isWhitespace() }) return null
         return raw
     }
 

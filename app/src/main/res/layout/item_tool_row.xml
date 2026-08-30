@@ -3,41 +3,32 @@
      tool-cell-schema role vocabulary (ADR 0011) one-to-one: title = primary line,
      subtitle + meta = the muted detail line, badge = the trailing status chip.
      A role the schema doesn't use is hidden by the factory — the layout carries no
-     tool-specific knowledge. RemoteViews-safe views only. Tap → PWA via the
-     collection's PendingIntentTemplate + a per-row fill-in intent.
-     The action button (#90) carries its OWN fill-in so a tap on it runs the
-     declared action while a tap anywhere else on the row still opens the PWA;
-     it is hidden unless the catalog declared params the row can fill.
+     tool-specific knowledge. RemoteViews-safe views only.
 
-     Two attempts made the button *bigger* and *clickable* and it still lost the
-     press — because the contest itself was the defect: `tw_item_root` carried a
-     fill-in too, so the button had to win bubbling against its own ancestor. The
-     third attempt dissolves the contest instead of trying to win it: the row root
-     carries NO fill-in at all, the PWA fill-in sits on the text column
-     (`tw_item_body`, which fills the row up to the button) and the action fill-in
-     stays on `tw_item_action`. They are siblings now, not child versus parent, and
-     a press has exactly one view that can claim it. `focusable` is gone with the
-     same reasoning — a focusable child in a ListView row is a known way to break
-     click delivery. The row's vertical padding sits on the text column so the
-     48dp target costs the row no visible height. -->
+     There is exactly ONE tap target here, the row root (#90). An action button
+     used to sit at the end of the row and three attempts failed to make it take
+     the press: first attributes (clickable, a 48dp target), then structure (no
+     fill-in on the root at all, text column and button as siblings with one
+     fill-in each). The app disproves the last one itself — ToolActionActivity
+     opens the PWA only when no action id arrived, so "Solaris opened" means the
+     button's fill-in never came. This launcher delivers one click target per
+     collection row, whatever the docs allow, so the check mark is REMOVED rather
+     than hidden and the choice moved into the sheet the row tap opens. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/tw_item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
+    android:paddingTop="9dp"
+    android:paddingBottom="9dp"
     android:baselineAligned="false">
 
-    <!-- The row's PWA tap target (#90): the fill-in lives here, not on the root,
-         so the action button next to it is a sibling and not a descendant. -->
     <LinearLayout
-        android:id="@+id/tw_item_body"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:paddingTop="9dp"
-        android:paddingBottom="9dp">
+        android:orientation="vertical">
 
         <TextView
             android:id="@+id/tw_item_title"
@@ -69,23 +60,5 @@
         android:textColor="#FFB0BEC5"
         android:textStyle="bold"
         android:textSize="13sp"
-        android:visibility="gone" />
-
-    <!-- 48dp of touch, 20dp of ink: the padding grows the target to the platform
-         minimum while the check mark keeps exactly the size it had. `clickable`
-         keeps the press here; there is no longer an ancestor fill-in for it to
-         bubble to, and deliberately no `focusable`. -->
-    <ImageView
-        android:id="@+id/tw_item_action"
-        android:layout_width="48dp"
-        android:layout_height="match_parent"
-        android:minWidth="48dp"
-        android:minHeight="48dp"
-        android:padding="14dp"
-        android:clickable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_check"
-        android:tint="#FF7E9CFF"
-        android:contentDescription="@string/tool_action_cd"
         android:visibility="gone" />
 </LinearLayout>

@@ -32,6 +32,14 @@ package cloud.dopp.solaris.widget
  *   `unknown` must never look like *abgeschlossen* — a *stale* `abgeschlossen`
  *   falls under it too, so [staleValue] turns it into a question.
  *
+ * The threshold answers the *passive* question — "has anything arrived lately?".
+ * It cannot answer the active one, and the device test proved why: in flight mode
+ * a tap raised the toast, but the tiles kept their colour, because 90 minutes had
+ * obviously not passed. So the second input arrived: an **executed action is a
+ * measurement of the connection** — the only one that happens exactly while the
+ * user is looking. [markFor] folds it in; [ActionProbe] decides what an outcome
+ * measured.
+ *
  * Pure (no Android) → the whole decision is JVM-testable.
  */
 object Staleness {
@@ -106,6 +114,71 @@ object Staleness {
     fun mark(ageLabel: String?, compact: Boolean = false): String? {
         val age = ageLabel?.takeIf { it.isNotBlank() } ?: return null
         return if (compact) age else "veraltet · $age"
+    }
+
+    // --- the action as a probe (#111) ----------------------------------------
+
+    /**
+     * What a tile says when the last thing we tried **did not reach the server**.
+     * Not "veraltet": the value's age is not the news here — the news is that we
+     * asked a moment ago and nothing came back. It matches the toast the same tap
+     * raises ("… Solaris antwortet nicht"), so the tile and the message agree.
+     */
+    const val UNREACHABLE = "nicht erreichbar"
+
+    /**
+     * Is the last thing we know about the connection a **failure**?
+     *
+     * [failedAtMs] is when a user-triggered action last failed to reach the server
+     * ([WidgetCache.unreachableSince]); `null`/`0` = no such failure on record. A
+     * successful fetch clears the record, so in practice only one of the two is
+     * ever set — the comparison is the belt to that suspender: a fetch *after* the
+     * failure means we have heard from the server since, and the failure is old
+     * news.
+     */
+    fun unreachable(lastFetchMs: Long?, failedAtMs: Long?): Boolean {
+        if (failedAtMs == null || failedAtMs <= 0L) return false
+        if (lastFetchMs == null || lastFetchMs <= 0L) return true
+        return failedAtMs >= lastFetchMs
+    }
+
+    /** The two wordings of one tile's mark — [line] for a full tier, [compact] for 1×1. */
+    data class Mark(val line: String, val compact: String)
+
+    /**
+     * The whole freshness verdict for one tile, ready to render — or `null` when
+     * the tile must not be marked at all.
+     *
+     * Two independent reasons to mark, and they are **not** the same statement:
+     *
+     * - **The probe** (this issue's follow-up): the user tapped, the action never
+     *   reached the server, and we know that *now*. That does not wait out
+     *   [THRESHOLD_MS] — waiting would be dishonest, because nobody has to guess
+     *   here: the user just watched it fail. It is no new false-alarm source
+     *   either, since the only thing that can set it is an action they triggered
+     *   themselves. A refusal the server *authored* (the 403 confirm gate, a
+     *   forbidden action) is not a failure to reach it — see [ActionProbe].
+     * - **The age**: nothing has arrived for longer than [THRESHOLD_MS]. Unchanged
+     *   — 90 minutes stays 90 minutes.
+     *
+     * The probe wins when both apply: "nicht erreichbar" is the stronger and more
+     * recent statement, and it carries the age along when there is one.
+     */
+    fun markFor(
+        lastFetchMs: Long?,
+        failedAtMs: Long?,
+        nowMs: Long,
+        thresholdMs: Long = THRESHOLD_MS,
+    ): Mark? {
+        val age = ageLabel(lastFetchMs, nowMs)?.takeIf { it.isNotBlank() }
+        if (unreachable(lastFetchMs, failedAtMs)) {
+            // The single cell says the reason and drops the age: which of the two
+            // the user needs is not in question once a tap has just failed.
+            return Mark(line = if (age == null) UNREACHABLE else "$UNREACHABLE · $age", compact = UNREACHABLE)
+        }
+        if (!isStale(lastFetchMs, nowMs, thresholdMs)) return null
+        val line = mark(age) ?: return null
+        return Mark(line = line, compact = mark(age, compact = true) ?: line)
     }
 
     /**

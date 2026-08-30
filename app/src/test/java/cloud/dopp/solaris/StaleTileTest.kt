@@ -5,6 +5,7 @@ import android.content.Intent
 import android.view.View
 import android.widget.TextView
 import cloud.dopp.solaris.data.Card
+import cloud.dopp.solaris.widget.ActionProbe
 import cloud.dopp.solaris.widget.Staleness
 import cloud.dopp.solaris.widget.WidgetCache
 import cloud.dopp.solaris.widget.WidgetRender
@@ -148,5 +149,46 @@ class StaleTileTest {
         assertEquals("abgeschlossen?", Staleness.staleValue("abgeschlossen", "lock"))
         assertEquals("veraltet · vor 3 Std.", Staleness.mark("vor 3 Std."))
         assertEquals("vor 3 Std.", Staleness.mark("vor 3 Std.", compact = true))
+    }
+
+    // --- the tap as the probe -------------------------------------------------
+
+    /**
+     * The half the flight-mode test could not reach: a tap that never got through
+     * marks the tile **at once**, minutes into an outage, with the 90 minutes
+     * untouched. This is what "ich tippe und nichts passiert" now looks like on
+     * the homescreen — and the value the user last saw is still there.
+     */
+    @Test fun aTapThatFailedMarksTheTileAtOnce() {
+        val card = lock()
+        WidgetCache.clear(ctx, 37)
+        WidgetCache.putCard(ctx, 37, card) // fetched a second ago: nothing is old here
+        val fresh = WidgetRender.build(ctx, 37, card, "Haustür", "lock", picker(), Load.LOADED)
+            .apply(ctx, null)
+        assertEquals(View.GONE, fresh.findViewById<View>(R.id.w_stale).visibility)
+
+        ActionProbe.record(ctx, 37, ActionProbe.Reach.UNREACHABLE)
+
+        val v = WidgetRender.build(ctx, 37, card, "Haustür", "lock", picker(), Load.LOADED)
+            .apply(ctx, null)
+        val mark = v.findViewById<TextView>(R.id.w_stale)
+        assertEquals(View.VISIBLE, mark.visibility)
+        assertEquals("nicht erreichbar", mark.text.toString())
+        // Mark, don't replace — the tile is still the device it was.
+        assertEquals("Haustür", v.findViewById<TextView>(R.id.w_name).text.toString())
+        assertTrue(v.findViewById<View>(R.id.w_tiny_toggle).hasOnClickListeners())
+    }
+
+    /** …and the next tap that gets through takes the mark away again. */
+    @Test fun aTapThatWorkedClearsTheMark() {
+        val card = lock()
+        WidgetCache.clear(ctx, 38)
+        WidgetCache.putCard(ctx, 38, card)
+        ActionProbe.record(ctx, 38, ActionProbe.Reach.UNREACHABLE)
+        ActionProbe.record(ctx, 38, ActionProbe.Reach.REACHED)
+
+        val v = WidgetRender.build(ctx, 38, card, "Haustür", "lock", picker(), Load.LOADED)
+            .apply(ctx, null)
+        assertEquals(View.GONE, v.findViewById<View>(R.id.w_stale).visibility)
     }
 }
