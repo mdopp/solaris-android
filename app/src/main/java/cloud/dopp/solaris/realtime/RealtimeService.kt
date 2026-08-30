@@ -234,6 +234,13 @@ class RealtimeService : Service() {
                     // notification stays calm ("Live-Updates aktiv"); constant re-posts
                     // are unhealthy. State transitions still update it.
                 }
+                RealtimeProtocol.EVENT_HA -> runCatching {
+                    // A household notice, a fired timer or a reminder (#116) →
+                    // native notification on that category's own channel. Best
+                    // effort and NOT an alarm channel — see EVENT_HA.
+                    val ev = RealtimeProtocol.parseHa(data) ?: return
+                    NoticeNotifier.post(applicationContext, ev)
+                }
                 RealtimeProtocol.EVENT_SERVICEBAY -> runCatching {
                     // A new ServiceBay approval (#43) → alert the admin. The verdict
                     // itself happens in the PWA (needs the Authelia session).

@@ -112,4 +112,16 @@
         <item quantity="one">%d ausstehendes Update</item>
         <item quantity="other">%d ausstehende Updates</item>
     </plurals>
+
+    <!-- Haus-Meldungen, Timer und Erinnerungen (#116, solarisbay#1276/#1280).
+         Drei Kanaele, damit sie getrennt stummschaltbar bleiben: wer die
+         Haus-Meldungen nicht will, darf dadurch keinen Timer verlieren.
+         KEIN Alarmkanal — Zustellung ist best effort, siehe RealtimeProtocol. -->
+    <string name="notice_house_channel_name">Haus-Meldungen</string>
+    <string name="notice_house_channel_desc">Meldungen aus Automatisierungen, z. B. „Waschmaschine fertig“. Beste Bemühung, kein Alarm.</string>
+    <string name="notice_timer_channel_name">Timer und Wecker</string>
+    <string name="notice_timer_channel_desc">Abgelaufene Timer und Wecker. Geklingelt wird am Lautsprecher — das hier ist die Kopie fürs Telefon.</string>
+    <string name="notice_reminder_channel_name">Erinnerungen</string>
+    <string name="notice_reminder_channel_desc">Fällige Erinnerungen aus Solaris. Beste Bemühung, kein Alarm.</string>
+    <string name="notice_generic">Neue Meldung aus Solaris.</string>
 </resources>
