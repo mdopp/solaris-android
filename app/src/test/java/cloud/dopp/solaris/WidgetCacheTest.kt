@@ -6,7 +6,9 @@ import cloud.dopp.solaris.data.Card
 import cloud.dopp.solaris.data.SbHome
 import cloud.dopp.solaris.widget.WidgetCache
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -100,6 +102,46 @@ class WidgetCacheTest {
         assertNull(WidgetCache.getCard(ctx, 999))
         assertNull(WidgetCache.getHome(ctx, 999))
         assertNull(WidgetCache.getServiceCounts(ctx, 999))
+        // …and a widget that never loaded has no fetch time to be judged by (#111).
+        assertNull(WidgetCache.fetchedAt(ctx, 999))
+    }
+
+    /**
+     * #111 — the timestamp the staleness mark hangs on. A payload landing in this
+     * cache *is* a successful round-trip, so every `put*` dates it; a failed fetch
+     * writes nothing at all, which is exactly why the recorded time keeps ageing
+     * during an outage.
+     */
+    @Test fun everySuccessfulWriteDatesTheWidget() {
+        val before = System.currentTimeMillis()
+        WidgetCache.putCard(ctx, 21, Card("light.x", "X", "light", null, "on", null))
+        WidgetCache.putHome(ctx, 22, SbHome(1, 0, 0, 0, 0))
+        WidgetCache.putServiceCounts(ctx, 23, Triple(1, 0, 0))
+        for (id in listOf(21, 22, 23)) {
+            val at = WidgetCache.fetchedAt(ctx, id)
+            assertNotNull("widget $id was not dated", at)
+            assertTrue("widget $id", at!! >= before)
+        }
+    }
+
+    /** The fetch time is *ours*, not the entity's: HA's state time is not it (#111). */
+    @Test fun theFetchTimeIsNotTheEntityStateTime() {
+        val ancient = 1_600_000_000_000L // a lamp unchanged since 2020 is not stale
+        WidgetCache.putCard(
+            ctx, 24,
+            Card("light.flur", "Flur", "light", null, "on", null, updatedAtMs = ancient),
+        )
+        val at = WidgetCache.fetchedAt(ctx, 24)!!
+        assertEquals(ancient, WidgetCache.getCard(ctx, 24)!!.updatedAtMs)
+        assertTrue("the fetch time must be now, not HA's state time", at > ancient)
+    }
+
+    /** A re-bound tile starts with no history — it must not inherit the old age. */
+    @Test fun clearDropsTheFetchTimeToo() {
+        WidgetCache.putCard(ctx, 25, Card("switch.x", "X", "switch", null, "on", null))
+        assertNotNull(WidgetCache.fetchedAt(ctx, 25))
+        WidgetCache.clear(ctx, 25)
+        assertNull(WidgetCache.fetchedAt(ctx, 25))
     }
 
     @Test fun clearDropsEveryPayloadForId() {

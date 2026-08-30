@@ -45,6 +45,23 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
+        <!-- Stale marker (#111): GONE while the tile is fresh, so a healthy 1x1
+             keeps exactly the geometry it had. When the last successful fetch has
+             aged out it shows the age alone ("vor 3 Std.") - a single cell has
+             room for that and nothing else, and the value above it stays. -->
+        <TextView
+            android:id="@+id/w_stale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="vor 3 Std."
+            android:textColor="#FFFFB74D"
+            android:textSize="9sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
         <!-- Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
              Fills the middle; tap runs the domain's primary action. -->
         <ImageView

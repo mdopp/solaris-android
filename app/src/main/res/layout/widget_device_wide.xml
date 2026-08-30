@@ -43,6 +43,21 @@
                 android:textStyle="bold"
                 android:textSize="16sp" />
 
+            <!-- Stale marker (#111): hidden while the tile is fresh; when the
+                 last successful fetch has aged out it names the age next to the
+                 device, and the value below keeps its place. -->
+            <TextView
+                android:id="@+id/w_stale"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="veraltet · vor 3 Std."
+                android:textColor="#FFFFB74D"
+                android:textSize="11sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone" />
+
             <!-- Lock badge (#38): shown for sensitive devices needing a confirm. -->
             <ImageView
                 android:id="@+id/w_lock"

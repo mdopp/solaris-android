@@ -82,6 +82,21 @@
             android:textStyle="bold"
             android:textSize="22sp" />
 
+        <!-- Stale marker (#111): hidden while the tile is fresh. It sits under
+             the state instead of replacing it - the last known value stays
+             readable, this line says how old it is. -->
+        <TextView
+            android:id="@+id/w_stale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="veraltet · vor 3 Std."
+            android:textColor="#FFFFB74D"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
         <ProgressBar
             android:id="@+id/w_bar"
             style="?android:attr/progressBarStyleHorizontal"
