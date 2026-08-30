@@ -31,6 +31,10 @@
     <string name="widget_confirm_neutral">Schalten</string>
     <string name="widget_confirm_no">Abbrechen</string>
 
+    <!-- Warnung ueber dem folgenschweren Eintrag eines Aktionsdialogs (#92/#113).
+         Steht direkt ueber "Tuer oeffnen", nie ueber einem harmlosen Eintrag. -->
+    <string name="widget_open_door_note">Öffnet die Tür – nicht nur das Schloss.</string>
+
     <!-- Fehlgeschlagener Tipp (#111): waehrend des Ausfalls antwortete
          /napi/ha/call mit 500, die Kachel schwieg und der Tipp sah folgenlos aus.
          %1$s = Geraetename. -->

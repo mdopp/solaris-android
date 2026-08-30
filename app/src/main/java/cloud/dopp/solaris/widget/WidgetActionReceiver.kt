@@ -57,7 +57,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                         .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                         .putExtra(EXTRA_ENTITY, entityId)
                         .putExtra(WidgetActionActivity.EXTRA_LOCK_CHOOSE, true)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        .addFlags(ActionDialog.TASK_FLAGS),
                 )
             }
             return
@@ -141,7 +141,7 @@ class WidgetActionReceiver : BroadcastReceiver() {
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     .putExtra(EXTRA_ENTITY, entityId)
                     .putExtra(EXTRA_SERVICE, service)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    .addFlags(ActionDialog.TASK_FLAGS),
             )
             Tap.CONFIRMING
         }

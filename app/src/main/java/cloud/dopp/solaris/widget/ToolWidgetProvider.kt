@@ -190,7 +190,7 @@ class ToolWidgetProvider : AppWidgetProvider() {
      */
     private fun rowTemplate(context: Context, appWidgetId: Int): PendingIntent {
         val i = Intent(context, ToolActionActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         val mutable =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         return PendingIntent.getActivity(

@@ -178,7 +178,8 @@ object PwaLauncher {
     fun tapPending(ctx: Context, reqCode: Int, path: String): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
             .putExtra(PwaTrampolineActivity.EXTRA_PATH, path)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // Own task (#114) — the trampoline must not join the app's.
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -193,7 +194,7 @@ object PwaLauncher {
     fun tapPendingUrl(ctx: Context, reqCode: Int, url: String): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
             .putExtra(PwaTrampolineActivity.EXTRA_URL, url)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, reqCode, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -233,7 +234,7 @@ object PwaLauncher {
      */
     fun rowTapTemplate(ctx: Context, reqCode: Int): PendingIntent {
         val i = Intent(ctx, PwaTrampolineActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         val mutable =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
         return PendingIntent.getActivity(

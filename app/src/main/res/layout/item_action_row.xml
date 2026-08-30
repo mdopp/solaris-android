@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One pickable action of an action sheet (#113). The background is set in code
+     from the item's tone: filled for the yes, ghost for an ordinary choice,
+     warn-outlined for the one entry that opens the house. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_xs"
+    android:minHeight="52dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:background="@drawable/btn_solaris_ghost"
+    android:clickable="true"
+    android:focusable="true">
+
+    <View
+        android:id="@+id/ar_swatch"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="12dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/ar_label"
+        style="@style/Text.Solaris.Title"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>

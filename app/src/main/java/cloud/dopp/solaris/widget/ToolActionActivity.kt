@@ -1,7 +1,6 @@
 package cloud.dopp.solaris.widget
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.os.Bundle
 import cloud.dopp.solaris.R
@@ -25,7 +24,9 @@ import kotlin.concurrent.thread
  * and re-sends confirmed; a `forbidden` 403 (every admin action on `/napi/`) and an
  * `unknown_action` 404 fail **silently** — there is nothing the user could confirm.
  *
- * Invisible: no layout is set, so a plain row tap never flashes a screen.
+ * Invisible: no layout is set, so a plain row tap never flashes a screen. Only
+ * the confirm path paints anything — [ActionDialog] draws its own scrim then, so
+ * the dialog no longer shows whatever sat on top of the app's task (#114).
  */
 class ToolActionActivity : Activity() {
 
@@ -84,15 +85,16 @@ class ToolActionActivity : Activity() {
     private fun confirm(actionId: String, params: JSONObject, appWidgetId: Int) {
         val title = intent.getStringExtra(EXTRA_TITLE)?.ifBlank { null }
             ?: getString(R.string.tool_widget_label)
-        AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
-            .setTitle(R.string.widget_confirm_title)
-            .setMessage(getString(R.string.tool_action_confirm, title))
-            .setPositiveButton(R.string.tool_action_do) { _, _ ->
-                run(actionId, params, confirmed = true)
-            }
-            .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
-            .setOnCancelListener { finish() }
-            .show()
+        // The same sheet the device widget uses (#113) — one shape for every
+        // action dialog, Abbrechen always the footer.
+        ActionDialog.show(
+            activity = this,
+            title = getString(R.string.widget_confirm_title),
+            message = getString(R.string.tool_action_confirm, title),
+            sheet = ActionSheets.toolConfirm(),
+            onPick = { run(actionId, params, confirmed = true) },
+            onCancel = { finish() },
+        )
     }
 
     companion object {

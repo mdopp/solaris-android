@@ -1,7 +1,6 @@
 package cloud.dopp.solaris.widget
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
@@ -80,14 +79,16 @@ class WidgetActionActivity : Activity() {
         // dotted domain.action instead and the button follows the same verb.
         val action = ConfirmVerb.of(service)
         val verb = getString(ConfirmWording.verbRes(action))
-        val positive = ConfirmWording.positiveRes(action)
-        AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
-            .setTitle(R.string.widget_confirm_title)
-            .setMessage(getString(R.string.widget_confirm_msg, label(appWidgetId, entityId), verb))
-            .setPositiveButton(positive) { _, _ -> runService(entityId, service, appWidgetId) }
-            .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
-            .setOnCancelListener { finish() }
-            .show()
+        // One shape for every action dialog (#113): the question on a Solaris
+        // card, the yes as a full-width row, Abbrechen underneath it.
+        ActionDialog.show(
+            activity = this,
+            title = getString(R.string.widget_confirm_title),
+            message = getString(R.string.widget_confirm_msg, label(appWidgetId, entityId), verb),
+            sheet = ActionSheets.confirm(action),
+            onPick = { runService(entityId, service, appWidgetId) },
+            onCancel = { finish() },
+        )
     }
 
     /**
@@ -97,9 +98,12 @@ class WidgetActionActivity : Activity() {
      * `confirmed = true` and no second "wirklich?" is stacked on top of it. The
      * server's 403 gate is untouched; it is simply already satisfied.
      *
-     * "Tür öffnen" is not a third list row. It is the only entry that opens the
-     * door, so it sits apart in the button bar, in the warning colour, and only
-     * appears when the lock advertises a latch — see [LockChooser].
+     * "Tür öffnen" is not an ordinary entry. It is the only one that opens the
+     * door, so [ActionSheets.lock] puts it last in the stack, in the warning
+     * colour and behind its own warning line, and it appears only when the lock
+     * advertises a latch — see [LockChooser]. What it must never be is the row
+     * where another dialog puts "Abbrechen" (#113); the footer is not a slot any
+     * action can reach.
      *
      * The capabilities come from the render cache, not the network: the dialog
      * must appear at once on a tap, and an offline phone must not silently lose
@@ -110,22 +114,18 @@ class WidgetActionActivity : Activity() {
         // LockChooser sees null capabilities and offers no "Tür öffnen" — the
         // conservative direction, and the one #100 must not quietly reverse.
         val cached = if (hasWidget(appWidgetId)) WidgetCache.getCard(this, appWidgetId) else null
-        val entries = LockChooser.entries(cached?.supportedFeatures)
-        val rows = entries.filter { it != LockChoice.OPEN }
-        val labels = rows.map { getString(it.labelRes) }.toTypedArray()
-        val builder = AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
-            .setTitle(getString(R.string.widget_lock_title, label(appWidgetId, entityId)))
-            .setItems(labels) { _, which -> runService(entityId, rows[which].service, appWidgetId) }
+        val sheet = ActionSheets.lock(cached?.supportedFeatures)
+        ActionDialog.show(
+            activity = this,
+            title = getString(R.string.widget_lock_title, label(appWidgetId, entityId)),
+            message = null,
+            sheet = sheet,
+            onPick = { i ->
+                sheet.items[i].service?.let { runService(entityId, it, appWidgetId) } ?: finish()
+            },
             // Abbrechen does nothing at all — no call, no refresh.
-            .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
-            .setOnCancelListener { finish() }
-        if (LockChoice.OPEN in entries) {
-            builder.setNeutralButton(R.string.widget_confirm_unlatch) { _, _ ->
-                runService(entityId, LockChoice.OPEN.service, appWidgetId)
-            }
-        }
-        val dialog = builder.show()
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(getColor(R.color.solaris_warn))
+            onCancel = { finish() },
+        )
     }
 
     /**
@@ -185,29 +185,34 @@ class WidgetActionActivity : Activity() {
      * Colour is not a sensitive action, so there is no confirm step here.
      */
     private fun showColorPalette(entityId: String, appWidgetId: Int) {
-        val labels = LightColors.PALETTE.map { getString(it.labelRes) }.toTypedArray()
-        AlertDialog.Builder(this, R.style.Theme_Solaris_AlertDialog)
-            .setTitle(getString(R.string.widget_color_title, WidgetStore.name(this, appWidgetId)))
-            .setItems(labels) { _, which ->
-                val swatch = LightColors.PALETTE[which]
-                val name = WidgetStore.name(this, appWidgetId)
-                thread {
-                    val ok = try {
-                        ApiClient(applicationContext).call(
-                            entityId, "light.turn_on", data = LightColors.data(swatch),
-                        )
-                    } catch (e: Exception) {
-                        false // the tile keeps its last known colour
-                    }
-                    // A colour that never arrived is still a tap that did nothing (#111).
-                    if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
-                    DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
-                    runOnUiThread { finish() }
-                }
+        // The sheet is built in palette order, so the pick's index *is* the
+        // palette's index — nothing here re-derives which colour was meant.
+        ActionDialog.show(
+            activity = this,
+            title = getString(R.string.widget_color_title, WidgetStore.name(this, appWidgetId)),
+            message = null,
+            sheet = ActionSheets.colors(),
+            onPick = { which -> runColor(entityId, appWidgetId, LightColors.PALETTE[which]) },
+            onCancel = { finish() },
+        )
+    }
+
+    /** Send one picked colour and refresh the tile, then finish. */
+    private fun runColor(entityId: String, appWidgetId: Int, swatch: LightColors.Swatch) {
+        val name = WidgetStore.name(this, appWidgetId)
+        thread {
+            val ok = try {
+                ApiClient(applicationContext).call(
+                    entityId, "light.turn_on", data = LightColors.data(swatch),
+                )
+            } catch (e: Exception) {
+                false // the tile keeps its last known colour
             }
-            .setNegativeButton(R.string.widget_confirm_no) { _, _ -> finish() }
-            .setOnCancelListener { finish() }
-            .show()
+            // A colour that never arrived is still a tap that did nothing (#111).
+            if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
+            DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)
+            runOnUiThread { finish() }
+        }
     }
 
     companion object {

@@ -457,7 +457,8 @@ object WidgetRender {
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             .putExtra(WidgetActionReceiver.EXTRA_ENTITY, entityId)
             .putExtra(WidgetActionReceiver.EXTRA_SERVICE, service)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // Its own task, never the app's (#114).
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, 500000 + appWidgetId * 100 + code, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -474,7 +475,7 @@ object WidgetRender {
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             .putExtra(WidgetActionReceiver.EXTRA_ENTITY, entityId)
             .putExtra(WidgetActionActivity.EXTRA_PICK_COLOR, true)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(ActionDialog.TASK_FLAGS)
         return PendingIntent.getActivity(
             ctx, 700000 + appWidgetId * 100 + code, i,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
