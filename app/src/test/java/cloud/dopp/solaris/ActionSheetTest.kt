@@ -284,6 +284,22 @@ class ActionSheetTest {
         assertEquals(activity.getColor(R.color.solaris_scrim), (bg as ColorDrawable).color)
     }
 
+    /**
+     * #119: the backdrop lets a little more through than it did in v2.34.0 (85 %),
+     * without giving up what #114 bought — it is still an opaque-enough scrim of
+     * the Solaris ground, so the dialog looks the same whatever lies behind it.
+     * The dialog's own card is fully opaque, so the text is untouched by this.
+     */
+    @Test fun theScrimIsLighterButStillAScrim() {
+        val ctx: Context = ApplicationProvider.getApplicationContext()
+        val scrim = ctx.getColor(R.color.solaris_scrim)
+        val alpha = (scrim ushr 24) and 0xFF
+        assertTrue("the scrim got lighter than v2.34.0's 0xD9: $alpha", alpha < 0xD9)
+        assertTrue("…but it is still a scrim, not a see-through window: $alpha", alpha >= 0x99)
+        // Same near-black ground as before — only the opacity moved.
+        assertEquals(0x070709, scrim and 0xFFFFFF)
+    }
+
     /** The colour palette uses the same card, footer and all — ten rows, one shape. */
     @Test fun theColourPaletteUsesTheSameCard() {
         val intent = Intent(RuntimeEnvironment.getApplication(), WidgetActionActivity::class.java)

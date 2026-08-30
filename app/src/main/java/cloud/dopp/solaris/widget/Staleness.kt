@@ -189,9 +189,12 @@ object Staleness {
      * old value actively misleads — it asserts a security state nobody verified —
      * and #84 already forbids `unknown` from looking secured. A stale
      * `abgeschlossen?` is still readable as the last thing we knew, and it no
-     * longer claims to be the case now. (The colour does the rest: a stale tile
-     * drops to the neutral grey, so the calm green of a confirmed `locked` cannot
-     * appear on an unverified one.)
+     * longer claims to be the case now. (The colour does the rest — for the lock
+     * alone: a stale lock drops to the neutral grey, so the calm green of a
+     * confirmed `locked` cannot appear on an unverified one. Every other domain
+     * *keeps* its colour while stale, #120: a lamp painted grey stops saying "it
+     * was on" and starts saying "it is off", which is the very substitution this
+     * whole file exists to prevent.)
      */
     fun staleValue(base: String, domain: String): String {
         if (domain.trim().lowercase() != "lock") return base

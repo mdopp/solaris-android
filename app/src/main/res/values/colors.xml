@@ -28,8 +28,10 @@
 
     <!-- Backdrop of an action dialog (#114). The action activities are
          translucent; without a painted window they showed whatever sat on top of
-         the app's task. -->
-    <color name="solaris_scrim">#D9070709</color>
+         the app's task. Deckkraft auf 70 % gesenkt (#119): etwas mehr scheint
+         durch, der Zweck bleibt — der Dialog sieht gleich aus, egal was dahinter
+         liegt, weil seine Karte selbst deckend ist. -->
+    <color name="solaris_scrim">#B3070709</color>
 
     <color name="solaris_field">#161620</color>        <!-- input field fill -->
     <color name="solaris_divider">#1AFFFFFF</color>    <!-- list divider -->
