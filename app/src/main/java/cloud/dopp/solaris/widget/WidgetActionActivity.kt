@@ -139,11 +139,14 @@ class WidgetActionActivity : Activity() {
             // The call's own answer decides (#111): `call` returns false on a
             // non-2xx — the outage's 500s came back this way — so a confirmed
             // "Abschließen" that the server refused must not end in silence.
-            val ok = try {
+            val result = runCatching {
                 ApiClient(applicationContext).call(entityId, service, confirmed = true)
-            } catch (e: Exception) {
-                false // the tile keeps its last known state; the user hears about it
             }
+            // …and the same answer says whether the server is there at all: the
+            // confirmed action is a measurement of the connection, taken while the
+            // user watches. A hit clears an existing mark, a miss sets one now.
+            ActionProbe.record(applicationContext, appWidgetId, ActionProbe.of(result))
+            val ok = result.getOrDefault(false) // the tile keeps its last known state
             if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
             // The device was used, whatever the call's outcome — that is what the
             // app-icon menu orders by (#100).
@@ -201,13 +204,13 @@ class WidgetActionActivity : Activity() {
     private fun runColor(entityId: String, appWidgetId: Int, swatch: LightColors.Swatch) {
         val name = WidgetStore.name(this, appWidgetId)
         thread {
-            val ok = try {
+            val result = runCatching {
                 ApiClient(applicationContext).call(
                     entityId, "light.turn_on", data = LightColors.data(swatch),
                 )
-            } catch (e: Exception) {
-                false // the tile keeps its last known colour
             }
+            ActionProbe.record(applicationContext, appWidgetId, ActionProbe.of(result))
+            val ok = result.getOrDefault(false) // the tile keeps its last known colour
             // A colour that never arrived is still a tap that did nothing (#111).
             if (!ok) WidgetActionReceiver.reportFailure(applicationContext, name)
             DeviceWidgetProvider.requestRefresh(applicationContext, appWidgetId)

@@ -91,15 +91,15 @@ object WidgetRender {
         val tier = tierFor(ctx, appWidgetId)
         val dom = card?.domain?.ifBlank { null } ?: domain
         val on = card?.isOn == true
-        // How long since we last successfully heard from the server for this tile
-        // (#111) — null while it is fresh, or while there is nothing to date.
-        val staleAge = staleAge(ctx, appWidgetId, card)
+        // What this tile has to say about its connection (#111) — null while it
+        // is fresh, or while there is nothing to date.
+        val stale = staleMark(ctx, appWidgetId, card)
 
         // TINY (1×1, #31) has its own shape: name instead of icon, one primary
         // toggle, and the state docked as a bottom bar. Built separately — and
         // without the confirm badge (#95), which does not fit a single cell.
         if (tier == Tier.TINY) {
-            return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, load, staleAge)
+            return buildTiny(ctx, appWidgetId, card, fallbackName, dom, on, onBodyTap, load, stale)
         }
 
         val sensitive = isSensitive(ctx, appWidgetId, card, dom)
@@ -114,14 +114,14 @@ object WidgetRender {
 
         // A stale tile keeps its value and its icon and loses its colour: the
         // accent is what claims "this is the state right now" (#111).
-        val accent = if (staleAge != null) STALE else accentFor(dom, card, on)
+        val accent = if (stale != null) STALE else accentFor(dom, card, on)
 
         v.setImageViewResource(R.id.w_icon, iconFor(dom, card))
         v.setInt(R.id.w_icon, "setColorFilter", accent)
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
-        v.setTextViewText(R.id.w_state, stateLabel(card, load, staleAge != null, dom))
+        v.setTextViewText(R.id.w_state, stateLabel(card, load, stale != null, dom))
         v.setTextColor(R.id.w_state, accent)
-        markStale(v, Staleness.mark(staleAge))
+        markStale(v, stale?.line)
 
         // Lock badge (#38): sensitive devices (garage/door/gate) need a confirm.
         v.setViewVisibility(R.id.w_lock, if (showsLockBadge(tier, sensitive)) View.VISIBLE else View.GONE)
@@ -201,20 +201,20 @@ object WidgetRender {
         on: Boolean,
         onBodyTap: PendingIntent,
         load: Load,
-        staleAge: String? = null,
+        stale: Staleness.Mark? = null,
     ): RemoteViews {
         val v = RemoteViews(ctx.packageName, R.layout.widget_device_tiny)
 
         if (tinyTap(load) == TinyTap.SETUP) return tinySetup(v, onBodyTap, load)
 
-        val accent = if (staleAge != null) STALE else accentFor(dom, card, on)
+        val accent = if (stale != null) STALE else accentFor(dom, card, on)
 
         // Name kept (#57); tapping it opens the PWA (#27).
         v.setTextViewText(R.id.w_name, (card?.name ?: fallbackName).ifBlank { fallbackName.ifBlank { "—" } })
         v.setOnClickPendingIntent(R.id.w_name, onBodyTap)
-        // One cell has room for the age and nothing else (#111) — the icon's
-        // dropped tint carries the rest of the message.
-        markStale(v, Staleness.mark(staleAge, compact = true))
+        // One cell has room for one line (#111) — the age, or the reason once a
+        // tap has just failed; the icon's dropped tint carries the rest.
+        markStale(v, stale?.compact)
 
         // Toggle = a tappable, state-tinted domain icon (no button chrome, #57).
         // The icon shows the domain (lamp/cover/…), its tint says on/off, and the
@@ -543,19 +543,23 @@ object WidgetRender {
     }
 
     /**
-     * The age to show on this tile, or `null` when it must not be marked (#111).
+     * What this tile has to say about its connection, or `null` when it must not
+     * be marked at all (#111).
      *
      * Marked only when there **is** a value to qualify: an empty tile already says
      * "lädt…" / "↻ tippen" / "einrichten", and dating a value we never had would
-     * be noise. The time asked for is [WidgetCache.fetchedAt] — when *we* last
-     * heard from the server — never `Card.updatedAtMs`, which is when the entity
-     * last changed and says nothing about the connection.
+     * be noise. Two inputs, both about *us* and the server, never about the
+     * entity: [WidgetCache.fetchedAt] — when we last heard anything, the passive
+     * half — and [WidgetCache.unreachableSince] — when a tap the user made last
+     * failed to get through, the active one. Neither is `Card.updatedAtMs`, which
+     * is when the entity last changed and says nothing about the connection.
      */
-    private fun staleAge(ctx: Context, appWidgetId: Int, card: Card?): String? {
+    private fun staleMark(ctx: Context, appWidgetId: Int, card: Card?): Staleness.Mark? {
         if (card == null) return null
-        val at = WidgetCache.fetchedAt(ctx, appWidgetId) ?: return null
-        val now = System.currentTimeMillis()
-        return if (Staleness.isStale(at, now)) Staleness.ageLabel(at, now) else null
+        val at = WidgetCache.fetchedAt(ctx, appWidgetId)
+        val failed = WidgetCache.unreachableSince(ctx, appWidgetId)
+        if (at == null && failed == null) return null
+        return Staleness.markFor(at, failed, System.currentTimeMillis())
     }
 
     /** Show or hide the tile's stale line; [text] `null` = fresh, nothing to say. */

@@ -137,6 +137,80 @@ class StalenessTest {
         }
     }
 
+    // --- the action as a probe ------------------------------------------------
+
+    /**
+     * A tap that never reached the server marks the tile **now**. The threshold
+     * answers "has anything arrived lately?", which a minute of flight mode
+     * cannot make interesting; this answers "did the thing I just did work?",
+     * which it can. No waiting, and no shorter threshold either.
+     */
+    @Test fun aFailedActionMarksWithoutWaitingOutTheThreshold() {
+        val fetched = now - 2 * min // as fresh as a tile ever is
+        assertFalse(Staleness.isStale(fetched, now))
+        assertNull("no probe, no mark", Staleness.markFor(fetched, null, now))
+
+        val m = Staleness.markFor(fetched, failedAtMs = now, nowMs = now)!!
+        assertEquals("nicht erreichbar", m.compact)
+        assertEquals("nicht erreichbar · vor 2 Min.", m.line)
+        // The wording is not "veraltet": the value is two minutes old, the
+        // connection is what is broken, and saying the wrong one is a lie.
+        assertTrue(Staleness.unreachable(fetched, now))
+    }
+
+    /**
+     * The other direction: an action that got through is a fresh `fetchedAt`, so
+     * a mark set by an earlier failure is gone — even with no refresh in between.
+     */
+    @Test fun aLaterSuccessEndsTheMark() {
+        val failed = now - 10 * min
+        assertTrue(Staleness.unreachable(now - 20 * min, failed))
+        // …then something arrived after it.
+        assertFalse(Staleness.unreachable(now - min, failed))
+        assertNull(Staleness.markFor(now - min, failed, now))
+    }
+
+    /** Never asked, never failed: the probe adds nothing on its own. */
+    @Test fun noProbeMeansNoOpinion() {
+        for (failed in listOf(null, 0L, -1L)) {
+            assertFalse("failed $failed", Staleness.unreachable(now - min, failed))
+            assertNull("failed $failed", Staleness.markFor(now - min, failed, now))
+        }
+    }
+
+    /**
+     * A tile that has never fetched has no age to show — but a tap that just
+     * failed is still worth saying, and the line has to stand without one.
+     */
+    @Test fun aFailedActionSpeaksEvenWithNothingToDate() {
+        val m = Staleness.markFor(null, now, now)!!
+        assertEquals("nicht erreichbar", m.line)
+        assertEquals("nicht erreichbar", m.compact)
+    }
+
+    /**
+     * Both reasons at once: the probe wins the wording — it is the newer and the
+     * stronger statement — and carries the age along for the tier that has room.
+     */
+    @Test fun theProbeOutranksTheAge() {
+        val fetched = now - 26 * hour
+        assertEquals("veraltet · vor 26 Std.", Staleness.markFor(fetched, null, now)!!.line)
+        val m = Staleness.markFor(fetched, now, now)!!
+        assertEquals("nicht erreichbar · vor 26 Std.", m.line)
+        assertEquals("nicht erreichbar", m.compact)
+    }
+
+    /** The passive rule is untouched: 90 minutes, and the boundary where it was. */
+    @Test fun theProbeDoesNotMoveTheThreshold() {
+        assertEquals(90L * 60 * 1000, Staleness.THRESHOLD_MS)
+        val t = Staleness.THRESHOLD_MS
+        assertNull(Staleness.markFor(now - t, null, now))
+        assertEquals("veraltet · vor 1 Std.", Staleness.markFor(now - t - 1, null, now)!!.line)
+        for (age in listOf(0L, 5 * min, 29 * min, 31 * min, 60 * min, 89 * min)) {
+            assertNull("age ${age / min} min", Staleness.markFor(now - age, null, now))
+        }
+    }
+
     /**
      * The one exception, and the reason #84 exists: a stale `abgeschlossen`
      * asserts a security state nobody has verified. It stays readable — it just
