@@ -19,12 +19,25 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// Bubblewrap's TWA block. Partly back in service since #115: the app shows the
+// Solaris surface itself as a Trusted Web Activity (SolarisSurface), and takes
+// the theme/navigation colours below from here.
+//
+// What is NOT taken from here, and must stay that way:
+//  - the **server**. `hostName`/`launchUrl` are the generator's single-tenant
+//    idea; the real surface URL is the server the user paired with, read at
+//    runtime from ServerStore (#52). The resValues they feed are unused.
+//  - the **shortcuts**. The generator task that rewrote res/xml/shortcuts.xml
+//    from a `shortcuts` list is gone (#97) and does not come back — the app-icon
+//    menu is published at runtime from the user's own devices (AppShortcuts,
+//    #100). A build-time list would only overwrite it with an empty file.
 def twaManifest = [
     applicationId: 'cloud.dopp.solaris',
-    hostName: 'localhost', // legacy TWA field (retired) — only feeds now-unused resValues, no hardcoded server.
-    launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
+    hostName: 'localhost', // legacy TWA field — feeds now-unused resValues, no hardcoded server.
+    launchUrl: '/', // legacy TWA field — the real start URL is the paired server.
     name: 'Solaris Companion', // The application name (distinct from the "Solaris" PWA).
     launcherName: 'Solaris Companion', // The name shown on the Android Launcher.
+    // In service again (#115): SolarisSurface passes these to the TWA intent.
     themeColor: '#0C0C0E', // The color used for the status bar.
     themeColorDark: '#0C0C0E', // The color used for the dark status bar.
     navigationColor: '#070709', // The color used for the navigation bar.
@@ -32,7 +45,11 @@ def twaManifest = [
     navigationDividerColor: '#000000', // The navbar divider color.
     navigationDividerColorDark: '#000000', // The dark navbar divider color.
     backgroundColor: '#070709', // The color used for the splash screen background.
-    enableNotifications: true, // Set to true to enable notification delegation.
+    // Notification *delegation* (a TrustedWebActivityService that lets the browser
+    // post as us) is deliberately NOT wired: the app raises its own notifications
+    // from its own SSE connection with the device token. The resValue below is
+    // read by nobody.
+    enableNotifications: true,
     // (removed: the TWA `shortcuts` list — app-icon shortcuts are published at
     // runtime from the user's own devices, see AppShortcuts, #97.)
     // The duration of fade out animation in milliseconds to be played when removing splash screen.
@@ -54,8 +71,8 @@ android {
         // needs the AndroidKeyStore-backed master key from API 23.
         minSdkVersion 23
         targetSdkVersion 35
-        versionCode 84
-        versionName "2.34.1"
+        versionCode 85
+        versionName "2.35.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
