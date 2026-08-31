@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
@@ -306,6 +307,26 @@ class ApiClient(private val ctx: Context) {
         } catch (e: Exception) {
             ActionOutcome.FAILED
         }
+    }
+
+    /**
+     * The notice backlog — `GET /napi/notifications?since=…` (#124, server
+     * solarisbay#1286). Returns the raw body for
+     * [cloud.dopp.solaris.realtime.NoticeBacklog] to read, or null on any failure
+     * (including the **404** of a box that predates v0.48.0): a catch-up that
+     * cannot be made is a pass that shows nothing, never an error.
+     *
+     * [since] is the cursor the last response's `now` handed us — passed through
+     * unchanged. Nothing here fabricates one from the device clock.
+     */
+    fun notifications(since: String?): String? {
+        val path = cloud.dopp.solaris.realtime.NoticeBacklog.PATH
+        val query = if (since.isNullOrBlank()) {
+            ""
+        } else {
+            "?since=" + URLEncoder.encode(since, "UTF-8")
+        }
+        return getBody(path + query)
     }
 
     /** GET [path] under `/napi`, returning the body, or null on any failure. */

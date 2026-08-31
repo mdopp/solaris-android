@@ -31,11 +31,13 @@ object RealtimeProtocol {
      *
      * Delivery is **best effort and always will be**. A notice arrives at once
      * while [RealtimeService] holds the stream; with the screen off the stream is
-     * dropped for battery and only what lands inside the poll pass's short catch-up
-     * window ([NoticeCatchUp]) is still seen — the server keeps **no backlog**, so
-     * anything published while nothing was subscribed is simply gone. Nothing here
-     * retries, queues, escalates or rings, and no `urgency` and no `category`
-     * changes that.
+     * dropped for battery, and the poll pass ([NoticeCatchUp]) both listens
+     * briefly and asks the server's short backlog what it missed (#124). That
+     * moved the promise from "can be lost while the screen is off" to **"catches
+     * up if the gap is under the server's retention"** — and no further: past the
+     * window, past the per-stream row cap, or with nothing ever asking, a notice
+     * is still gone. Nothing here retries, queues, escalates or rings, and no
+     * `urgency` and no `category` changes that.
      *
      * Good for "Waschmaschine fertig" / "Post da" / "Fenster offen". Never for
      * smoke, intrusion, a medical event, or anything else that has to wake
@@ -84,12 +86,26 @@ object RealtimeProtocol {
     }
 
     /**
-     * One offered action, exactly as the contract states it: `{action, title}`.
-     * [action] is an **opaque server string** — nothing on the server defines what
-     * it names — so what (if anything) the app is willing to run for it is decided
-     * in [NoticeActions], never here.
+     * One offered action, exactly as the contract states it since solarisbay#1283
+     * (shipped v0.48.0): `{entity_id, service, title, confirm}` — **separate
+     * fields**, never one overloaded `domain.suffix` string. [entityId] and
+     * [service] together are literally the `/napi/ha/call` body, so the call is
+     * passed through **verbatim**; nothing here derives a service from a name or
+     * guesses what a string meant. Which of them may become a button is decided in
+     * [NoticeActions], never here.
+     *
+     * [confirm] says whether the receiver must ask before running it. The server
+     * computes it from the entity's HA `device_class` (`cover` is a garage door
+     * *and* a kitchen blind under one domain — the domain alone cannot tell them
+     * apart), it is always on the wire, and a caller may raise it but never lower
+     * it. **A missing `confirm` is read as `true`** — see [parseHa].
      */
-    data class NoticeAction(val action: String, val title: String)
+    data class NoticeAction(
+        val entityId: String,
+        val service: String,
+        val title: String,
+        val confirm: Boolean,
+    )
 
     /** A parsed `ha` frame. [urgency] is presentation only — see [EVENT_HA]. */
     data class NoticeEvent(
@@ -111,19 +127,28 @@ object RealtimeProtocol {
     fun parseHa(data: String?): NoticeEvent? {
         if (data.isNullOrBlank()) return null
         return try {
-            val o = JSONObject(data)
-            val title = o.optString("title").trim()
-            if (title.isBlank()) return null
-            NoticeEvent(
-                title = title,
-                body = o.optString("body").trim(),
-                category = NoticeCategory.of(o.optString("category")),
-                urgency = o.optString("urgency").trim().lowercase().ifBlank { "normal" },
-                actions = parseNoticeActions(o.optJSONArray("actions")),
-            )
+            noticeOf(JSONObject(data))
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * The same parse from an already-decoded object — the entry the catch-up
+     * backlog ([NoticeBacklog]) uses, because a backlogged notice is the stream's
+     * event **verbatim** and there must not be a second renderer that can drift
+     * from this one.
+     */
+    fun noticeOf(o: JSONObject): NoticeEvent? {
+        val title = o.optString("title").trim()
+        if (title.isBlank()) return null
+        return NoticeEvent(
+            title = title,
+            body = o.optString("body").trim(),
+            category = NoticeCategory.of(o.optString("category")),
+            urgency = o.optString("urgency").trim().lowercase().ifBlank { "normal" },
+            actions = parseNoticeActions(o.optJSONArray("actions")),
+        )
     }
 
     private fun parseNoticeActions(arr: org.json.JSONArray?): List<NoticeAction> {
@@ -132,13 +157,32 @@ object RealtimeProtocol {
         for (i in 0 until arr.length()) {
             if (out.size >= MAX_NOTICE_ACTIONS) break
             val item = arr.optJSONObject(i) ?: continue
-            val action = item.optString("action").trim()
+            val entityId = item.optString("entity_id").trim()
+            val service = item.optString("service").trim()
             val title = item.optString("title").trim()
-            if (action.isBlank() || title.isBlank()) continue
-            out.add(NoticeAction(action, title))
+            // An old one-string action (`{action,title}`) has no entity_id and is
+            // dropped here: the notice still shows, only without a button. The
+            // server refuses that shape with 400 since v0.48.0, but an older box
+            // may still emit it and a swallowed notice is the worse failure.
+            if (entityId.isBlank() || service.isBlank() || title.isBlank()) continue
+            out.add(NoticeAction(entityId, service, title, confirmOf(item)))
         }
         return out
     }
+
+    /**
+     * **A missing `confirm` is `true`.** The single most important line of the
+     * #123 contract: the field is computed server-side and always on the wire from
+     * v0.48.0 on, so its absence means "an older server, which never weighed this
+     * up" — and defaulting that to `false` would eventually put a garage door one
+     * tap away on a lock screen. Same rule the repo learned in #84 (`unknown` must
+     * never look like `abgeschlossen`) and #120 (a missing card was painted "lamp
+     * off"): **the unknown case is never the harmless one.**
+     *
+     * A value that is present but not a boolean is unknown too, hence `true`.
+     */
+    private fun confirmOf(item: JSONObject): Boolean =
+        if (item.isNull("confirm")) true else item.optBoolean("confirm", true)
 
     /** A parsed `card_state` frame: which entity, and its fresh card. */
     data class CardStateEvent(val entityId: String, val card: Card)

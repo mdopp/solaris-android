@@ -40,17 +40,20 @@ import java.util.concurrent.atomic.AtomicInteger
  * - **The button is an Activity intent, never a broadcast.** A broadcast
  *   `PendingIntent` fires straight from the lock screen with no keyguard in
  *   between; an Activity one puts the device lock in front of it. It lands in
- *   [WidgetActionActivity]'s shortcut trampoline — the same entry the app-icon
- *   shortcut uses (#97/#100), which re-derives the domain from the entity id
- *   itself and hands the tap to [WidgetActionReceiver], keeping the server's
- *   authoritative `403 sensitive_action` gate in front of anything gated.
+ *   [WidgetActionActivity] — the same screen the widget's confirm dialog and the
+ *   app-icon shortcut use (#97/#100/#113), which re-validates the pair it was
+ *   handed instead of trusting it, and keeps the server's authoritative
+ *   `403 sensitive_action` gate in front of anything gated.
  * - **`setAuthenticationRequired`** on top of that (API 31+), so the platform
  *   demands the unlock itself rather than leaving it to launch semantics.
  * - **Nothing here declares `showWhenLocked` and nothing dismisses the keyguard.**
  *   [WidgetActionActivity] states the same rule for the widget path; this surface
  *   does not get to weaken it.
- * - **Which actions exist at all** is [NoticeActions]' decision — a lock, a
- *   garage cover or an alarm panel gets no button, however the payload words it.
+ * - **Which actions exist at all** is [NoticeActions]' decision — a lock or an
+ *   alarm panel gets no button, however the payload words it.
+ * - **A `confirm` action asks first** (#123), through that same dialog. That flag
+ *   is *information from the server*, never a substitute for the three rules
+ *   above: two independent locks, and one that relies on the other is none.
  */
 object NoticeNotifier {
 
@@ -67,8 +70,13 @@ object NoticeNotifier {
      * 33+) nothing appears, and no failure here may reach the caller — a bad
      * frame or a missing permission must never take the stream down.
      */
-    fun post(context: Context, ev: NoticeEvent) {
+    fun post(context: Context, ev: NoticeEvent, backlogId: String? = null) {
         val ctx = context.applicationContext
+        // Remember it before it is shown, so the catch-up backlog (#124) can tell
+        // a notice it already delivered from one it still owes — whichever of the
+        // two paths showed it. A stream frame carries no id, so the fingerprint is
+        // what makes the two comparable at all.
+        NoticeSeen.mark(ctx, NoticeBacklog.keysOf(ev, backlogId))
         ensureChannel(ctx, ev.category)
         val id = NOTIF_ID_BASE + ev.category.ordinal * SLOTS + (seq.getAndIncrement() % SLOTS)
         val body = ev.body.ifBlank { ctx.getString(R.string.notice_generic) }
@@ -106,8 +114,12 @@ object NoticeNotifier {
     ): NotificationCompat.Action {
         val intent = Intent(ctx, WidgetActionActivity::class.java)
             .setAction(Intent.ACTION_VIEW)
+            // The payload's own call, passed through verbatim (#123) — nothing
+            // here derives a service from an entity's name.
             .putExtra(WidgetActionReceiver.EXTRA_ENTITY, NoticeActions.entityId(action))
-            .putExtra(WidgetActionActivity.EXTRA_SHORTCUT_TOGGLE, true)
+            .putExtra(WidgetActionReceiver.EXTRA_SERVICE, NoticeActions.service(action))
+            .putExtra(WidgetActionActivity.EXTRA_NOTICE_ACTION, true)
+            .putExtra(WidgetActionActivity.EXTRA_NOTICE_CONFIRM, action.confirm)
             .addFlags(ActionDialog.TASK_FLAGS)
         val pi = PendingIntent.getActivity(
             ctx, notifId * RealtimeProtocol.MAX_NOTICE_ACTIONS + index, intent,

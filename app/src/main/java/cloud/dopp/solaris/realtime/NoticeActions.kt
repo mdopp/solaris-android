@@ -1,69 +1,99 @@
 package cloud.dopp.solaris.realtime
 
-import cloud.dopp.solaris.widget.DeviceShortcuts
-
 /**
- * Which of a notice's offered actions (#116) the app is willing to **run**, and
- * which it only refuses quietly.
+ * Which of a notice's offered actions (#116, contract #123) the app is willing to
+ * **run**, and which it refuses quietly.
  *
  * A notification is the first surface in this app that can carry a button which
  * acts on the household, and a notification lies on the **lock screen**. So the
- * question is not "can we map the payload onto a call" but "what may a string
- * that arrived over the network reach". Two facts decide it:
+ * question is not "can we map the payload onto a call" but "what may a payload
+ * that arrived over the network reach".
  *
- * 1. **`action` is opaque.** The server validates only that it is a non-empty
- *    string (`ha_notify._parse_actions`); nothing over there says what it names.
- *    Its own tests use `"lock.front_door"` (an entity id) and `"cover.close"`
- *    (a service) in the same file — the two examples do not even agree with each
- *    other. Inventing a syntax here would be the app deciding, on its own, how a
- *    remote string turns into a household call.
- * 2. **The widget path is the ceiling.** #92/#97/#100 settled which devices a
- *    one-tap surface outside the app may switch at all: [DeviceShortcuts]'s
- *    `DIRECT_DOMAINS` allowlist (`light`, `switch`). A lock gets a chooser, a
- *    cover/alarm gets "open the card", and nothing else acts directly.
+ * ## The shape is now stated, not guessed
  *
- * Hence the rule below: an action is runnable only when it is **entity-id
- * shaped** and its domain is one the shortcut table already lets a tap switch
- * directly. Everything else — a lock, a garage cover, an alarm panel, a service
- * name, a free-form string — yields **no button at all**. The notice itself is
- * still shown; only the shortcut to acting on it is withheld.
+ * Until solarisbay#1283 an action was **one opaque string**, and `lock.front_door`
+ * (an entity) and `cover.close` (a service) are syntactically identical — the
+ * server's own tests carried one of each. Guessing wrong turns "show me the front
+ * door" into "switch the front door" from the lock screen, so #116 refused
+ * everything but a light or a switch.
  *
- * What is deliberately NOT built here: no way to reach `lock.open`, `lock.unlock`
- * or any other sensitive action from a notification. The lock chooser (#92) needs
- * the render cache's latch bit and its own warning row, and a notification cannot
- * carry that dialog — so the answer is "not from here", not "a simpler dialog".
+ * Since v0.48.0 the payload says it outright: `entity_id` and `service` in
+ * separate fields, the service's domain equal to the entity's, and the pair is
+ * exactly the `/napi/ha/call` body. So the call is **passed through verbatim** —
+ * this object derives nothing and guesses nothing; it only decides whether the
+ * pair is representable at all.
  *
- * Pure (no Android) so the reachable set is JVM-asserted, both ways: what a
- * notice may run, and what it may not.
+ * ## What may be named
+ *
+ * [ACTIONABLE_DOMAINS] mirrors the server's closed set: `light`, `switch`,
+ * `cover`, `climate`. **`lock` and `alarm_control_panel` are absent and must stay
+ * absent** — the server refuses them in two places (`_parse_actions` and
+ * `event_data`), and this is the third. An unlock is *unrepresentable* from a
+ * notification, not merely discouraged: the lock chooser (#92) needs the render
+ * cache's latch bit and its own warning row, and a notification cannot carry that
+ * dialog — so the answer is "not from here", never "a simpler dialog".
+ *
+ * ## `confirm` is information, not our lock
+ *
+ * [RealtimeProtocol.NoticeAction.confirm] decides whether the button asks first
+ * (via the existing [cloud.dopp.solaris.widget.WidgetActionActivity] dialog from
+ * #113), and a **missing** one counts as `true` — see `RealtimeProtocol`. It does
+ * **not** replace the lock-screen boundary from #116: activity `PendingIntent`
+ * rather than broadcast, `setAuthenticationRequired(true)`, no `showWhenLocked`.
+ * Two independent locks; one that relies on the other is none.
+ *
+ * Pure (no Android) so the reachable set is JVM-asserted, both ways: what a notice
+ * may run, and what it may not.
  */
 object NoticeActions {
 
     /**
-     * Is [raw] shaped like an entity id — `domain.object_id`, one dot, no
-     * whitespace? Same shape [DeviceShortcuts.domainOf] reads a domain from, so a
-     * string that passes here is the very string the call would be made against.
+     * The domains a notice action may name — the server's `ACTIONABLE_DOMAINS`,
+     * mirrored. `lock` and `alarm_control_panel` are deliberately missing; adding
+     * either here would put a front door on a lock screen.
      */
-    fun isEntityId(raw: String?): Boolean {
+    val ACTIONABLE_DOMAINS = setOf("light", "switch", "cover", "climate")
+
+    /**
+     * Is [raw] shaped like an HA dotted pair — `domain.suffix`, exactly one dot,
+     * no whitespace, neither half empty? Both `entity_id` and `service` wear this
+     * shape, and a value that passes here is the very string the call is made
+     * against.
+     */
+    fun isDotted(raw: String?): Boolean {
         val s = raw?.trim().orEmpty()
         if (s.isEmpty() || s.any { it.isWhitespace() }) return false
         val dot = s.indexOf('.')
         return dot > 0 && dot == s.lastIndexOf('.') && dot < s.length - 1
     }
 
+    /** The domain half of a dotted pair, e.g. `cover.garagentor` → `cover`. */
+    fun domainOf(raw: String?): String = raw?.trim()?.substringBefore('.', "").orEmpty()
+
     /**
-     * May this action become a notification button that acts? Only for an
-     * entity-id-shaped target whose domain [DeviceShortcuts] lets act directly —
-     * i.e. a light or a switch, never a lock, cover, alarm panel or unknown
-     * domain.
+     * May this pair become a notification button that acts? Three conditions, all
+     * read from the payload and none inferred: both halves are dotted, the
+     * service's domain **equals** the entity's (the contract's own rule — a
+     * `light.toggle` aimed at a cover is a malformed action, not a translation
+     * job), and that domain is in [ACTIONABLE_DOMAINS].
      */
+    fun runnable(entityId: String?, service: String?): Boolean {
+        if (!isDotted(entityId) || !isDotted(service)) return false
+        val domain = domainOf(entityId)
+        return domain == domainOf(service) && domain in ACTIONABLE_DOMAINS
+    }
+
+    /** As [runnable], for a parsed action. */
     fun runnable(action: RealtimeProtocol.NoticeAction): Boolean =
-        isEntityId(action.action) &&
-            DeviceShortcuts.actsDirectly(DeviceShortcuts.domainOf(action.action.trim()))
+        runnable(action.entityId, action.service)
 
     /** The subset of [actions] that becomes buttons — possibly none. */
     fun runnable(actions: List<RealtimeProtocol.NoticeAction>): List<RealtimeProtocol.NoticeAction> =
         actions.filter { runnable(it) }.take(RealtimeProtocol.MAX_NOTICE_ACTIONS)
 
-    /** The entity id a runnable action names, trimmed. */
-    fun entityId(action: RealtimeProtocol.NoticeAction): String = action.action.trim()
+    /** The entity id an action names, trimmed — passed on unchanged. */
+    fun entityId(action: RealtimeProtocol.NoticeAction): String = action.entityId.trim()
+
+    /** The service an action names, trimmed — passed on unchanged. */
+    fun service(action: RealtimeProtocol.NoticeAction): String = action.service.trim()
 }
