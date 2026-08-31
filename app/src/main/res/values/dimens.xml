@@ -34,4 +34,19 @@
     <dimen name="tile_icon">26dp</dimen>
     <dimen name="tile_min_height">76dp</dimen>
 
+    <!-- ── Brand lockup, two sizes (#130) ───────────────────────────────────
+         The wordmark in its glow is the header of BOTH home states, but a paired
+         install has content to show underneath it, so it is presented smaller
+         there: no claim line, a tighter lockup, roughly two thirds the height.
+         The plain tokens are the first-run presentation, the `_compact` ones the
+         paired one; `OnboardingHomeActivity.renderBrand` swaps between them. -->
+    <dimen name="brand_lockup_top">32dp</dimen>
+    <dimen name="brand_lockup_top_compact">4dp</dimen>
+    <dimen name="brand_figure_height">39dp</dimen>
+    <dimen name="brand_figure_height_compact">25dp</dimen>
+    <dimen name="brand_rule_bottom">14dp</dimen>
+    <dimen name="brand_rule_bottom_compact">18dp</dimen>
+    <dimen name="hero_glow_size_compact">112dp</dimen>
+    <dimen name="text_hero_compact">26sp</dimen>
+
 </resources>

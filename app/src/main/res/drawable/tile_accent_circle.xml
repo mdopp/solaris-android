@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shared filled Solaris-accent circle behind a trigger-tile glyph (#54).
+<!-- Shared filled brand-blue circle behind a trigger-tile glyph (#54).
      Used by every "öffnet X" tile (camera, voice, …) so they read identically —
-     an accent-gradient oval signalling "antippen". Generalised from the old
-     voice_mic_circle. -->
+     a gradient oval signalling "antippen". Generalised from the old
+     voice_mic_circle.
+
+     Painted from the brand blue, NOT from the shell accent (#130): these tiles
+     are home-screen widgets, sitting among foreign icons rather than beside the
+     web surface, so the seam argument that turned the in-app accent orange does
+     not apply to them. The in-app camera page reuses the same circle so a
+     captured page and the widget that triggered it still read as one thing. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <gradient
         android:angle="90"
-        android:startColor="@color/solaris_accent"
-        android:endColor="@color/solaris_accent_dark" />
+        android:startColor="@color/solaris_brand_blue"
+        android:endColor="@color/solaris_brand_blue_dark" />
 </shape>

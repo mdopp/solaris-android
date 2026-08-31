@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.provider.Settings
@@ -51,6 +52,14 @@ import java.io.StringWriter
  *  3. add widgets (one-tap via requestPinAppWidget).
  * It also captures the `cloud.dopp.solaris://pair#token=…` redirect from the
  * server's /pair-device page and stores the device token.
+ *
+ * **This is the screen the app icon opens** (#129). #115 briefly sent the icon
+ * straight to the Solaris surface; the cost was that everything only this app
+ * has — widgets, Live-Updates, the diagnostics entry, sign-out — had no way *in*
+ * any more, only the back gesture out of the surface. "Zu Solaris" is the jump
+ * onward, one tap, and every surface has a forward path again. Deep links from
+ * widgets and shortcuts are unaffected: they go through [PwaLauncher] straight
+ * into the surface and never through this screen.
  */
 class OnboardingHomeActivity : AppCompatActivity() {
 
@@ -111,11 +120,11 @@ class OnboardingHomeActivity : AppCompatActivity() {
                     startActivity(android.content.Intent(this@OnboardingHomeActivity, DiagnosticsActivity::class.java))
                 }
             }
+            applySystemBarInsets()
             handleDeepLink(intent)
             render()
             // If Live-Updates is on and we're paired, make sure the service runs.
             RealtimeService.ensure(this)
-            openSurfaceOnLaunch(savedInstanceState)
         } catch (e: Throwable) {
             showError("onCreate", e)
         }
@@ -147,14 +156,98 @@ class OnboardingHomeActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Start the screen **below** the system bars (#130).
+     *
+     * `targetSdkVersion 35` makes every window edge-to-edge, and nothing here
+     * consumed the insets: the layout's own `paddingTop` was all that stood
+     * between the content and the status bar, which is why the status line ended
+     * up level with the system clock. It only became visible when #126 removed
+     * the brand block, which had been filling that space by accident.
+     * `android:statusBarColor` does not help — it is a no-op from API 35.
+     *
+     * Same shape as the fix on the config screens (#19) and the approvals list:
+     * the system-bar insets are added onto the root's own padding, so a cutout,
+     * a tall status bar and a gesture-navigation bar are all cleared.
+     */
+    private fun applySystemBarInsets() {
+        val root = findViewById<View>(R.id.home_root)
+        val basePadTop = root.paddingTop
+        val basePadBottom = root.paddingBottom
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            v.setPadding(
+                v.paddingLeft,
+                basePadTop + bars.top,
+                v.paddingRight,
+                basePadBottom + bars.bottom,
+            )
+            insets
+        }
+    }
+
+    /**
+     * The brand lockup, in two sizes (#130).
+     *
+     * #126 hid the wordmark once the install was paired, on the reasoning that a
+     * paired app no longer has to introduce itself. The operator disagreed after
+     * living with it — the wordmark in its glow is what the screen looks like —
+     * so it is back in **both** states. What #126 actually won is kept: paired,
+     * the lockup switches to the compact tokens and the first-run claim goes, so
+     * the essentials still fit without scrolling. The height that ticket freed
+     * came from the tile grid, not from here.
+     */
+    private fun renderBrand(connected: Boolean) {
+        findViewById<View>(R.id.brand_block).visibility = View.VISIBLE
+        findViewById<View>(R.id.brand_claim).visibility =
+            if (connected) View.GONE else View.VISIBLE
+
+        val glow = if (connected) R.dimen.hero_glow_size_compact else R.dimen.hero_glow_size
+        val glowPx = resources.getDimensionPixelSize(glow)
+        findViewById<View>(R.id.brand_glow).apply {
+            layoutParams = layoutParams.also { it.width = glowPx; it.height = glowPx }
+        }
+
+        val hero = if (connected) R.dimen.text_hero_compact else R.dimen.text_hero
+        val heroPx = resources.getDimension(hero)
+        listOf(R.id.brand_word_start, R.id.brand_word_end).forEach {
+            findViewById<TextView>(it).setTextSize(TypedValue.COMPLEX_UNIT_PX, heroPx)
+        }
+
+        val figure =
+            if (connected) R.dimen.brand_figure_height_compact else R.dimen.brand_figure_height
+        findViewById<View>(R.id.brand_figure).apply {
+            layoutParams = layoutParams.also { it.height = resources.getDimensionPixelSize(figure) }
+        }
+
+        val top = if (connected) R.dimen.brand_lockup_top_compact else R.dimen.brand_lockup_top
+        setTopMargin(R.id.brand_lockup, resources.getDimensionPixelSize(top))
+        // With the claim gone the rule carries the gap to the status line itself.
+        val rule = if (connected) R.dimen.brand_rule_bottom_compact else R.dimen.brand_rule_bottom
+        setBottomMargin(R.id.brand_rule, resources.getDimensionPixelSize(rule))
+    }
+
+    private fun setTopMargin(id: Int, px: Int) {
+        val v = findViewById<View>(id)
+        (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+            it.topMargin = px
+            v.layoutParams = it
+        }
+    }
+
+    private fun setBottomMargin(id: Int, px: Int) {
+        val v = findViewById<View>(id)
+        (v.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+            it.bottomMargin = px
+            v.layoutParams = it
+        }
+    }
+
     private fun render() {
         val connected = ServerStore.isConfigured(this) && TokenStore.isPaired(this)
         findViewById<View>(R.id.connect_section).visibility = if (connected) View.GONE else View.VISIBLE
         findViewById<View>(R.id.connected_section).visibility = if (connected) View.VISIBLE else View.GONE
-        // The wordmark + glow + claim are the empty app introducing itself. Once
-        // paired they push the content the user came for off the screen (#126),
-        // and the status line takes over as the screen's header.
-        findViewById<View>(R.id.brand_block).visibility = if (connected) View.GONE else View.VISIBLE
+        renderBrand(connected)
         renderMoreWidgets()
 
         val urlField = findViewById<EditText>(R.id.server_url)
@@ -498,33 +591,22 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     /**
-     * "Zu Solaris" (#127) — the hub's primary action, and the only one that is
-     * not a setting: since #115 this switches the view inside the same app rather
-     * than opening anything elsewhere, which is why it is the filled button at
-     * the top and no longer a ghost sharing a footer row with "Abmelden".
+     * "Zu Solaris" (#127) — and since #129 **the** way into the surface, not just
+     * the fastest one.
+     *
+     * #115 made the app icon open the surface directly, which left this screen —
+     * widgets, Live-Updates, the diagnostics entry on the version line (#110),
+     * sign-out — reachable only by the back gesture. A way out is not a way in.
+     * The app icon leads here again; this button is the jump onward. What #115
+     * won is untouched: the surface still opens **inside** the app (no URL bar,
+     * no second login, one icon), it is simply no longer the start surface.
+     *
+     * Widgets, app-icon shortcuts and notifications keep going straight to their
+     * place in the surface — they reach [PwaLauncher] without passing through
+     * here, and nothing on this path reroutes them (`SurfaceLaunchTest`).
      */
     private fun openSolaris() {
         PwaLauncher.open(this, PwaLauncher.Routes.ROOT)
-    }
-
-    /**
-     * One icon instead of two (#115): a tap on the app icon opens the Solaris
-     * surface. The hub stays the launcher activity and stays underneath, so
-     * backing out of the surface lands on it (widgets, Live-Updates, diagnostics)
-     * and the next back leaves the app.
-     *
-     * Only on a fresh `ACTION_MAIN` start, and only when the install is actually
-     * paired — an unpaired or half-paired install must reach onboarding, which is
-     * this screen. A recreated instance (rotation, process restart) and every
-     * internally started intent (the surface's own fallback to onboarding, a
-     * pairing deep link) are left alone, which is also what keeps the two screens
-     * from bouncing off each other.
-     */
-    private fun openSurfaceOnLaunch(savedInstanceState: Bundle?) {
-        if (savedInstanceState != null) return
-        if (intent?.action != Intent.ACTION_MAIN) return
-        if (!ServerStore.isConfigured(this) || !TokenStore.isPaired(this)) return
-        startActivity(Intent(this, SolarisSurfaceActivity::class.java))
     }
 
     private fun logout() {

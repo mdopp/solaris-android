@@ -7,6 +7,9 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
@@ -37,14 +40,17 @@ import org.robolectric.shadows.ShadowDialog
  * pixels. Whether it now fits one display is the device test's half — but every
  * claim underneath it is checked here:
  *
- *  1. the paired hub drops the brand block and leads with the status line,
+ *  1. the paired hub keeps the brand block, in its compact presentation (#130),
+ *     and the status line right underneath it,
  *  2. the extra widget groups start folded and are one tap from being back —
  *     "Weitere Widgets" hides them, it never removes them,
  *  3. the way into Solaris is the first action and starts the in-app surface,
  *  4. the Live-Updates card says one short line; the explanation is in a dialog,
  *  5. the unpaired state keeps every onboarding path, and the diagnostics entry
  *     on the version line (#110) still opens,
- *  6. the shell and the surface paint their system bars from the same tokens.
+ *  6. the shell and the surface paint their system bars from the same tokens,
+ *  7. the content starts below the status bar (#130) — the screen is edge-to-edge
+ *     under targetSdk 35 and has to clear the insets itself.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -67,9 +73,8 @@ class HomeScreenTest {
     }
 
     /**
-     * The hub as reached from inside the app — a plain (non-`ACTION_MAIN`) start,
-     * because the app icon of a paired install goes to the surface (#115) and
-     * would only bounce this test forward.
+     * The hub — since #129 this is also what the app icon opens, paired or not, so
+     * a plain start and an `ACTION_MAIN` start reach the same screen.
      */
     private fun hub(): OnboardingHomeActivity =
         Robolectric.buildActivity(OnboardingHomeActivity::class.java).setup().get()
@@ -84,14 +89,29 @@ class HomeScreenTest {
 
     // --- 1. what the paired screen leads with ---------------------------------
 
+    /**
+     * #126 hid the wordmark once paired; the operator asked for it back (#130).
+     * It is back in both states — smaller when there is content under it, and
+     * without the first-run claim, so #126's prioritisation survives.
+     */
     @Test
-    fun thePairedHubDropsTheBrandBlockAndKeepsTheStatusLine() {
+    fun thePairedHubKeepsTheWordmarkButPresentsItSmaller() {
         paired()
         val a = hub()
         assertTrue(visible(a.findViewById(R.id.connected_section)))
         assertTrue(
-            "the wordmark + glow + claim are the empty app introducing itself",
-            !visible(a.findViewById(R.id.brand_block)),
+            "the wordmark in its glow is the screen's header in both states",
+            visible(a.findViewById(R.id.brand_block)),
+        )
+        assertTrue(
+            "the first-run claim has nothing to say to a paired install",
+            !visible(a.findViewById(R.id.brand_claim)),
+        )
+        val glow = a.findViewById<View>(R.id.brand_glow).layoutParams.height
+        assertEquals(a.resources.getDimensionPixelSize(R.dimen.hero_glow_size_compact), glow)
+        assertTrue(
+            "the paired lockup must be smaller than the first-run one",
+            glow < a.resources.getDimensionPixelSize(R.dimen.hero_glow_size),
         )
         assertEquals(
             "Verbunden mit chat.dopp.cloud",
@@ -193,6 +213,11 @@ class HomeScreenTest {
     fun theUnpairedScreenKeepsEveryOnboardingPath() {
         val a = hub()
         assertTrue(visible(a.findViewById(R.id.brand_block)))
+        assertTrue("the first run is the full presentation", visible(a.findViewById(R.id.brand_claim)))
+        assertEquals(
+            a.resources.getDimensionPixelSize(R.dimen.hero_glow_size),
+            a.findViewById<View>(R.id.brand_glow).layoutParams.height,
+        )
         assertTrue(visible(a.findViewById(R.id.connect_section)))
         assertTrue(!visible(a.findViewById(R.id.connected_section)))
         listOf(R.id.qr_scan_btn, R.id.server_url, R.id.connect_btn, R.id.request_access_btn)
@@ -237,5 +262,54 @@ class HomeScreenTest {
         assertEquals(theme, attrs.getColor(0, 0))
         assertEquals(bg, attrs.getColor(1, 0))
         attrs.recycle()
+    }
+
+    /**
+     * #130, the seam's second half: #127 took the web surface's backgrounds and
+     * left the accent on ServiceBay blue, so a blue primary button stood next to
+     * an orange surface. The shell follows the surface — accent included.
+     */
+    @Test
+    fun theShellAccentFollowsTheWebSurfaceRatherThanServiceBay() {
+        assertEquals(0xFFF97316.toInt(), ctx().getColor(R.color.solaris_accent))
+        assertEquals(0xFFEA580C.toInt(), ctx().getColor(R.color.solaris_accent_dark))
+    }
+
+    /**
+     * …and only there. A launcher icon, an app-icon shortcut glyph and a widget
+     * trigger tile are seen among foreign icons on the Android home screen, not
+     * beside the web surface, so they keep the brand blue — as does the brand
+     * lockup itself, which is that same icon's mark.
+     */
+    @Test
+    fun theHomeScreenSurfacesKeepTheBrandBlue() {
+        val blue = 0xFF3B82F6.toInt()
+        assertEquals(blue, ctx().getColor(R.color.solaris_brand_blue))
+        assertEquals(blue, ctx().getColor(R.color.ic_launcher_background))
+        assertEquals(blue, cloud.dopp.solaris.realtime.NOTIF_ACCENT)
+    }
+
+    // --- 7. below the status bar, not under it (#130) -------------------------
+
+    /**
+     * targetSdk 35 draws the window edge-to-edge, and nothing consumed the insets:
+     * the status line sat at the height of the system clock. The root adds the
+     * system-bar insets onto its own padding.
+     */
+    @Test
+    fun theContentStartsBelowTheSystemBars() {
+        paired()
+        val a = hub()
+        val root = a.findViewById<View>(R.id.home_root)
+        val before = root.paddingTop
+        val insets = WindowInsetsCompat.Builder()
+            .setInsets(
+                WindowInsetsCompat.Type.systemBars(),
+                Insets.of(0, 96, 0, 48),
+            )
+            .build()
+        ViewCompat.dispatchApplyWindowInsets(root, insets)
+        assertEquals(before + 96, root.paddingTop)
+        assertEquals(48, root.paddingBottom)
     }
 }

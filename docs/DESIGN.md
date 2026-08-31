@@ -2,16 +2,25 @@
 
 Der visuelle Standard für App-Screens **und** Widgets, damit alles wie *ein*
 Produkt wirkt. Neue UI/Widgets richten sich hiernach; Abweichungen sind bewusst
-zu begründen. Spiegelt das Solaris-Web-Frontend + das ServiceBay-Blau.
+zu begründen. Spiegelt das Solaris-Web-Frontend.
+
+> **Zwei Akzente, nach Nachbarschaft getrennt (#130).** Der App-Rumpf wird
+> *neben* der Weboberflaeche gesehen (seit #115 oeffnet sie in der App), also
+> folgt er ihr — Akzent **orange**. Launcher-Icon, App-Icon-Shortcuts, Widgets
+> und Benachrichtigungen werden *neben fremden* Icons gesehen, nicht neben der
+> Weboberflaeche; sie behalten das **Markenblau**. Der Markenblock (Wortmarke im
+> Glow) ist dieselbe Marke wie das Icon und bleibt ebenfalls blau.
 
 ## Palette (`res/values/colors.xml`)
 | Rolle | Token | Hex |
 |---|---|---|
 | Hintergrund | `solaris_bg` | `#070709` |
 | Erhöht (Statusbar/Nav) | `solaris_bg_elevated` | `#0C0C0E` |
-| **Akzent (Primär)** | `solaris_accent` | `#3B82F6` (ServiceBay-Blau) |
-| Akzent gedrückt | `solaris_accent_dark` | `#2563EB` |
-| Akzent-Tint (12 %) | `solaris_accent_faint` | `#1F3B82F6` |
+| **Akzent (Primär, In-App)** | `solaris_accent` | `#F97316` (Solaris-Orange) |
+| Akzent gedrückt | `solaris_accent_dark` | `#EA580C` |
+| Akzent-Tint (12 %) | `solaris_accent_faint` | `#1FF97316` |
+| **Markenblau** (Icon/Shortcuts/Widgets/Glow) | `solaris_brand_blue` | `#3B82F6` |
+| Markenblau gedrückt | `solaris_brand_blue_dark` | `#2563EB` |
 | Text | `solaris_text` | `#F2F2F5` |
 | Text gedämpft | `solaris_text_muted` | `#9AA0AE` |
 | Text schwach | `solaris_text_faint` | `#6B7280` |
@@ -22,13 +31,17 @@ zu begründen. Spiegelt das Solaris-Web-Frontend + das ServiceBay-Blau.
 **Domänen-Akzente** (Geräte-Widgets, aktiver Zustand): Licht `#FFC107`,
 Cover/Jalousie `#7E9CFF`, Schalter `#66BB6A`, Klima `#FF8A65`.
 
-> Regel: **UI-Akzent ist immer `solaris_accent` (#3B82F6).** `#7E9CFF` ist die
+> Regel: **In-App-Akzent ist immer `solaris_accent`, Akzent auf dem
+> Android-Startbildschirm immer `solaris_brand_blue`.** `#7E9CFF` ist die
 > *Batterie/Cover*-Farbe — nicht als generischer Akzent verwenden.
 
 ## Tokens (`res/values/dimens.xml`)
 - Radien: `radius_sm 12` (Felder/Chips/Kacheln) · `radius_md 16` (Buttons) · `radius_lg 20` (Cards).
 - Abstände: `space_xs 8 · sm 12 · md 16 · lg 24 · xl 32`; Screen-Gutter 24dp.
 - Typo: `text_hero 40 · headline 22 · title 17 · body 15 · label 13 · tile 12`.
+- Markenblock: `brand_lockup_top · brand_figure_height · brand_rule_bottom ·
+  hero_glow_size · text_hero` (Erstauftritt) und dieselben mit `_compact`
+  (gekoppelt, #130) — `OnboardingHomeActivity.renderBrand` schaltet um.
 - Text-Styles: `Text.Solaris.Hero/Headline/Title/Body/Label/Tile` (`res/values/themes.xml`).
 
 ## Widgets — allgemein
@@ -44,7 +57,7 @@ Kacheln, die nur eine Aktion auslösen, folgen **einem** Muster:
 
 1. **Aufbau:** vertikal, zentriert — **Icon oben, einzeiliges Label darunter**. Root
    `widget_bg`, Padding `space_sm` (12dp).
-2. **Icon:** gefüllter **Solaris-Akzent-Kreis** (`solaris_accent`, #3B82F6) mit
+2. **Icon:** gefüllter **Markenblau-Kreis** (`tile_accent_circle`, #3B82F6) mit
    weißem Glyph — signalisiert „antippen". **Gleiche Größe** überall (Kreis **52dp**,
    Glyph-Padding 12dp), **zentriert**. Kein flaches getöntes Glyph, keine
    abweichende Farbe (`#7E9CFF` etc.).

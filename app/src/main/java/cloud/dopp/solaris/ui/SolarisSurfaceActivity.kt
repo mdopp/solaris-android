@@ -11,9 +11,10 @@ import cloud.dopp.solaris.widget.PwaLauncher
 
 /**
  * The screen that **is** the Solaris surface (#115): it hosts the Trusted Web
- * Activity showing the user's own server, so a tap on the app icon — or on a
- * widget, a shortcut, a notification — lands in the chat instead of in a Custom
- * Tab beside a separately installed PWA.
+ * Activity showing the user's own server, so a tap on a widget, a shortcut, a
+ * notification — or on "Zu Solaris" on the hub — lands in the chat instead of in
+ * a Custom Tab beside a separately installed PWA. The **app icon** goes to the
+ * hub, not here (#129): the surface has a way out, the hub needed a way in.
  *
  * It draws nothing itself (the window background is the splash), because a TWA
  * is rendered by the browser inside *this* task. The activity stays alive
@@ -26,8 +27,9 @@ import cloud.dopp.solaris.widget.PwaLauncher
  *    there is no surface, so the tap goes to [OnboardingHomeActivity].
  *  - **Back is not a dead end.** The browser walks the web history first; when it
  *    is exhausted the browser finishes, this host comes back, and it finishes
- *    itself — so the user leaves the app (or returns to the hub that opened it)
- *    instead of landing on a blank screen.
+ *    itself — so the user returns to the hub that opened it (or, for a widget tap
+ *    into an app task that did not exist yet, leaves the app) instead of landing
+ *    on a blank screen.
  *  - **Fallback stays the Custom Tab** (`twaManifest.fallbackType: 'customtabs'`)
  *    when no installed browser can host a TWA, when the binding fails, or when it
  *    simply doesn't answer.

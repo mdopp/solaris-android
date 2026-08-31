@@ -3,12 +3,14 @@
     <!-- Legacy Google-template shortcut background (kept for shortcut drawables). -->
     <color name="shortcut_background">#F5F5F5</color>
 
-    <!-- Adaptive launcher-icon background: solid ServiceBay blue (blue-500). -->
-    <color name="ic_launcher_background">#3B82F6</color>
+    <!-- Adaptive launcher-icon background: the brand blue. It stays blue while the
+         in-app accent follows the web surface to orange (#130) — the icon is seen
+         on the home screen among foreign icons, and the orange figure needs the
+         blue field to read at all. -->
+    <color name="ic_launcher_background">@color/solaris_brand_blue</color>
 
     <!-- ── Solaris palette ─────────────────────────────────────────────────
-         Mirrors the Solaris web frontend + the ServiceBay blue used across
-         the widgets. Backgrounds are the same deep near-black as the splash
+         Mirrors the Solaris web frontend. Backgrounds are the same deep near-black as the splash
          (twa-manifest backgroundColor #070709 / themeColor #0C0C0E). -->
     <color name="solaris_bg">#070709</color>            <!-- window background -->
     <color name="solaris_bg_elevated">#0C0C0E</color>   <!-- status/nav bar -->
@@ -34,9 +36,32 @@
     <color name="solaris_surface_bg">#070709</color>    <!-- web background_color -->
     <color name="solaris_surface_theme">#0C0C0E</color> <!-- web theme_color -->
 
-    <color name="solaris_accent">#3B82F6</color>        <!-- ServiceBay blue-500 -->
-    <color name="solaris_accent_dark">#2563EB</color>   <!-- blue-600 (pressed) -->
-    <color name="solaris_accent_faint">#1F3B82F6</color><!-- 12% blue tint -->
+    <!-- ── The accent, second half of the seam (#127 → #130) ───────────────
+         #127 carried the web surface's *backgrounds* over and left the accent
+         where it was: ServiceBay blue. On the device that showed as a blue
+         primary button standing next to an orange surface — the very break the
+         ticket set out to remove. The direction is unchanged (the shell follows
+         the web, never the other way round), so the accent follows too.
+
+         The value is not invented: it is the orange of the Solaris figure in the
+         app's own brand mark (`ic_solaris_figure` / `ic_maskable` run
+         #F97316→#FBAF21), which is the same mark the web surface accents from —
+         send button, tab bar, input border, wordmark. -->
+    <color name="solaris_accent">#F97316</color>        <!-- Solaris orange-500 -->
+    <color name="solaris_accent_dark">#EA580C</color>   <!-- orange-600 (pressed) -->
+    <color name="solaris_accent_faint">#1FF97316</color><!-- 12% orange tint -->
+
+    <!-- ── What does NOT follow the surface (#130) ──────────────────────────
+         The seam argument only holds where the shell is *seen next to* the web
+         surface. Three things are not: the launcher icon and the app-icon
+         shortcut glyphs sit on the Android home screen among foreign icons, the
+         notification sits in the shade among foreign notifications, and the
+         brand lockup IS the icon's mark — the blue field with the orange figure
+         is what makes it findable, and orange-on-orange would swallow the
+         figure. They keep the brand blue, and it lives here rather than as a
+         copy of the old accent value so the split is visible. -->
+    <color name="solaris_brand_blue">#3B82F6</color>      <!-- ServiceBay blue-500 -->
+    <color name="solaris_brand_blue_dark">#2563EB</color> <!-- blue-600 (pressed) -->
 
     <color name="solaris_text">#F2F2F5</color>         <!-- primary text -->
     <color name="solaris_text_muted">#9AA0AE</color>   <!-- secondary/hint text -->

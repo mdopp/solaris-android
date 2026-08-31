@@ -139,8 +139,9 @@
              https://chat.dopp.cloud: an exported (let alone autoVerify'd) filter
              would make the app a system-wide handler for that address, and any
              app on the phone could push a URL into the signed-in household view.
-             The surface is opened by the app itself — launcher, widgets,
-             shortcuts, notifications — and by nothing else. -->
+             The surface is opened by the app itself — the hub's "Zu Solaris",
+             widgets, shortcuts, notifications — and by nothing else. Since #129
+             the launcher entry is OnboardingHomeActivity again. -->
         <activity
             android:name=".ui.SolarisSurfaceActivity"
             android:exported="false"
