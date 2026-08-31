@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.provider.Settings
@@ -196,6 +197,13 @@ class OnboardingHomeActivity : AppCompatActivity() {
      * the lockup switches to the compact tokens and the first-run claim goes, so
      * the essentials still fit without scrolling. The height that ticket freed
      * came from the tile grid, not from here.
+     *
+     * The compact size is **one scale factor**, not a second set of hand-picked
+     * values (#132). Halo and wordmark used to be shrunk independently (190→112dp
+     * against 40→26sp), so the mark filled the small circle more than the large
+     * one and looked crammed into it. Everything inside the lockup now follows
+     * the halo's own factor, which is what keeps the two presentations reading
+     * as the same mark at two sizes.
      */
     private fun renderBrand(connected: Boolean) {
         findViewById<View>(R.id.brand_block).visibility = View.VISIBLE
@@ -207,17 +215,16 @@ class OnboardingHomeActivity : AppCompatActivity() {
         findViewById<View>(R.id.brand_glow).apply {
             layoutParams = layoutParams.also { it.width = glowPx; it.height = glowPx }
         }
+        val scale = glowPx / resources.getDimension(R.dimen.hero_glow_size)
 
-        val hero = if (connected) R.dimen.text_hero_compact else R.dimen.text_hero
-        val heroPx = resources.getDimension(hero)
+        val heroPx = resources.getDimension(R.dimen.text_hero) * scale
         listOf(R.id.brand_word_start, R.id.brand_word_end).forEach {
             findViewById<TextView>(it).setTextSize(TypedValue.COMPLEX_UNIT_PX, heroPx)
         }
 
-        val figure =
-            if (connected) R.dimen.brand_figure_height_compact else R.dimen.brand_figure_height
+        val figurePx = resources.getDimension(R.dimen.brand_figure_height) * scale
         findViewById<View>(R.id.brand_figure).apply {
-            layoutParams = layoutParams.also { it.height = resources.getDimensionPixelSize(figure) }
+            layoutParams = layoutParams.also { it.height = Math.round(figurePx) }
         }
 
         val top = if (connected) R.dimen.brand_lockup_top_compact else R.dimen.brand_lockup_top
@@ -247,6 +254,12 @@ class OnboardingHomeActivity : AppCompatActivity() {
         val connected = ServerStore.isConfigured(this) && TokenStore.isPaired(this)
         findViewById<View>(R.id.connect_section).visibility = if (connected) View.GONE else View.VISIBLE
         findViewById<View>(R.id.connected_section).visibility = if (connected) View.VISIBLE else View.GONE
+        // Sign out shares the footer row with the version line (#132), but the row
+        // itself belongs to both states — an unpaired install has nothing to sign
+        // out of, and the version line then owns the row and re-centres.
+        findViewById<View>(R.id.logout_btn).visibility = if (connected) View.VISIBLE else View.GONE
+        findViewById<TextView>(R.id.app_version).gravity =
+            if (connected) Gravity.END or Gravity.CENTER_VERTICAL else Gravity.CENTER
         renderBrand(connected)
         renderMoreWidgets()
 
