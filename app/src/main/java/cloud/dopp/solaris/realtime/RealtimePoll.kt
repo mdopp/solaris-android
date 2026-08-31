@@ -99,6 +99,11 @@ object RealtimePoll {
                 .putInt(K_LAST_UPDATES, home.pendingUpdates)
                 .apply()
         }
+        // Household notices, timers and reminders (#116) live on the stream, not on
+        // a count — so the pass listens briefly instead of asking. The server keeps
+        // no backlog, so this catches what arrives while the phone is awake here and
+        // nothing older; see NoticeCatchUp for why that is the ceiling.
+        runCatching { NoticeCatchUp.drain(ctx) }
         schedule(ctx) // re-arm the next pass
     }
 
