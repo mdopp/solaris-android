@@ -79,8 +79,11 @@ class ShortcutIconTest {
             val text = xml.readText()
             assertTrue("$name must be an adaptive icon, else the launcher wraps it in white",
                 text.contains("<adaptive-icon"))
-            assertTrue("$name needs an opaque background (#99)",
-                text.contains("""<background android:drawable="@color/solaris_accent""""))
+            // The brand blue, not the shell accent: a shortcut badge is drawn in
+            // the launcher among foreign icons, so it did not follow the accent
+            // to orange when the in-app shell did (#130).
+            assertTrue("$name needs an opaque brand-blue background (#99/#130)",
+                text.contains("""<background android:drawable="@color/solaris_brand_blue""""))
             // The outer third of the canvas is the launcher's to crop.
             val inset = Regex("""android:inset="(\d+)%"""").find(text)
             assertTrue("$name must inset its glyph into the mask's safe zone", inset != null)
@@ -97,8 +100,8 @@ class ShortcutIconTest {
             val xml = File(mainDir, "res/drawable/ic_shortcut_$name.xml")
             assertTrue("missing res/drawable/ic_shortcut_$name.xml", xml.isFile)
             val text = xml.readText()
-            assertTrue("$name fallback needs the opaque Solaris field",
-                text.contains("""android:color="@color/solaris_accent""""))
+            assertTrue("$name fallback needs the opaque brand-blue field",
+                text.contains("""android:color="@color/solaris_brand_blue""""))
             assertTrue("$name fallback must inset the glyph, not bleed it", text.contains("android:left="))
         }
     }

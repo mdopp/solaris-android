@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- targetSdk 35 draws every window edge-to-edge, so this screen's own top
+     padding is NOT enough to clear the status bar — the status line ended up at
+     the height of the system clock (#130). The Activity adds the system-bar
+     insets onto the root's padding (`applySystemBarInsets`), which is why the
+     root carries an id; `android:statusBarColor` alone is a no-op on API 35. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/home_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/solaris_bg"
@@ -16,12 +22,18 @@
         android:paddingTop="@dimen/space_lg"
         android:paddingBottom="@dimen/space_xl">
 
-        <!-- ── Brand block — the first-run moment (#37), shown while UNPAIRED ──
-             The "Solar[figure]s" wordmark floating in a soft blue glow is what an
-             empty app has to say for itself. Once the install is paired it is
-             pure decoration in front of the content the user came for (#126), so
-             the Activity hides the whole block and the status line becomes the
-             screen's header. -->
+        <!-- ── Brand block — the "Solar[figure]s" wordmark in its blue glow ──────
+             The first-run moment (#37), and the screen's header in BOTH states.
+             #126 hid it once paired; the operator's device feedback (#130) took
+             that back — the wordmark in its glow stays visible. What it does not
+             stay is full size: paired, the Activity switches the lockup to the
+             compact tokens below and drops the claim, so the height #126 won for
+             the content is kept (it came from the tiles anyway).
+
+             The glow stays BLUE while the shell's accent follows the web surface
+             to orange (#130): this lockup *is* the brand mark, the same one on
+             the launcher icon, and the blue field is exactly what the operator
+             asked to have back. -->
         <LinearLayout
             android:id="@+id/brand_block"
             android:layout_width="match_parent"
@@ -29,11 +41,13 @@
             android:orientation="vertical">
 
             <FrameLayout
+                android:id="@+id/brand_lockup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp">
+                android:layout_marginTop="@dimen/brand_lockup_top">
 
                 <ImageView
+                    android:id="@+id/brand_glow"
                     android:layout_width="@dimen/hero_glow_size"
                     android:layout_height="@dimen/hero_glow_size"
                     android:layout_gravity="center"
@@ -50,14 +64,16 @@
                     android:layout_gravity="center">
 
                     <TextView
+                        android:id="@+id/brand_word_start"
                         style="@style/Text.Solaris.Hero"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Solar" />
 
                     <ImageView
+                        android:id="@+id/brand_figure"
                         android:layout_width="wrap_content"
-                        android:layout_height="39dp"
+                        android:layout_height="@dimen/brand_figure_height"
                         android:adjustViewBounds="true"
                         android:layout_marginStart="2dp"
                         android:layout_marginEnd="1dp"
@@ -66,6 +82,7 @@
                         android:contentDescription="@null" />
 
                     <TextView
+                        android:id="@+id/brand_word_end"
                         style="@style/Text.Solaris.Hero"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -73,17 +90,20 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Accent underline: a short ServiceBay-blue rule, centred under the
-                 wordmark, tying the lockup to the brand colour. -->
+            <!-- Accent underline: a short rule centred under the wordmark. It is
+                 part of the brand lockup, so it keeps the brand blue rather than
+                 following the shell accent (#130). -->
             <View
+                android:id="@+id/brand_rule"
                 android:layout_width="52dp"
                 android:layout_height="3dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="10dp"
-                android:layout_marginBottom="14dp"
-                android:background="@color/solaris_accent" />
+                android:layout_marginBottom="@dimen/brand_rule_bottom"
+                android:background="@color/solaris_brand_blue" />
 
             <TextView
+                android:id="@+id/brand_claim"
                 style="@style/Text.Solaris.Body"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

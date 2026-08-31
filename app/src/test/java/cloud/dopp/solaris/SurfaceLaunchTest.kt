@@ -37,8 +37,11 @@ import org.robolectric.annotation.Config
  * 2. **The unpaired state leads to onboarding**, from both directions: a widget
  *    tap without a server, and the surface activity started without one. Never an
  *    error page.
- * 3. **The app icon opens the surface** when the install is paired, and stays on
- *    the onboarding hub when it is not.
+ * 3. **The app icon opens the hub**, paired or not (#129). #115 sent it straight
+ *    to the surface, which left the hub — widgets, Live-Updates, the diagnostics
+ *    entry, sign-out — reachable only by backing out of the surface. What must
+ *    NOT change with it: a widget, a shortcut or a notification still lands
+ *    directly at its place in the surface, never rerouted through the hub.
  * 4. **The fallback still works** — with no TWA-capable browser installed (which
  *    is the case here on the JVM), the surface falls back to the Custom Tab
  *    instead of leaving the tap on a blank screen.
@@ -201,14 +204,22 @@ class SurfaceLaunchTest {
         )
     }
 
-    // --- 5. the app icon -------------------------------------------------------
+    // --- 5. the app icon (#129) ------------------------------------------------
 
+    /**
+     * The app icon lands on the hub even when the install is paired. That is the
+     * whole of #129: the surface can be left by the back gesture, but the hub had
+     * no way *in* while the icon skipped past it.
+     */
     @Test
-    fun theAppIconOpensTheSurfaceWhenPaired() {
+    fun theAppIconOpensTheHubEvenWhenPaired() {
         paired()
         val main = Intent(Intent.ACTION_MAIN).setClass(ctx(), OnboardingHomeActivity::class.java)
         Robolectric.buildActivity(OnboardingHomeActivity::class.java, main).setup()
-        assertNotNull(startedOn(SolarisSurfaceActivity::class.java))
+        assertNull(
+            "the app icon must not skip past the hub",
+            startedOn(SolarisSurfaceActivity::class.java),
+        )
     }
 
     /** A half-paired install (server set, no device token) still needs onboarding. */
@@ -220,11 +231,54 @@ class SurfaceLaunchTest {
         assertNull(startedOn(SolarisSurfaceActivity::class.java))
     }
 
-    /** The surface's own bounce back to onboarding must not bounce forward again. */
+    /** A hub started from inside the app opens nothing on its own either. */
     @Test
-    fun anInternallyStartedHubDoesNotReopenTheSurface() {
+    fun anInternallyStartedHubDoesNotOpenTheSurface() {
         paired()
         Robolectric.buildActivity(OnboardingHomeActivity::class.java).setup()
         assertNull(startedOn(SolarisSurfaceActivity::class.java))
+    }
+
+    // --- 6. the deep links the start change must not reroute (#129) ------------
+
+    /**
+     * The place #129 could go wrong: now that the hub is the start surface again,
+     * a widget tap must still land **directly** on its target in the surface — the
+     * hub must not appear in front of it, and the URL must be the widget's own,
+     * not the root.
+     */
+    @Test
+    fun aWidgetDeepLinkStillLandsDirectlyInTheSurface() {
+        paired()
+        PwaLauncher.open(ctx(), PwaLauncher.Routes.device("light.kitchen"))
+        val i = startedOn(SolarisSurfaceActivity::class.java)
+        assertNotNull("the widget tap must reach the surface itself", i)
+        assertEquals(
+            "$base/#/p/device/light.kitchen",
+            i!!.getStringExtra(SolarisSurface.EXTRA_URL),
+        )
+        assertNull(
+            "the hub must not sit in front of a deep link",
+            startedOn(OnboardingHomeActivity::class.java),
+        )
+    }
+
+    /** Same for an app-icon shortcut, which travels through the trampoline (#97). */
+    @Test
+    fun aShortcutDeepLinkStillLandsDirectlyInTheSurface() {
+        paired()
+        val i = Intent(ctx(), cloud.dopp.solaris.widget.PwaTrampolineActivity::class.java)
+            .putExtra(
+                cloud.dopp.solaris.widget.PwaTrampolineActivity.EXTRA_PATH,
+                PwaLauncher.Routes.ENERGY,
+            )
+        Robolectric.buildActivity(
+            cloud.dopp.solaris.widget.PwaTrampolineActivity::class.java,
+            i,
+        ).setup()
+        val surface = startedOn(SolarisSurfaceActivity::class.java)
+        assertNotNull(surface)
+        assertEquals("$base/#/p/energy", surface!!.getStringExtra(SolarisSurface.EXTRA_URL))
+        assertNull(startedOn(OnboardingHomeActivity::class.java))
     }
 }

@@ -30,9 +30,14 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Solaris blue, the accent every notification of this package carries (#88).
+ * The brand blue, the accent every notification of this package carries (#88).
  * Android masks the small icon to a white silhouette, so the brand colour can
  * only come back through [androidx.core.app.NotificationCompat.Builder.setColor].
+ *
+ * Deliberately **not** moved with the shell accent (#130): a notification is seen
+ * in the shade among foreign notifications, not next to the web surface, so the
+ * seam argument that turned the in-app accent orange does not reach it. Mirrors
+ * `@color/solaris_brand_blue`.
  */
 internal const val NOTIF_ACCENT = 0xFF3B82F6.toInt()
 
