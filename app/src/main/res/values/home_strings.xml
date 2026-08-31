@@ -25,13 +25,20 @@
     <string name="home_request_access_intro">Noch keinen Zugang?</string>
     <string name="home_request_access">Zugang anfordern</string>
     <string name="home_status_label">Status</string>
-    <string name="home_connected">✓ Verbunden mit %1$s</string>
+    <!-- The status dot already carries the state — a second ✓ in the text said
+         it twice (#126). -->
+    <string name="home_connected">Verbunden mit %1$s</string>
     <string name="home_status_connected">Verbunden</string>
 
     <!-- Quick-add widget grid (#37): now THE primary add surface — a tap on a
          tile pins that widget type (the energy tile opens a variant chooser). -->
     <string name="home_widgets_teaser_title">Widget hinzufügen</string>
-    <string name="home_widgets_teaser_hint">Tippe einen Typ, um ihn auf dem Startbildschirm hinzuzufügen.</string>
+    <string name="home_widgets_teaser_hint">Tippen legt es auf den Startbildschirm.</string>
+    <!-- Progressive disclosure (#126): ServiceBay- und Tool-Widgets liegen hinter
+         diesem Schalter, damit die erste Seite fünf Kacheln zeigt statt einem
+         Dutzend. Versteckt, nicht entfernt. -->
+    <string name="home_more_widgets">Weitere Widgets</string>
+    <string name="home_less_widgets">Weniger anzeigen</string>
 
     <!-- Short labels for the tappable quick-add tiles. -->
     <string name="home_tile_device">Gerät</string>
@@ -62,11 +69,13 @@
 
     <!-- Step 2 (#11): install the PWA for chat & notifications. -->
     <string name="home_install_pwa_title">Solaris-App installieren</string>
-    <string name="home_install_pwa_hint">Für Chat &amp; Benachrichtigungen — im Browser öffnen und „Zum Startbildschirm hinzufügen".</string>
+    <string name="home_install_pwa_hint">Für Web-Benachrichtigungen: im Browser öffnen und „Zum Startbildschirm hinzufügen".</string>
     <string name="home_install_pwa">Installieren</string>
     <string name="home_install_pwa_dismiss">Ausblenden</string>
 
-    <string name="home_open">Solaris öffnen</string>
+    <!-- Seit #115 öffnet die Oberfläche IN dieser App — „öffnen" versprach einen
+         Sprung nach draußen, den es nicht mehr gibt (#127). -->
+    <string name="home_open">Zu Solaris</string>
     <string name="home_logout">Abmelden</string>
     <string name="home_logged_out">Abgemeldet.</string>
     <string name="home_no_browser">Kein Browser gefunden.</string>
@@ -83,7 +92,11 @@
 
     <!-- Live-Updates (#48): realtime SSE toggle + foreground-service notification. -->
     <string name="home_realtime_title">Live-Updates</string>
-    <string name="home_realtime_hint">Direkte Verbindung zu Solaris: weckt Geräte-Widgets und zeigt Freigabe-Meldungen — auch im Hintergrund. Dauerhafte Benachrichtigung, etwas mehr Akku.</string>
+    <!-- Kurz, was es tut (#126); das Warum steht im Info-Dialog. -->
+    <string name="home_realtime_hint">Widgets und Freigaben melden sich sofort.</string>
+    <string name="home_realtime_info_cd">Was Live-Updates bedeuten</string>
+    <string name="home_realtime_info">Solaris hält im Hintergrund eine direkte Verbindung zu deinem Server: Geräte-Widgets aktualisieren sich sofort, und Freigabe-Anfragen melden sich, sobald sie entstehen.\n\nAndroid verlangt dafür eine dauerhafte Benachrichtigung — sie zeigt nur an, dass die Verbindung steht. Der Akkuverbrauch steigt dadurch etwas.\n\nBei ausgeschaltetem Bildschirm wird die Verbindung geschont; wie oft dann nachgesehen wird, stellst du in der Zeile „Im Ruhemodus" ein.</string>
+    <string name="home_info_ok">Verstanden</string>
     <string name="realtime_channel_name">Live-Updates</string>
     <string name="realtime_channel_desc">Hält die Verbindung für sofortige Widget-Aktualisierungen.</string>
     <string name="realtime_notif_title">Live-Updates aktiv</string>

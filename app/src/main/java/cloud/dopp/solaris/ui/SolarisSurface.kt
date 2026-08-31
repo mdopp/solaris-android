@@ -181,15 +181,21 @@ object SolarisSurface {
     }
 
     /**
-     * Status/navigation bar colours for the surface — the `twaManifest` theme
-     * values (`themeColor`, `navigationColor`, `navigationDividerColor`), which
-     * have sat in `app/build.gradle` as unused `resValue`s since the TWA was
-     * retired and are back in service here.
+     * Status/navigation bar colours for the surface (#127).
+     *
+     * These used to be read from the Bubblewrap `twaManifest` block's generated
+     * `resValue`s in `app/build.gradle` — a place nobody edits and no designer
+     * looks at, which is how the shell and the surface could drift apart in the
+     * first place. They now come from the two `solaris_surface_*` tokens, the
+     * same ones `Theme.Solaris` paints the shell's bars with, so the frame around
+     * the content is provably the same colour before and after the switch. The
+     * divider is the navigation colour itself: a third colour in a 1px line is
+     * exactly the kind of seam this ticket is about.
      */
-    private fun colors(ctx: Context): CustomTabColorSchemeParams =
+    fun colors(ctx: Context): CustomTabColorSchemeParams =
         CustomTabColorSchemeParams.Builder()
-            .setToolbarColor(ContextCompat.getColor(ctx, R.color.colorPrimary))
-            .setNavigationBarColor(ContextCompat.getColor(ctx, R.color.navigationColor))
-            .setNavigationBarDividerColor(ContextCompat.getColor(ctx, R.color.navigationDividerColor))
+            .setToolbarColor(ContextCompat.getColor(ctx, R.color.solaris_surface_theme))
+            .setNavigationBarColor(ContextCompat.getColor(ctx, R.color.solaris_surface_bg))
+            .setNavigationBarDividerColor(ContextCompat.getColor(ctx, R.color.solaris_surface_bg))
             .build()
 }

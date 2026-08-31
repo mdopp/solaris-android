@@ -73,4 +73,24 @@ Kacheln, die nur eine Aktion auslösen, folgen **einem** Muster:
 ## App-Screens
 Siehe Home-Screen (`activity_home.xml`): Hero mit Wortmark „Solar[Figur]s" +
 Akzent-Glow, Status-Pill, ein filled Primär, Ghost-Sekundäraktionen. Konsistente
-Radien/Abstände/Typo aus den Tokens; runde Karten `card_solaris`.
+Radien/Abstände/Typo aus den Tokens; runde Karten `card_solaris`, alle mit
+demselben Innenabstand `card_padding`.
+
+**Reihenfolge ist Priorität (#126).** Der ungekoppelte Zustand zeigt den
+Markenauftritt — eine leere App muss sich vorstellen. Der **gekoppelte** Zustand
+lässt ihn weg und beginnt mit der Statuszeile (volle Spaltenbreite wie alles
+andere), darunter der **filled Primär in die Solaris-Oberfläche**, dann die
+Dinge, die der Hub selbst besitzt. Was selten gebraucht wird, steht hinter einer
+Aufklappzeile („Weitere Widgets") oder als stiller Link unten — **versteckt, nie
+entfernt**. Karten sagen in **einer** Zeile, was etwas tut; das Warum steht hinter
+einem Info-Symbol, nicht im Fließtext auf dem Bildschirm.
+
+## Die Naht zur Weboberfläche (#127)
+Seit #115 öffnet die Solaris-Weboberfläche **in** dieser App. Der native Rumpf
+nähert sich ihr an, **nie umgekehrt** — sie ist das Gesicht des Produkts, wird
+auch am Rechner gesehen und liegt in einem anderen Repo. Die beiden Werte, die
+sie für sich selbst angibt (`theme_color` / `background_color`), stehen als
+`solaris_surface_theme` / `solaris_surface_bg` in `colors.xml`; **Status- und
+Navigationsleiste des Rumpfs und die der Trusted Web Activity kommen beide von
+dort**, damit sich der Rahmen beim Wechsel nicht verfärbt. Ändert sich die
+Weboberfläche, sind diese zwei Zeilen die ganze Änderung.
