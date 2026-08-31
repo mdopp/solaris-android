@@ -236,19 +236,7 @@
                     android:ellipsize="middle" />
             </LinearLayout>
 
-            <!-- 2. The way into Solaris (#127). Since #115 the surface opens *in*
-                 this app, so this is a view switch, not a jump out — and it is the
-                 product's main surface, not a side feature next to Live-Updates.
-                 Therefore: the filled primary, directly under the status line, and
-                 no longer a ghost button sharing a footer row with "Abmelden". -->
-            <Button
-                android:id="@+id/open_btn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_md"
-                android:text="@string/home_open" />
-
-            <!-- 3. Live-Updates (#48): opt-in realtime SSE. One short line says
+            <!-- 2. Live-Updates (#48): opt-in realtime SSE. One short line says
                  what it does; the why (persistent notification, battery, idle
                  interval) sits behind the info icon (#126). -->
             <LinearLayout
@@ -323,7 +311,7 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- 4. "Widget hinzufügen": tapping a tile pins that widget type (the
+            <!-- 3. "Widget hinzufügen": tapping a tile pins that widget type (the
                  energy tile opens a Jetzt/Verlauf/Gesamt chooser). The five
                  household types are what almost every user wants; ServiceBay and
                  the catalog-driven tools sit behind "Weitere Widgets" (#126) —
@@ -651,7 +639,7 @@
                     android:background="?attr/selectableItemBackground" />
             </LinearLayout>
 
-            <!-- 5. Install-PWA card (#11): dismissible; below the fold on purpose
+            <!-- 4. Install-PWA card (#11): dismissible; below the fold on purpose
                  — the app itself is the surface since #115, this is only about the
                  browser's Web Push. IDs preserved. -->
             <LinearLayout
@@ -711,39 +699,68 @@
                     android:text="@string/home_install_pwa" />
             </LinearLayout>
 
-            <!-- 6. Sign out — rare, and the opposite of what the screen is for, so
-                 it steps back to a quiet link beside the version line (#126). -->
+            <!-- 5. The way into Solaris, now at the foot of the screen (#132).
+                 #127 pulled it up under the status line as the filled, full-width
+                 primary; on the device that made it the loudest thing here,
+                 competing with the wordmark right above it. It moves down beside
+                 "Abmelden" — but it does NOT become the footer text link that
+                 #127 was right to abolish: it stays the filled accent button and
+                 only loses its full width, because it remains the entry to the
+                 product's main surface and has to stay distinguishable from the
+                 quiet sign-out link under it. -->
+            <Button
+                android:id="@+id/open_btn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:minWidth="200dp"
+                android:layout_marginTop="@dimen/space_lg"
+                android:text="@string/home_open" />
+        </LinearLayout>
+
+        <!-- Footer: sign out and the installed version — with it the way into the
+             diagnostics screen (#110) — share ONE row (#132). Both are secondary
+             and neither needs a line of its own. The row sits outside the paired
+             section because the version line belongs to both states; `render`
+             hides the sign-out link alone. -->
+        <LinearLayout
+            android:id="@+id/home_footer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:baselineAligned="false"
+            android:layout_marginTop="@dimen/space_md">
+
             <TextView
                 android:id="@+id/logout_btn"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_lg"
                 android:paddingTop="@dimen/space_sm"
                 android:paddingBottom="@dimen/space_sm"
-                android:gravity="center"
+                android:gravity="start"
                 android:text="@string/home_logout"
                 android:textColor="@color/solaris_text_muted"
                 android:textSize="@dimen/text_body"
                 android:clickable="true"
                 android:focusable="true"
                 android:background="?attr/selectableItemBackground" />
-        </LinearLayout>
 
-        <!-- Installed app version — and the way into the diagnostics screen
-             (#110), which is what makes the notification path checkable. -->
-        <TextView
-            android:id="@+id/app_version"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_md"
-            android:paddingTop="@dimen/space_xs"
-            android:paddingBottom="@dimen/space_xs"
-            android:gravity="center"
-            android:text="@string/app_version_placeholder"
-            android:textColor="@color/solaris_text_faint"
-            android:textSize="12sp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground" />
+            <TextView
+                android:id="@+id/app_version"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:paddingTop="@dimen/space_sm"
+                android:paddingBottom="@dimen/space_sm"
+                android:gravity="end"
+                android:text="@string/app_version_placeholder"
+                android:textColor="@color/solaris_text_faint"
+                android:textSize="12sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

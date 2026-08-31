@@ -2,8 +2,10 @@ package cloud.dopp.solaris
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -119,6 +121,48 @@ class HomeScreenTest {
         )
     }
 
+    /**
+     * #132: the mark looked crammed into the small halo because the two were
+     * shrunk by different factors. What has to survive the shrink is the *ratio*
+     * of mark to halo — the two presentations are one mark at two sizes.
+     */
+    @Test
+    fun theCompactLockupKeepsTheWordmarksRatioToItsHalo() {
+        val first = hub()
+        val fullGlow = first.findViewById<View>(R.id.brand_glow).layoutParams.height.toFloat()
+        val fullWord = first.findViewById<TextView>(R.id.brand_word_start).textSize
+        val fullFigure = first.findViewById<View>(R.id.brand_figure).layoutParams.height.toFloat()
+
+        paired()
+        val a = hub()
+        val glow = a.findViewById<View>(R.id.brand_glow).layoutParams.height.toFloat()
+        val word = a.findViewById<TextView>(R.id.brand_word_start).textSize
+        val figure = a.findViewById<View>(R.id.brand_figure).layoutParams.height.toFloat()
+
+        assertTrue("the paired lockup is the smaller one", glow < fullGlow)
+        assertEquals("wordmark to halo", fullWord / fullGlow, word / glow, 0.005f)
+        assertEquals("figure to halo", fullFigure / fullGlow, figure / glow, 0.01f)
+    }
+
+    /**
+     * #132: the halo's gradient radius was a fixed 110dp, which only suited the
+     * 190dp first-run circle — drawn at 112dp the fade had reached half its way
+     * at the edge and the disc cut off hard. Relative to the drawable, it ends at
+     * the edge whatever size the lockup is drawn at.
+     */
+    @Test
+    fun theGlowFadesOutAtItsEdgeAtEverySize() {
+        val glow = ctx().getDrawable(R.drawable.hero_glow) as GradientDrawable
+        glow.setBounds(0, 0, 112, 112)
+        assertEquals(56f, glow.gradientRadius, 1f)
+        glow.setBounds(0, 0, 190, 190)
+        assertEquals(95f, glow.gradientRadius, 1f)
+        // …and it fades into transparent BLUE: #00000000 leaves a grey halo on the
+        // dark background, which is why the end colour is not simply "transparent".
+        val colors = glow.colors!!
+        assertEquals(0x003B82F6, colors[colors.size - 1])
+    }
+
     /** #126: the pill sat at wrap_content while everything around it was flush. */
     @Test
     fun theStatusLineFillsTheColumnLikeTheCards() {
@@ -163,19 +207,46 @@ class HomeScreenTest {
         assertTrue(!visible(a.findViewById(R.id.more_widgets)))
     }
 
-    // --- 3. the way into Solaris (#127) ---------------------------------------
+    // --- 3. the way into Solaris (#127/#132) ----------------------------------
 
+    /**
+     * #127 made this the filled, full-width primary right under the status line;
+     * on the device it was the loudest thing on the screen and competed with the
+     * wordmark above it (#132), so it moved down to the foot. The correction that
+     * must NOT come back with it is #127's own finding: down does not mean turned
+     * into a footer text link. It stays a real, filled button — visibly a
+     * different thing from the quiet sign-out link it now sits beside.
+     */
     @Test
-    fun theWayIntoSolarisIsTheFirstActionAndOpensTheInAppSurface() {
+    fun theWayIntoSolarisSitsAtTheFootButStaysAButton() {
         paired()
         val a = hub()
         val section = a.findViewById<LinearLayout>(R.id.connected_section)
         val open = section.indexOfChild(a.findViewById(R.id.open_btn))
         val widgets = section.indexOfChild(a.findViewById(R.id.widgets_teaser_card))
-        assertTrue("the product's main surface must not sit below the settings", open in 0 until widgets)
+        assertTrue("the entry moved below the cards (#132)", open > widgets)
 
-        a.findViewById<View>(R.id.open_btn).performClick()
+        val btn = a.findViewById<View>(R.id.open_btn)
+        assertTrue("it may get quieter, not invisible — a link is not a button", btn is Button)
+        assertNotNull("a text link has no button background", btn.background)
+        // …and it must stay distinguishable from "Abmelden" next to it.
+        assertTrue(a.findViewById<View>(R.id.logout_btn) !is Button)
+
+        btn.performClick()
         assertNotNull("the button switches the view inside the app", startedOn(SolarisSurfaceActivity::class.java))
+    }
+
+    /** #132: two secondary lines, one row — sign out and the version line. */
+    @Test
+    fun signOutAndTheVersionLineShareOneRow() {
+        paired()
+        val a = hub()
+        val out = a.findViewById<View>(R.id.logout_btn)
+        val version = a.findViewById<View>(R.id.app_version)
+        assertEquals("both are secondary and share a line", out.parent, version.parent)
+        val row = out.parent as LinearLayout
+        assertEquals(LinearLayout.HORIZONTAL, row.orientation)
+        assertTrue(visible(out) && visible(version))
     }
 
     /** The label may not promise a jump out of the app that no longer happens. */
@@ -222,6 +293,10 @@ class HomeScreenTest {
         assertTrue(!visible(a.findViewById(R.id.connected_section)))
         listOf(R.id.qr_scan_btn, R.id.server_url, R.id.connect_btn, R.id.request_access_btn)
             .forEach { assertTrue(visible(a.findViewById(it))) }
+        // The footer row is shared with the paired state (#132): the version line
+        // — and with it diagnostics (#110) — stays, sign out has nothing to do here.
+        assertTrue(visible(a.findViewById(R.id.app_version)))
+        assertTrue(!visible(a.findViewById(R.id.logout_btn)))
     }
 
     /** #110: the version line is the only way to reach the diagnostics screen. */
