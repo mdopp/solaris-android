@@ -2,6 +2,7 @@ package cloud.dopp.solaris.realtime
 
 import android.content.Context
 import cloud.dopp.solaris.SolarisConfig
+import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.ServerStore
 import cloud.dopp.solaris.data.TokenStore
 import okhttp3.OkHttpClient
@@ -14,45 +15,86 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * The screen-off half of the notice path (#116): during a [RealtimePoll] pass the
- * stream is opened for a few seconds and any `ha` frame that lands in that window
- * is shown through [NoticeNotifier], the same way the live service shows it.
+ * The screen-off half of the notice path (#116, #124). A [RealtimePoll] pass does
+ * two things here, in this order, and both end at [NoticeNotifier] so the two
+ * paths cannot drift apart in what they show:
+ *
+ * 1. **Ask what was missed** ([backlog]) — `GET /napi/notifications?since=…`,
+ *    the server's short catch-up store (#124).
+ * 2. **Listen briefly** ([window]) — the stream is opened for [WINDOW_MS] and
+ *    every `ha` frame landing in that window is shown at once.
+ *
+ * The window stays because it is the **fast** path: a notice published while the
+ * phone happens to be awake here arrives immediately rather than at the next
+ * wake. The backlog sits beside it, not in its place.
  *
  * ## What this can and cannot recover
  *
- * The server's event bus is in-process pub/sub with **no backlog**
- * (`engine/notify.py`): an event published while nobody is subscribed is not
- * stored, and there is no catch-up endpoint under `/napi/` to ask for missed
- * notices. So this window catches a notice that arrives *while the phone is
- * already awake for its poll* — and nothing else. That is the honest ceiling of
- * the shipped contract, and it is why [RealtimeProtocol.EVENT_HA] says in as many
- * words that this is not an alarm channel. Closing the gap properly needs a
- * server-side "notices since <t>" endpoint, which is a solarisbay change, not one
- * to be faked here.
+ * The event bus itself is in-process pub/sub with no memory, so before #124 a
+ * notice published outside the window was simply **gone**. The backlog changed
+ * that promise from "can be lost while the screen is off" to **"catches up if the
+ * gap is shorter than the server's retention"** — and no further. Past the
+ * window, past the server's per-stream row cap, or with nothing ever asking, a
+ * notice is still lost, and [RealtimeProtocol.EVENT_HA] still says in as many
+ * words that this is not an alarm channel. That caveat is unchanged.
  *
- * The window costs little: the poll pass has already woken the device and its
- * radio, and [RealtimeIdleReceiver] holds a 30 s wakelock around it. Nor does it
- * cost another surface its copy — while an SSE client is subscribed the server
- * skips the Web Push for that resident (the #715 selective-push rule), but in
- * that case the notice was delivered here instead, natively.
+ * The pass costs little: it has already woken the device and its radio, and
+ * [RealtimeIdleReceiver] holds a 30 s wakelock around it. Nor does it cost another
+ * surface its copy — while an SSE client is subscribed the server skips the Web
+ * Push for that resident (the #715 selective-push rule), but in that case the
+ * notice was delivered here instead, natively.
  */
 object NoticeCatchUp {
 
     /**
-     * How long a poll pass listens. Comfortably inside the receiver's wakelock and
-     * the broadcast's own budget — a longer window would not recover more, since
-     * nothing is buffered to recover.
+     * How long a poll pass listens on the stream. Comfortably inside the
+     * receiver's wakelock and the broadcast's own budget; anything older than the
+     * window is the backlog's job, not a longer listen's.
      */
     const val WINDOW_MS = 8_000L
 
     /**
-     * Listen for [WINDOW_MS], post whatever `ha` frames arrive, then close. Blocks
-     * the calling thread (the poll already runs off the main thread) and never
-     * throws: a backstop poll must not be able to crash the app.
+     * One screen-off pass: the backlog first, then the live window. Blocks the
+     * calling thread (the poll already runs off the main thread) and never throws
+     * — a backstop poll must not be able to crash the app.
      */
     fun drain(context: Context) {
         val ctx = context.applicationContext
         if (!ServerStore.realtimeEnabled(ctx) || !TokenStore.isPaired(ctx)) return
+        runCatching { backlog(ctx) }
+        window(ctx)
+    }
+
+    /**
+     * Ask the server what this device missed and post it, oldest first.
+     *
+     * Everything that matters here is [NoticeBacklog]'s, which is why it is pure:
+     * the next cursor comes from the response's `now` and never from the device
+     * clock, `retention_hours` is read rather than assumed, an already-shown
+     * notice is dropped by id (or by content, for one the live stream showed),
+     * and a first run without a cursor is bounded instead of replaying the whole
+     * window.
+     *
+     * A missing/failed response leaves the cursor untouched: a window we never
+     * saw must not be skipped.
+     */
+    fun backlog(context: Context) {
+        val ctx = context.applicationContext
+        val since = NoticeSeen.since(ctx)
+        val body = runCatching { ApiClient(ctx).notifications(since) }.getOrNull() ?: return
+        val result = NoticeBacklog.parse(body, since, NoticeSeen.keys(ctx)) ?: return
+        result.show.forEach { item ->
+            runCatching { NoticeNotifier.post(ctx, item.event, item.id) }
+        }
+        NoticeSeen.setSince(ctx, result.nextSince)
+    }
+
+    /**
+     * Listen for [WINDOW_MS], post whatever `ha` frames arrive, then close. Never
+     * throws.
+     */
+    fun window(context: Context) {
+        val ctx = context.applicationContext
         val base = ServerStore.baseUrl(ctx)?.trimEnd('/') ?: return
         val token = TokenStore.get(ctx) ?: return
         val client = OkHttpClient.Builder()

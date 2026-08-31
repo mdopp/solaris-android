@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.data.ApiClient
+import cloud.dopp.solaris.realtime.NoticeActions
 import kotlin.concurrent.thread
 
 /**
@@ -26,6 +27,9 @@ import kotlin.concurrent.thread
  * 4. **Shortcut trampoline** (#97): an app-icon shortcut can only start an
  *    activity, so a non-sensitive device's shortcut lands here and is handed
  *    straight to [WidgetActionReceiver] as the widget's own toggle.
+ * 5. **A notification's action button** (#116/#123): the payload's own
+ *    `{entity_id, service}` pair, run verbatim — asked first when the payload's
+ *    `confirm` says so, through the very dialog in job 1 and not a second one.
  *
  * The activity deliberately declares **no `showWhenLocked`** and dismisses no
  * keyguard: sitting behind the device lock is what makes a homescreen tile an
@@ -70,17 +74,32 @@ class WidgetActionActivity : Activity() {
             return
         }
         val service = intent.getStringExtra(WidgetActionReceiver.EXTRA_SERVICE)
+        // A notification's action button (#123). It carries the server's own
+        // `{entity_id, service}` pair and is run **verbatim**; what is decided
+        // here is only whether to ask first.
+        if (intent.getBooleanExtra(EXTRA_NOTICE_ACTION, false)) {
+            runNoticeAction(entityId, service)
+            return
+        }
         if (entityId == null || service == null) {
             finish()
             return
         }
-        // Wording follows the service's own direction (#85) — a substring test on
-        // "close" mislabels lock.lock and alarm_arm_*, so ConfirmVerb maps the
-        // dotted domain.action instead and the button follows the same verb.
+        showConfirm(entityId, service, appWidgetId)
+    }
+
+    /**
+     * The confirm dialog for one service call — the single shape every action
+     * dialog wears (#113): the question on a Solaris card, the yes as a full-width
+     * row, Abbrechen underneath it.
+     *
+     * Wording follows the service's own direction (#85) — a substring test on
+     * "close" mislabels `lock.lock` and `alarm_arm_*`, so [ConfirmVerb] maps the
+     * dotted `domain.action` instead and the button follows the same verb.
+     */
+    private fun showConfirm(entityId: String, service: String, appWidgetId: Int) {
         val action = ConfirmVerb.of(service)
         val verb = getString(ConfirmWording.verbRes(action))
-        // One shape for every action dialog (#113): the question on a Solaris
-        // card, the yes as a full-width row, Abbrechen underneath it.
         ActionDialog.show(
             activity = this,
             title = getString(R.string.widget_confirm_title),
@@ -89,6 +108,66 @@ class WidgetActionActivity : Activity() {
             onPick = { runService(entityId, service, appWidgetId) },
             onCancel = { finish() },
         )
+    }
+
+    /**
+     * A notice's button (#116 boundary, #123 contract). The pair was validated on
+     * the way in ([NoticeActions]) and is validated again **here**, from the
+     * intent's own strings: a stale or forged button aimed at a lock or an alarm
+     * panel must reach nothing, exactly as [EXTRA_SHORTCUT_TOGGLE] re-derives its
+     * domain rather than trusting the sender (#100).
+     *
+     * `confirm` decides whether the resident is asked first, and its **default is
+     * `true`**: an intent that lost the flag — an older build's `PendingIntent`,
+     * a forgery — asks rather than acts. The unknown case is never the harmless
+     * one. When the flag says no ask, the call still goes out unconfirmed, so the
+     * server's authoritative `403 sensitive_action` gate stays in front of it and
+     * simply lands in the very same dialog.
+     *
+     * Neither branch weakens the lock screen: this activity declares no
+     * `showWhenLocked` and the notification's `PendingIntent` is flagged
+     * `setAuthenticationRequired`, so the device lock is already behind us.
+     */
+    private fun runNoticeAction(entityId: String?, service: String?) {
+        if (!NoticeActions.runnable(entityId, service)) {
+            finish()
+            return
+        }
+        val entity = entityId!!.trim()
+        val svc = service!!.trim()
+        if (intent.getBooleanExtra(EXTRA_NOTICE_CONFIRM, true)) {
+            showConfirm(entity, svc, AppWidgetManager.INVALID_APPWIDGET_ID)
+        } else {
+            runUnconfirmed(entity, svc)
+        }
+    }
+
+    /**
+     * Run a notice's un-gated action and finish — or, if the server answers its
+     * 403 confirm gate after all, fall into [showConfirm] rather than reporting a
+     * failure. The server stays authoritative about what needs a yes; `confirm`
+     * only spares the round trip when it already knows the answer.
+     */
+    private fun runUnconfirmed(entityId: String, service: String) {
+        thread {
+            var sensitive = false
+            val ok = runCatching {
+                try {
+                    ApiClient(applicationContext).call(entityId, service)
+                } catch (e: ApiClient.SensitiveException) {
+                    sensitive = true
+                    true // the server answered; the dialog is the next step
+                }
+            }.getOrDefault(false)
+            if (!sensitive) {
+                WidgetStore.noteEntityUsed(applicationContext, entityId)
+                // A tap that went nowhere must not look like it worked (#111).
+                if (!ok) WidgetActionReceiver.reportFailure(applicationContext, entityId)
+            }
+            runOnUiThread {
+                if (sensitive) showConfirm(entityId, service, AppWidgetManager.INVALID_APPWIDGET_ID) else finish()
+            }
+        }
     }
 
     /**
@@ -231,6 +310,19 @@ class WidgetActionActivity : Activity() {
          * directly — never for a lock.
          */
         const val EXTRA_SHORTCUT_TOGGLE = "shortcut_toggle"
+
+        /**
+         * Boolean extra: this intent came from a **notification's** action button
+         * (#123). It carries `{entity_id, service}` verbatim from the payload and
+         * is re-validated here against [NoticeActions] — never trusted.
+         */
+        const val EXTRA_NOTICE_ACTION = "notice_action"
+
+        /**
+         * Boolean extra: the payload's `confirm`. **Defaults to `true` when
+         * absent** — an intent that lost the flag asks rather than acts.
+         */
+        const val EXTRA_NOTICE_CONFIRM = "notice_confirm"
 
         /**
          * String extra: the device's name as the shortcut published it (#100).

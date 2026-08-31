@@ -100,9 +100,10 @@ object RealtimePoll {
                 .apply()
         }
         // Household notices, timers and reminders (#116) live on the stream, not on
-        // a count — so the pass listens briefly instead of asking. The server keeps
-        // no backlog, so this catches what arrives while the phone is awake here and
-        // nothing older; see NoticeCatchUp for why that is the ceiling.
+        // a count. So the pass asks the server's short backlog what it missed
+        // (#124) and then listens briefly for what arrives while it is awake — the
+        // catch-up and the fast path, side by side. See NoticeCatchUp for the
+        // ceiling: a gap longer than the server's retention is still lost.
         runCatching { NoticeCatchUp.drain(ctx) }
         schedule(ctx) // re-arm the next pass
     }
