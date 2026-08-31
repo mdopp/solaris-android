@@ -15,6 +15,25 @@
     <color name="solaris_card">#14141A</color>          <!-- card surface -->
     <color name="solaris_card_edge">#1FFFFFFF</color>   <!-- hairline card border -->
 
+    <!-- ── The seam to the web surface (#127) ──────────────────────────────
+         Since #115 the Solaris web surface opens *inside* this app, so the
+         native shell and the web page are seen in one movement and every colour
+         they do not share reads as a break. Direction is settled: the shell
+         follows the web surface, never the other way round — the web is the
+         product's face, it is seen from the desktop too, and it lives in another
+         repo, so it cannot be recoloured from here at all.
+
+         These two are therefore *the web's* values, not ours: they are the
+         `theme_color` / `background_color` the surface declares for itself (the
+         same pair the twa-manifest block in app/build.gradle was generated
+         from). Everything the user sees around the surface — the shell's window,
+         its status and navigation bar, and the bars handed to the Trusted Web
+         Activity — is painted from here, so the frame does not change colour
+         when the view does. If the web surface ever moves, these two lines are
+         the whole change. -->
+    <color name="solaris_surface_bg">#070709</color>    <!-- web background_color -->
+    <color name="solaris_surface_theme">#0C0C0E</color> <!-- web theme_color -->
+
     <color name="solaris_accent">#3B82F6</color>        <!-- ServiceBay blue-500 -->
     <color name="solaris_accent_dark">#2563EB</color>   <!-- blue-600 (pressed) -->
     <color name="solaris_accent_faint">#1F3B82F6</color><!-- 12% blue tint -->

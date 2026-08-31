@@ -13,8 +13,13 @@
         <item name="android:textColorPrimary">@color/solaris_text</item>
         <item name="android:textColorSecondary">@color/solaris_text_muted</item>
         <item name="android:textColorHint">@color/solaris_text_faint</item>
-        <item name="android:statusBarColor">@color/solaris_bg_elevated</item>
-        <item name="android:navigationBarColor">@color/solaris_bg</item>
+        <!-- The system bars are the frame the user sees around BOTH the native
+             screens and the in-app web surface (#127), so they are painted from
+             the surface tokens rather than from the shell palette — same values
+             SolarisSurface hands the Trusted Web Activity, so nothing changes
+             colour when the view changes. -->
+        <item name="android:statusBarColor">@color/solaris_surface_theme</item>
+        <item name="android:navigationBarColor">@color/solaris_surface_bg</item>
         <item name="buttonStyle">@style/Widget.Solaris.Button</item>
         <item name="editTextStyle">@style/Widget.Solaris.EditText</item>
     </style>

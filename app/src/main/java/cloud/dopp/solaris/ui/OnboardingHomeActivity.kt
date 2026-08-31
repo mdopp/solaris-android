@@ -94,12 +94,16 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<View>(R.id.tile_sb_services).setOnClickListener {
                 pinTile(cloud.dopp.solaris.widget.SbServicesWidgetProvider::class.java)
             }
+            // Everything past the five household types (#42/#44 ServiceBay, #72
+            // tools) lives behind one disclosure so the first screen is short (#126).
+            findViewById<View>(R.id.more_widgets_toggle).setOnClickListener { toggleMoreWidgets() }
             findViewById<Button>(R.id.install_pwa_btn).setOnClickListener { installPwa() }
             findViewById<TextView>(R.id.install_pwa_dismiss).setOnClickListener { dismissPwaHint() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
-            findViewById<Button>(R.id.logout_btn).setOnClickListener { logout() }
+            findViewById<View>(R.id.logout_btn).setOnClickListener { logout() }
             findViewById<Switch>(R.id.realtime_switch)
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
+            findViewById<View>(R.id.realtime_info).setOnClickListener { showRealtimeInfo() }
             findViewById<TextView>(R.id.realtime_interval).setOnClickListener { pickPollInterval() }
             findViewById<TextView>(R.id.app_version).apply {
                 text = getString(R.string.app_version_fmt, appVersionName())
@@ -147,6 +151,11 @@ class OnboardingHomeActivity : AppCompatActivity() {
         val connected = ServerStore.isConfigured(this) && TokenStore.isPaired(this)
         findViewById<View>(R.id.connect_section).visibility = if (connected) View.GONE else View.VISIBLE
         findViewById<View>(R.id.connected_section).visibility = if (connected) View.VISIBLE else View.GONE
+        // The wordmark + glow + claim are the empty app introducing itself. Once
+        // paired they push the content the user came for off the screen (#126),
+        // and the status line takes over as the screen's header.
+        findViewById<View>(R.id.brand_block).visibility = if (connected) View.GONE else View.VISIBLE
+        renderMoreWidgets()
 
         val urlField = findViewById<EditText>(R.id.server_url)
         // Only prefill an already-configured server; a fresh install stays blank so
@@ -263,6 +272,40 @@ class OnboardingHomeActivity : AppCompatActivity() {
     /** Guards against a second catalog fetch while one is in flight (onResume). */
     @Volatile
     private var toolsLoading = false
+
+    /**
+     * Whether the "Weitere Widgets" section is unfolded (#126). Session state on
+     * purpose: the point of the disclosure is that the screen *starts* short, and
+     * a persisted "always open" would quietly undo that on the next launch. Every
+     * widget type stays one tap away either way.
+     */
+    private var moreWidgetsShown = false
+
+    private fun toggleMoreWidgets() {
+        moreWidgetsShown = !moreWidgetsShown
+        renderMoreWidgets()
+    }
+
+    private fun renderMoreWidgets() {
+        findViewById<View>(R.id.more_widgets).visibility =
+            if (moreWidgetsShown) View.VISIBLE else View.GONE
+        findViewById<TextView>(R.id.more_widgets_toggle).setText(
+            if (moreWidgetsShown) R.string.home_less_widgets else R.string.home_more_widgets,
+        )
+    }
+
+    /**
+     * The long half of the Live-Updates text (#126): why a permanent notification
+     * exists, what it costs, and what the idle interval does. The card keeps one
+     * line saying what the feature is *for*; this is for whoever asks why.
+     */
+    private fun showRealtimeInfo() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.home_realtime_title)
+            .setMessage(R.string.home_realtime_info)
+            .setPositiveButton(R.string.home_info_ok, null)
+            .show()
+    }
 
     /** Persist the dismiss flag (#11) and hide the install-PWA hint card. */
     private fun dismissPwaHint() {
@@ -454,7 +497,12 @@ class OnboardingHomeActivity : AppCompatActivity() {
         PwaLauncher.customTab(this, PwaLauncher.url(base, PwaLauncher.Routes.ROOT))
     }
 
-    /** "Solaris öffnen" — the in-app surface, the same view the app icon opens. */
+    /**
+     * "Zu Solaris" (#127) — the hub's primary action, and the only one that is
+     * not a setting: since #115 this switches the view inside the same app rather
+     * than opening anything elsewhere, which is why it is the filled button at
+     * the top and no longer a ghost sharing a footer row with "Abmelden".
+     */
     private fun openSolaris() {
         PwaLauncher.open(this, PwaLauncher.Routes.ROOT)
     }
