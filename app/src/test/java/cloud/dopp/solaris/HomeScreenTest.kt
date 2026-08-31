@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.Insets
@@ -386,5 +387,68 @@ class HomeScreenTest {
         ViewCompat.dispatchApplyWindowInsets(root, insets)
         assertEquals(before + 96, root.paddingTop)
         assertEquals(48, root.paddingBottom)
+    }
+
+    // --- 8. where the leftover space sits (#134) -------------------------------
+
+    /** Measure and lay the screen out at a given viewport height. */
+    private fun laidOut(a: OnboardingHomeActivity, heightPx: Int): LinearLayout {
+        val root = a.findViewById<ScrollView>(R.id.home_root)
+        root.measure(
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(heightPx, View.MeasureSpec.EXACTLY),
+        )
+        root.layout(0, 0, 1080, heightPx)
+        return root.getChildAt(0) as LinearLayout
+    }
+
+    /**
+     * #134: the content started at the top and left a large empty area under the
+     * footer — the air sat where it does nothing. It belongs under the logo: the
+     * column is anchored at the bottom, the slack falls between the brand block
+     * and the rest.
+     */
+    @Test
+    fun theLeftoverSpaceFallsUnderTheLogoNotUnderTheFooter() {
+        paired()
+        val a = hub()
+        val column = laidOut(a, 3000)
+        val spacer = a.findViewById<View>(R.id.brand_spacer)
+
+        assertTrue("the gap belongs between the wordmark and the rest", spacer.height > 0)
+        assertTrue(
+            "…and it is the space that used to sit under the footer",
+            column.indexOfChild(spacer) > column.indexOfChild(a.findViewById(R.id.brand_block)),
+        )
+        assertTrue(
+            "the spacer stays above everything the operator reads",
+            column.indexOfChild(spacer) < column.indexOfChild(a.findViewById(R.id.connected_section)),
+        )
+        // Nothing but the column's own bottom padding is left under the footer.
+        val footer = a.findViewById<View>(R.id.home_footer)
+        assertEquals(
+            "the last row ends at the foot of the screen",
+            column.height - column.paddingBottom,
+            footer.bottom,
+        )
+    }
+
+    /**
+     * The limit that matters more than the gap: on a screen with no slack the
+     * spacing collapses instead of displacing content — #126's prioritisation
+     * survives, and nothing gets clipped or pushed out of reach.
+     */
+    @Test
+    fun onAShortScreenTheGapCollapsesRatherThanPushingContentAway() {
+        paired()
+        val a = hub()
+        val column = laidOut(a, 320)
+        val spacer = a.findViewById<View>(R.id.brand_spacer)
+        val footer = a.findViewById<View>(R.id.home_footer)
+
+        assertEquals("no slack, no gap", 0, spacer.height)
+        assertTrue("the content is taller than the viewport, so it scrolls", column.height > 320)
+        assertTrue("…and the footer is still inside it", footer.bottom <= column.height)
+        assertTrue("nothing is collapsed away with the gap", footer.height > 0)
     }
 }

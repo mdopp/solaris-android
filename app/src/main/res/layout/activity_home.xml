@@ -113,6 +113,25 @@
                 android:text="@string/home_claim" />
         </LinearLayout>
 
+        <!-- ── Where the slack goes (#134) ────────────────────────────────────
+             The content used to start at the top and leave a large empty area
+             under the footer — air at the one place it does nothing. The screen
+             is anchored at the BOTTOM instead: this spacer swallows whatever the
+             viewport has left over, so the gap falls between the brand block and
+             the rest, where the glow needs room around it.
+
+             `0dp` + weight is what makes it safe on a short screen: the excess
+             space the ScrollView's `fillViewport` hands down is exactly the empty
+             area that sat at the foot, never more, and when there is none the
+             spacer collapses to nothing instead of pushing content out of reach
+             (#126's prioritisation stays intact). -->
+        <View
+            android:id="@+id/brand_spacer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:importantForAccessibility="no" />
+
         <!-- ── Not connected: connect to your own server ─────────────────── -->
         <LinearLayout
             android:id="@+id/connect_section"
