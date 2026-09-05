@@ -128,6 +128,16 @@ object RealtimeProtocol {
          * paired with (contract solarisbay#1326).
          */
         val kind: String = "",
+        /**
+         * For [KIND_APP_UPDATE]: which version is being offered (#146). **The
+         * number only** — still no address; the reasoning in [kind] is unchanged.
+         *
+         * The server cannot know what is installed on any given phone (it compares
+         * the release against its own marker), and with two phones in a household
+         * there is no single answer. So it announces, and the client decides
+         * whether the announcement applies to it.
+         */
+        val versionName: String = "",
     )
 
     /**
@@ -163,6 +173,7 @@ object RealtimeProtocol {
             urgency = o.optString("urgency").trim().lowercase().ifBlank { "normal" },
             actions = parseNoticeActions(o.optJSONArray("actions")),
             kind = o.optString("kind").trim().lowercase(),
+            versionName = o.optString("versionName").trim(),
         )
     }
 
