@@ -12,6 +12,9 @@ import org.json.JSONObject
 object RealtimeProtocol {
 
     /** The SSE event kind we act on; every other kind (chat/done/…) is ignored. */
+    /** The one [NoticeEvent.kind] the app treats specially (#143). */
+    const val KIND_APP_UPDATE = "app-update"
+
     const val EVENT_CARD_STATE = "card_state"
 
     /** ServiceBay approval event (companion-api.md): `data:{id,kind,summary}`. */
@@ -114,6 +117,17 @@ object RealtimeProtocol {
         val category: NoticeCategory,
         val urgency: String,
         val actions: List<NoticeAction>,
+        /**
+         * What KIND of notice this is (#143) — a **closed** discriminator, not free
+         * text the app acts on. Only [KIND_APP_UPDATE] means anything here; every
+         * other value, including the empty default, behaves exactly as before.
+         *
+         * Deliberately NOT accompanied by a URL. A notification that opens an
+         * address handed to it is a phishing surface; this field only says *that*
+         * something is offered, and the app resolves *where* from the server it is
+         * paired with (contract solarisbay#1326).
+         */
+        val kind: String = "",
     )
 
     /**
@@ -148,6 +162,7 @@ object RealtimeProtocol {
             category = NoticeCategory.of(o.optString("category")),
             urgency = o.optString("urgency").trim().lowercase().ifBlank { "normal" },
             actions = parseNoticeActions(o.optJSONArray("actions")),
+            kind = o.optString("kind").trim().lowercase(),
         )
     }
 

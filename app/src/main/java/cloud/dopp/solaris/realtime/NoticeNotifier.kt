@@ -91,7 +91,10 @@ object NoticeNotifier {
             // never whether it arrives. Pre-O only — from O the channel decides.
             .setPriority(priorityOf(ev.urgency))
             // A tap opens Solaris; the contract carries no deep link for a notice.
-            .setContentIntent(PwaLauncher.tapPending(ctx, id, PwaLauncher.Routes.ROOT))
+            // The one exception is an app-update notice (#143), which opens the
+            // download on the paired server instead — the notice is the TRIGGER,
+            // never the source of the address (see NoticeEvent.kind).
+            .setContentIntent(PwaLauncher.tapPending(ctx, id, tapRoute(ev)))
         NoticeActions.runnable(ev.actions).forEachIndexed { i, action ->
             b.addAction(button(ctx, id, i, action))
         }
@@ -131,6 +134,15 @@ object NoticeNotifier {
             .setAuthenticationRequired(true)
             .build()
     }
+
+    /**
+     * Where a tap goes (#143). Only the closed value
+     * [RealtimeProtocol.KIND_APP_UPDATE] diverts it; anything else opens Solaris,
+     * exactly as before.
+     */
+    internal fun tapRoute(ev: RealtimeProtocol.NoticeEvent): String =
+        if (ev.kind == RealtimeProtocol.KIND_APP_UPDATE) PwaLauncher.Routes.DOWNLOAD
+        else PwaLauncher.Routes.ROOT
 
     /** `low|normal|high` → the pre-O priority. Never an escalation, only a look. */
     private fun priorityOf(urgency: String): Int = when (urgency) {

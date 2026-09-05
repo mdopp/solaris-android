@@ -32,6 +32,13 @@ object PwaLauncher {
         const val ROOT = "/"
 
         /**
+         * The signed APK the paired server publishes (#143, contract
+         * solarisbay#1326). Base-relative on purpose: the address never comes
+         * from a notification's payload, only from the server we are paired with.
+         */
+        const val DOWNLOAD = "/download"
+
+        /**
          * ServiceBay tap **fallback** for an unpaired install (#109): with no base
          * there is no admin host to derive, so the tap keeps the old behaviour and
          * lands on the PWA root (which bounces to onboarding). The paired case does
