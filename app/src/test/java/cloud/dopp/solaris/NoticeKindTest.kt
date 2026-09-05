@@ -5,6 +5,8 @@ import cloud.dopp.solaris.realtime.RealtimeProtocol
 import cloud.dopp.solaris.widget.PwaLauncher
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -69,6 +71,42 @@ class NoticeKindTest {
             .put("downloadUrl", "https://boese.example/apk")
             .put("url", "https://boese.example/apk")
         assertEquals(PwaLauncher.Routes.DOWNLOAD, NoticeNotifier.tapRoute(notice(o.toString())))
+    }
+
+    // --- an offer for a version you already have (#146) -----------------------
+
+    private val K = RealtimeProtocol.KIND_APP_UPDATE
+
+    /**
+     * The case that made this necessary: the server compares the release against
+     * its OWN marker, not against the phone. So an offer can arrive for a version
+     * that is already running — exactly what happened when the build was handed
+     * over in chat before the daily check ran.
+     */
+    @Test
+    fun `an offer for the installed version is swallowed`() {
+        assertTrue(NoticeNotifier.suppress(K, offered = "2.40.0", installed = "2.40.0"))
+        assertTrue(NoticeNotifier.suppress(K, offered = "2.38.1", installed = "2.40.0"))
+    }
+
+    @Test
+    fun `a genuinely newer version still gets through`() {
+        assertFalse(NoticeNotifier.suppress(K, offered = "2.41.0", installed = "2.40.0"))
+    }
+
+    /** A missed hint is worse than a redundant one — so anything unclear shows. */
+    @Test
+    fun `anything unclear is shown, never swallowed`() {
+        assertFalse("older server sends no version", NoticeNotifier.suppress(K, "", "2.40.0"))
+        assertFalse("installed version unreadable", NoticeNotifier.suppress(K, "2.40.0", ""))
+        assertFalse("unparseable offer", NoticeNotifier.suppress(K, "latest", "2.40.0"))
+    }
+
+    /** The guard must never touch an ordinary household notice. */
+    @Test
+    fun `only update offers are ever swallowed`() {
+        assertFalse(NoticeNotifier.suppress("", "2.40.0", "2.40.0"))
+        assertFalse(NoticeNotifier.suppress("house", "2.40.0", "2.40.0"))
     }
 
     /** A notice without `kind` parses exactly as before — no field, no change. */

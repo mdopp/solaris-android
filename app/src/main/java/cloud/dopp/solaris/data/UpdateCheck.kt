@@ -93,6 +93,13 @@ object UpdateCheck {
         return false
     }
 
+    /**
+     * Can [v] be compared at all? Callers that must distinguish "demonstrably not
+     * newer" from "no idea" need this — [isNewer] answers false for both, and
+     * treating the second as the first swallows things it should not (#146).
+     */
+    fun parses(v: String): Boolean = segments(v).isNotEmpty()
+
     private fun segments(v: String): List<Int> {
         val parts = v.trim().removePrefix("v").split('.')
         val out = ArrayList<Int>(parts.size)

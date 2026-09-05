@@ -11,6 +11,7 @@ import cloud.dopp.solaris.R
 import cloud.dopp.solaris.realtime.RealtimeProtocol.NoticeCategory
 import cloud.dopp.solaris.realtime.RealtimeProtocol.NoticeEvent
 import cloud.dopp.solaris.widget.ActionDialog
+import cloud.dopp.solaris.data.UpdateCheck
 import cloud.dopp.solaris.widget.PwaLauncher
 import cloud.dopp.solaris.widget.WidgetActionActivity
 import cloud.dopp.solaris.widget.WidgetActionReceiver
@@ -77,6 +78,11 @@ object NoticeNotifier {
         // two paths showed it. A stream frame carries no id, so the fingerprint is
         // what makes the two comparable at all.
         NoticeSeen.mark(ctx, NoticeBacklog.keysOf(ev, backlogId))
+        // An update offer for a version that is already installed is a promise
+        // that isn't real (#146) — swallow it. Deliberately AFTER marking it seen:
+        // the notice IS handled, and un-marking it would make the catch-up
+        // re-offer it on every drain.
+        if (suppress(ev.kind, ev.versionName, installedVersion(ctx))) return
         ensureChannel(ctx, ev.category)
         val id = NOTIF_ID_BASE + ev.category.ordinal * SLOTS + (seq.getAndIncrement() % SLOTS)
         val body = ev.body.ifBlank { ctx.getString(R.string.notice_generic) }
@@ -134,6 +140,29 @@ object NoticeNotifier {
             .setAuthenticationRequired(true)
             .build()
     }
+
+    /**
+     * Should this notice be swallowed (#146)?
+     *
+     * Only ever an app-update offer, and only when [offered] is demonstrably not
+     * newer than [installed]. Everything else shows: a missed hint is worse than a
+     * redundant one, so an older server that sends no version (blank [offered]),
+     * or an unreadable installed version, keeps the notice.
+     *
+     * Pure → JVM-testable.
+     */
+    internal fun suppress(kind: String, offered: String, installed: String): Boolean {
+        if (kind != RealtimeProtocol.KIND_APP_UPDATE) return false
+        // Both must be COMPARABLE. `isNewer` says false for "not newer" and for
+        // "unreadable" alike, and swallowing the second would hide a real offer
+        // behind a version string we simply failed to parse.
+        if (!UpdateCheck.parses(offered) || !UpdateCheck.parses(installed)) return false
+        return !UpdateCheck.isNewer(offered, installed)
+    }
+
+    private fun installedVersion(ctx: Context): String = runCatching {
+        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName
+    }.getOrNull().orEmpty()
 
     /**
      * Where a tap goes (#143). Only the closed value
