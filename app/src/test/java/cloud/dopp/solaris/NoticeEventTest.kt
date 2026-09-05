@@ -106,7 +106,7 @@ class NoticeEventTest {
         fun confirmOf(json: String): Boolean =
             RealtimeProtocol.parseHa("""{"title":"T","actions":[$json]}""")!!.actions.single().confirm
 
-        val garage = """"entity_id":"cover.garagentor","service":"cover.open_cover","title":"Auf""""
+        val garage = """"entity_id":"cover.garage_door","service":"cover.open_cover","title":"Auf""""
         // No field at all — an older server. Ask.
         assertTrue(confirmOf("{$garage}"))
         // Present but null, or present but not a boolean — still unknown. Ask.
@@ -160,16 +160,16 @@ class NoticeEventTest {
         assertTrue(NoticeActions.runnable(action("light.keller", "light.toggle")))
         assertTrue(NoticeActions.runnable(action("switch.pumpe", "switch.turn_on")))
         // New since #123: cover and climate are server-side actionable.
-        assertTrue(NoticeActions.runnable(action("cover.garagentor", "cover.close_cover")))
+        assertTrue(NoticeActions.runnable(action("cover.garage_door", "cover.close_cover")))
         assertTrue(NoticeActions.runnable(action("climate.bad", "climate.set_hvac_mode")))
         // Unrepresentable, in the payload and here — this is the third refusal.
-        assertFalse(NoticeActions.runnable(action("lock.front_door", "lock.unlock")))
+        assertFalse(NoticeActions.runnable(action("lock.entry", "lock.unlock")))
         assertFalse(NoticeActions.runnable(action("lock.haustuer", "lock.open")))
         assertFalse(NoticeActions.runnable(action("alarm_control_panel.haus", "alarm_control_panel.alarm_disarm")))
         assertFalse("no lock may creep into the set", "lock" in NoticeActions.ACTIONABLE_DOMAINS)
         assertFalse("nor an alarm panel", "alarm_control_panel" in NoticeActions.ACTIONABLE_DOMAINS)
         // The service's domain must equal the entity's — no translation job.
-        assertFalse(NoticeActions.runnable(action("cover.garagentor", "light.toggle")))
+        assertFalse(NoticeActions.runnable(action("cover.garage_door", "light.toggle")))
         assertFalse(NoticeActions.runnable(action("light.keller", "lock.open")))
         // Anything that is not a dotted pair at all.
         assertFalse(NoticeActions.runnable(action("türöffnen", "light.toggle")))
@@ -225,7 +225,7 @@ class NoticeEventTest {
         val n = post(
             RealtimeProtocol.NoticeEvent(
                 "Garagentor offen", "", NoticeCategory.HOUSE, "normal",
-                listOf(action("cover.garagentor", "cover.close_cover", "Schließen", confirm = true)),
+                listOf(action("cover.garage_door", "cover.close_cover", "Schließen", confirm = true)),
             ),
         )
         assertEquals(1, n.actions.size)
@@ -238,7 +238,7 @@ class NoticeEventTest {
         assertTrue(intent.getBooleanExtra(WidgetActionActivity.EXTRA_NOTICE_ACTION, false))
         assertTrue(intent.getBooleanExtra(WidgetActionActivity.EXTRA_NOTICE_CONFIRM, false))
         // Passed through unchanged — nothing derived a service from a name.
-        assertEquals("cover.garagentor", intent.getStringExtra(WidgetActionReceiver.EXTRA_ENTITY))
+        assertEquals("cover.garage_door", intent.getStringExtra(WidgetActionReceiver.EXTRA_ENTITY))
         assertEquals("cover.close_cover", intent.getStringExtra(WidgetActionReceiver.EXTRA_SERVICE))
         // …and the button never becomes the widget's own toggle any more.
         assertFalse(intent.getBooleanExtra(WidgetActionActivity.EXTRA_SHORTCUT_TOGGLE, false))
@@ -260,7 +260,7 @@ class NoticeEventTest {
 
     /** A `confirm` action asks first — through the #113 dialog, not a second one. */
     @Test fun aConfirmActionAsksBeforeItActs() {
-        launch(noticeIntent("cover.garagentor", "cover.close_cover", confirm = true))
+        launch(noticeIntent("cover.garage_door", "cover.close_cover", confirm = true))
         val dialog = ShadowDialog.getLatestDialog()
         assertTrue("the garage door must ask first", dialog != null && dialog.isShowing)
     }
@@ -277,7 +277,7 @@ class NoticeEventTest {
      * branch, never the harmless-looking one.
      */
     @Test fun anIntentWithoutTheFlagStillAsks() {
-        val intent = noticeIntent("cover.garagentor", "cover.close_cover", confirm = true)
+        val intent = noticeIntent("cover.garage_door", "cover.close_cover", confirm = true)
         intent.removeExtra(WidgetActionActivity.EXTRA_NOTICE_CONFIRM)
         launch(intent)
         val dialog = ShadowDialog.getLatestDialog()
@@ -293,7 +293,7 @@ class NoticeEventTest {
         for (pair in listOf(
             "lock.haustuer" to "lock.open",
             "alarm_control_panel.haus" to "alarm_control_panel.alarm_disarm",
-            "cover.garagentor" to "lock.open",
+            "cover.garage_door" to "lock.open",
         )) {
             val activity = launch(noticeIntent(pair.first, pair.second, confirm = false))
             assertNull("${pair.first}/${pair.second} must reach nothing", ShadowDialog.getLatestDialog())
