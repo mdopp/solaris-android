@@ -205,6 +205,28 @@ class DeviceWidgetProvider : AppWidgetProvider() {
         }
 
         /**
+         * Re-fetch and re-render EVERY bound instance (#138).
+         *
+         * The realtime SSE is deliberately dropped while the screen is off, so a
+         * state change in that window reaches nobody. On reconnect the watch-set is
+         * re-registered, but `ha_watch` only ever publishes on the NEXT
+         * `state_changed` — there is no snapshot on connect. Without this the tile
+         * keeps drawing its cached card until someone taps it, which is exactly the
+         * "garage door closed manually, tile still says open" report.
+         *
+         * The state-side twin of `NoticeCatchUp.drain` (#124): what was missed while
+         * disconnected is fetched once the connection is back. Same shape as
+         * [ActiveDevicesWidgetProvider.refreshAll]; each instance re-fetches through
+         * the normal refresh path, so a failed fetch still keeps the last known card
+         * (see [drawn]) instead of repainting the device as "aus".
+         */
+        fun refreshAll(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, DeviceWidgetProvider::class.java))
+            for (id in ids) requestRefresh(context, id)
+        }
+
+        /**
          * Render one bound instance directly from an already-known [Card] — the
          * realtime `card_state` push path (#48): no re-fetch, we already have the
          * fresh state. Mirrors the async branch of [refresh] but skips the network.
