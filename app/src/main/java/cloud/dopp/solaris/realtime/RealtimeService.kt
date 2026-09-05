@@ -30,6 +30,7 @@ import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 /**
  * The brand blue, the accent every notification of this package carries (#88).
@@ -237,6 +238,19 @@ class RealtimeService : Service() {
             // connection up is the moment they are about to be looked at.
             runCatching { SbServicesWidgetProvider.refreshAll(applicationContext) }
             runCatching { SbOverviewWidgetProvider.refreshAll(applicationContext) }
+            // Same gap, one floor down (#124): notices published while the screen
+            // was off reach nobody, and `NoticeCatchUp.drain` was called from
+            // exactly one place — the screen-off poll — which RETURNS EARLY once
+            // the screen is on again, before it gets to the catch-up. So the
+            // alarm that fires just after the phone is picked up hands back to
+            // this service and fetches nothing. Ask the server's backlog here,
+            // where we know the connection is up and the user is looking.
+            //
+            // Only `backlog`, not `drain`: `window()` opens a second stream to
+            // listen briefly, which is what the poll needs and we do not — this
+            // stream IS the live one. Off-thread, because both do network I/O and
+            // this is the SSE callback thread.
+            thread { runCatching { NoticeCatchUp.backlog(applicationContext) } }
         }
 
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
