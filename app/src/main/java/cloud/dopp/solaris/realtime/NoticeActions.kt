@@ -11,7 +11,7 @@ package cloud.dopp.solaris.realtime
  *
  * ## The shape is now stated, not guessed
  *
- * Until solarisbay#1283 an action was **one opaque string**, and `lock.front_door`
+ * Until solarisbay#1283 an action was **one opaque string**, and `lock.entry`
  * (an entity) and `cover.close` (a service) are syntactically identical — the
  * server's own tests carried one of each. Guessing wrong turns "show me the front
  * door" into "switch the front door" from the lock screen, so #116 refused
@@ -67,7 +67,7 @@ object NoticeActions {
         return dot > 0 && dot == s.lastIndexOf('.') && dot < s.length - 1
     }
 
-    /** The domain half of a dotted pair, e.g. `cover.garagentor` → `cover`. */
+    /** The domain half of a dotted pair, e.g. `cover.garage_door` → `cover`. */
     fun domainOf(raw: String?): String = raw?.trim()?.substringBefore('.', "").orEmpty()
 
     /**

@@ -151,7 +151,7 @@ class LockChooserTest {
     }
 
     private fun card(state: String?) = Card(
-        entityId = "lock.zuhause",
+        entityId = "lock.home",
         name = "Haustür",
         domain = "lock",
         deviceClass = null,

@@ -43,7 +43,7 @@ class NoticeBacklogTest {
                 notice(1, "2026-08-31T10:00:00.000Z", "Post da", category = "house"),
                 notice(
                     2, "2026-08-31T10:01:00.000Z", "Garagentor offen", category = "house",
-                    actions = """[{"entity_id":"cover.garagentor","service":"cover.close_cover",
+                    actions = """[{"entity_id":"cover.garage_door","service":"cover.close_cover",
                                    "title":"Schließen","confirm":true}]""",
                 ),
             ),
@@ -54,7 +54,7 @@ class NoticeBacklogTest {
         assertEquals(listOf("1", "2"), out.show.map { it.id })
         assertEquals("2026-08-31T10:01:00.000Z", out.show[1].ts)
         val action = out.show[1].event.actions.single()
-        assertEquals("cover.garagentor", action.entityId)
+        assertEquals("cover.garage_door", action.entityId)
         assertEquals("cover.close_cover", action.service)
         assertTrue(action.confirm)
     }
