@@ -20,6 +20,8 @@ import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.ui.OnboardingHomeActivity
 import cloud.dopp.solaris.widget.ActiveDevicesWidgetProvider
 import cloud.dopp.solaris.widget.DeviceWidgetProvider
+import cloud.dopp.solaris.widget.SbOverviewWidgetProvider
+import cloud.dopp.solaris.widget.SbServicesWidgetProvider
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -222,6 +224,19 @@ class RealtimeService : Service() {
             // Option B, solarisbay#810) and keep re-posting to refresh its TTL.
             // Off-thread + best-effort; a failed post never affects the service.
             scheduleWatchPost()
+            // Catch up on what was missed while disconnected (#138). The SSE is
+            // dropped with the screen, and the server pushes only on the NEXT
+            // state_changed — never a snapshot on connect — so a device that
+            // flipped in that window would keep its stale card until tapped.
+            // Best-effort: each tile refreshes through the normal path, and a
+            // failed fetch keeps the last known card rather than repainting "aus".
+            runCatching { DeviceWidgetProvider.refreshAll(applicationContext) }
+            // The two ServiceBay tiles have no auto-refresh at all (#137): Android
+            // never updates them (updatePeriodMillis=0) and no card_state can wake
+            // them, because a ServiceBay service is not an HA entity. Screen on +
+            // connection up is the moment they are about to be looked at.
+            runCatching { SbServicesWidgetProvider.refreshAll(applicationContext) }
+            runCatching { SbOverviewWidgetProvider.refreshAll(applicationContext) }
         }
 
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
