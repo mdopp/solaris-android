@@ -797,37 +797,39 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     /**
-     * The way to the app download (#141, #149).
+     * The way to the app download (#141, #149, #151).
      *
-     * The line is **always** there once a server is paired, because the action has
-     * to be reachable when the user wants it — not only in the moment the server
-     * happens to be announcing something. Hiding it whenever nothing is new made
-     * the only route to a fresh build disappear exactly when someone went looking
-     * for it.
+     * Lives in the footer row beside sign-out and the version, because all three
+     * are secondary and the installed version must appear exactly **once** — as a
+     * line of its own above the footer it repeated what stood right below it.
      *
-     * Quiet by default and naming the installed version, so the tap is honest
-     * about what it does. When the paired server publishes something genuinely
-     * newer it switches to the accent colour and names that version instead.
+     * **Always** present once a server is paired: the action has to be reachable
+     * when the user wants it, not only in the moment the server happens to be
+     * announcing something. Hiding it whenever nothing is new made the only route
+     * to a fresh build disappear exactly when someone went looking for it.
      *
-     * The tap always goes to the paired server's own `/download` — never to an
-     * address out of a response (see [UpdateCheck]). Unpaired: no base, no line.
+     * Quiet "App laden" by default; when the paired server publishes something
+     * genuinely newer it names that version in the accent colour. The tap always
+     * goes to the paired server's own `/download` — never to an address out of a
+     * response, unless `/download/version` itself names an https target (see
+     * [UpdateCheck]). Unpaired: no base, no entry.
      */
     private fun checkForUpdate() {
         val installed = appVersionName()
         val base = ServerStore.baseUrl(this)?.trimEnd('/') ?: return
-        val line = findViewById<TextView>(R.id.update_hint)
+        val entry = findViewById<TextView>(R.id.update_hint)
         runCatching {
-            line.text = getString(R.string.home_update_download, installed)
-            line.visibility = View.VISIBLE
-            line.setOnClickListener { openUrl(Uri.parse("$base/download")) }
+            entry.text = getString(R.string.home_update_download)
+            entry.visibility = View.VISIBLE
+            entry.setOnClickListener { openUrl(Uri.parse("$base/download")) }
         }
         kotlin.concurrent.thread {
             val found = UpdateCheck.fetch(applicationContext, installed) ?: return@thread
             runOnUiThread {
                 runCatching {
-                    line.text = getString(R.string.home_update_available, found.versionName)
-                    line.setTextColor(getColor(R.color.solaris_accent))
-                    line.setOnClickListener { openUrl(Uri.parse(found.downloadUrl)) }
+                    entry.text = getString(R.string.home_update_available, found.versionName)
+                    entry.setTextColor(getColor(R.color.solaris_accent))
+                    entry.setOnClickListener { openUrl(Uri.parse(found.downloadUrl)) }
                 }
             }
         }
