@@ -91,6 +91,7 @@
     <string name="crash_details_title">Technische Details</string>
 
     <!-- Live-Updates (#48): realtime SSE toggle + foreground-service notification. -->
+    <string name="home_update_download">Solaris-App herunterladen · installiert %1$s</string>
     <string name="home_update_available">Neue Version %1$s verfügbar · tippen zum Laden</string>
     <string name="home_realtime_title">Live-Updates</string>
     <!-- Kurz, was es tut (#126); das Warum steht im Info-Dialog. -->
