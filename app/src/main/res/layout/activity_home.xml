@@ -737,10 +737,11 @@
                 android:text="@string/home_open" />
         </LinearLayout>
 
-        <!-- "A newer version is ready" (#141). Hidden unless the paired server
-             publishes one that is genuinely newer than the installed build, so
-             the screen stays quiet in the normal case. Sits above the footer
-             because it is an offer, not a status line. -->
+        <!-- The way to the app download (#141, #149). ALWAYS present once paired,
+             because the action has to be reachable when the user wants it, not
+             only when the server happens to be announcing something. Quiet by
+             default ("Solaris-App herunterladen · installiert X"); switches to the
+             accent colour and names the version when a newer one is published. -->
         <TextView
             android:id="@+id/update_hint"
             android:layout_width="match_parent"
@@ -749,7 +750,7 @@
             android:paddingTop="@dimen/space_sm"
             android:paddingBottom="@dimen/space_sm"
             android:layout_marginTop="@dimen/space_md"
-            android:textColor="@color/solaris_accent"
+            android:textColor="@color/solaris_text_muted"
             android:textSize="@dimen/text_body"
             android:clickable="true"
             android:focusable="true"

@@ -797,21 +797,37 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     /**
-     * Ask the paired server whether a newer build is published (#141) and, only
-     * then, show the offer. Off the main thread; every failure is silence, because
-     * an update line that leads nowhere is worse than none (see [UpdateCheck]).
+     * The way to the app download (#141, #149).
+     *
+     * The line is **always** there once a server is paired, because the action has
+     * to be reachable when the user wants it — not only in the moment the server
+     * happens to be announcing something. Hiding it whenever nothing is new made
+     * the only route to a fresh build disappear exactly when someone went looking
+     * for it.
+     *
+     * Quiet by default and naming the installed version, so the tap is honest
+     * about what it does. When the paired server publishes something genuinely
+     * newer it switches to the accent colour and names that version instead.
+     *
+     * The tap always goes to the paired server's own `/download` — never to an
+     * address out of a response (see [UpdateCheck]). Unpaired: no base, no line.
      */
     private fun checkForUpdate() {
         val installed = appVersionName()
+        val base = ServerStore.baseUrl(this)?.trimEnd('/') ?: return
+        val line = findViewById<TextView>(R.id.update_hint)
+        runCatching {
+            line.text = getString(R.string.home_update_download, installed)
+            line.visibility = View.VISIBLE
+            line.setOnClickListener { openUrl(Uri.parse("$base/download")) }
+        }
         kotlin.concurrent.thread {
             val found = UpdateCheck.fetch(applicationContext, installed) ?: return@thread
             runOnUiThread {
                 runCatching {
-                    findViewById<TextView>(R.id.update_hint).apply {
-                        text = getString(R.string.home_update_available, found.versionName)
-                        visibility = View.VISIBLE
-                        setOnClickListener { openUrl(Uri.parse(found.downloadUrl)) }
-                    }
+                    line.text = getString(R.string.home_update_available, found.versionName)
+                    line.setTextColor(getColor(R.color.solaris_accent))
+                    line.setOnClickListener { openUrl(Uri.parse(found.downloadUrl)) }
                 }
             }
         }
