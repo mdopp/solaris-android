@@ -737,6 +737,24 @@
                 android:text="@string/home_open" />
         </LinearLayout>
 
+        <!-- "A newer version is ready" (#141). Hidden unless the paired server
+             publishes one that is genuinely newer than the installed build, so
+             the screen stays quiet in the normal case. Sits above the footer
+             because it is an offer, not a status line. -->
+        <TextView
+            android:id="@+id/update_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:paddingTop="@dimen/space_sm"
+            android:paddingBottom="@dimen/space_sm"
+            android:layout_marginTop="@dimen/space_md"
+            android:textColor="@color/solaris_accent"
+            android:textSize="@dimen/text_body"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground" />
+
         <!-- Footer: sign out and the installed version — with it the way into the
              diagnostics screen (#110) — share ONE row (#132). Both are secondary
              and neither needs a line of its own. The row sits outside the paired

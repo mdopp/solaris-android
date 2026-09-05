@@ -31,6 +31,7 @@ import cloud.dopp.solaris.SolarisApp
 import cloud.dopp.solaris.SolarisConfig
 import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.ServerStore
+import cloud.dopp.solaris.data.UpdateCheck
 import cloud.dopp.solaris.data.TokenStore
 import cloud.dopp.solaris.data.ToolDef
 import cloud.dopp.solaris.data.ToolDefs
@@ -124,6 +125,7 @@ class OnboardingHomeActivity : AppCompatActivity() {
             applySystemBarInsets()
             handleDeepLink(intent)
             render()
+            checkForUpdate()
             // If Live-Updates is on and we're paired, make sure the service runs.
             RealtimeService.ensure(this)
         } catch (e: Throwable) {
@@ -792,6 +794,27 @@ class OnboardingHomeActivity : AppCompatActivity() {
             androidVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
         )
         openUrl(Uri.parse(url))
+    }
+
+    /**
+     * Ask the paired server whether a newer build is published (#141) and, only
+     * then, show the offer. Off the main thread; every failure is silence, because
+     * an update line that leads nowhere is worse than none (see [UpdateCheck]).
+     */
+    private fun checkForUpdate() {
+        val installed = appVersionName()
+        kotlin.concurrent.thread {
+            val found = UpdateCheck.fetch(applicationContext, installed) ?: return@thread
+            runOnUiThread {
+                runCatching {
+                    findViewById<TextView>(R.id.update_hint).apply {
+                        text = getString(R.string.home_update_available, found.versionName)
+                        visibility = View.VISIBLE
+                        setOnClickListener { openUrl(Uri.parse(found.downloadUrl)) }
+                    }
+                }
+            }
+        }
     }
 
     private fun appVersionName(): String = runCatching {
