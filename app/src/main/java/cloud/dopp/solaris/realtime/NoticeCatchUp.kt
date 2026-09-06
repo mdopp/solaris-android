@@ -81,8 +81,31 @@ object NoticeCatchUp {
     fun backlog(context: Context) {
         val ctx = context.applicationContext
         val since = NoticeSeen.since(ctx)
-        val body = runCatching { ApiClient(ctx).notifications(since) }.getOrNull() ?: return
-        val result = NoticeBacklog.parse(body, since, NoticeSeen.keys(ctx)) ?: return
+        // Every exit writes a line (#153). This path used to end in `return` at
+        // three places and mapped 404, 401, a timeout and "nothing pending" onto
+        // the same silence — so a failing catch-up was indistinguishable from a
+        // working one with nothing to do, and cost two rounds of guessing at the
+        // wrong cause. The diagnostics screen exists for exactly this (#110).
+        val fetch = runCatching { ApiClient(ctx).notificationsFetch(since) }
+            .getOrElse { ApiClient.Fetch(0, null) }
+        val body = fetch.body
+        if (body == null) {
+            RealtimeLog.add(
+                ctx,
+                if (fetch.code == 0) "Nachholen: keine Antwort" else "Nachholen: HTTP ${fetch.code}",
+            )
+            return
+        }
+        val result = NoticeBacklog.parse(body, since, NoticeSeen.keys(ctx))
+        if (result == null) {
+            RealtimeLog.add(ctx, "Nachholen: Antwort unlesbar")
+            return
+        }
+        if (result.show.isEmpty()) {
+            RealtimeLog.add(ctx, "Nachholen: nichts offen (seit ${since ?: "—"})")
+        } else {
+            RealtimeLog.add(ctx, "nachgeholt: ${result.show.size}")
+        }
         result.show.forEach { item ->
             runCatching { NoticeNotifier.post(ctx, item.event, item.id) }
         }
