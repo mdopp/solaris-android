@@ -322,6 +322,23 @@
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:visibility="gone" />
+
+                    <!-- What Solaris said (#158). On this card because it is the
+                         notification feature's own history; reachable here so it
+                         does not depend on a notification being on screen. -->
+                    <TextView
+                        android:id="@+id/home_notices"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/home_notices"
+                        android:textColor="@color/solaris_accent"
+                        android:textSize="13sp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground" />
                 </LinearLayout>
 
                 <Switch

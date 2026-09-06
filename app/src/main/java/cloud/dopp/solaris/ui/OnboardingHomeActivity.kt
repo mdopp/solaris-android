@@ -116,6 +116,9 @@ class OnboardingHomeActivity : AppCompatActivity() {
                 .setOnClickListener { onRealtimeToggled((it as Switch).isChecked) }
             findViewById<View>(R.id.realtime_info).setOnClickListener { showRealtimeInfo() }
             findViewById<TextView>(R.id.realtime_interval).setOnClickListener { pickPollInterval() }
+            findViewById<TextView>(R.id.home_notices).setOnClickListener {
+                startActivity(android.content.Intent(this, NoticesActivity::class.java))
+            }
             findViewById<TextView>(R.id.app_version).apply {
                 text = getString(R.string.app_version_fmt, appVersionName())
                 setOnClickListener {

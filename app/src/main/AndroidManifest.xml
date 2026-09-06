@@ -68,6 +68,13 @@
         </activity>
 
         <!-- Universal device widget (#4). -->
+        <!-- What Solaris told this household (#158) — the destination a
+             notification tap never had. -->
+        <activity
+            android:name=".ui.NoticesActivity"
+            android:exported="false"
+            android:label="@string/notices_title" />
+
         <receiver
             android:name=".widget.DeviceWidgetProvider"
             android:exported="true"
