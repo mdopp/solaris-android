@@ -102,7 +102,13 @@ object NoticeCatchUp {
             return
         }
         if (result.show.isEmpty()) {
-            RealtimeLog.add(ctx, "Nachholen: nichts offen (seit ${since ?: "—"})")
+            // "The server had nothing" and "we filtered it all away" are different
+            // findings and used to read the same (#155) — which cost a round.
+            RealtimeLog.add(
+                ctx,
+                if (result.alreadySeen > 0) "Nachholen: ${result.alreadySeen} schon gezeigt"
+                else "Nachholen: nichts offen (seit ${since ?: "—"})",
+            )
         } else {
             RealtimeLog.add(ctx, "nachgeholt: ${result.show.size}")
         }

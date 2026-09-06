@@ -65,6 +65,8 @@ object NoticeBacklog {
     data class CatchUp(
         val show: List<Item>,
         val nextSince: String?,
+        /** How many the server DID return but [parse] dropped as already shown (#155). */
+        val alreadySeen: Int = 0,
         val retentionHours: Double,
         val bounded: Boolean,
     )
@@ -118,13 +120,14 @@ object NoticeBacklog {
         val retention = root.optDouble("retention_hours", 0.0).let { if (it.isNaN()) 0.0 else it }
         val arr = root.optJSONArray("notifications")
         val fresh = ArrayList<Item>()
+        var dropped = 0
         for (i in 0 until (arr?.length() ?: 0)) {
             val o = arr?.optJSONObject(i) ?: continue
             // The same renderer the stream uses — there is no second one to drift.
             val ev = RealtimeProtocol.noticeOf(o) ?: continue
             val id = o.optString("id").trim()
             val item = Item(id, o.optString("ts").trim(), ev)
-            if (keysOf(ev, id).any { it in seen }) continue
+            if (keysOf(ev, id).any { it in seen }) { dropped++; continue }
             fresh.add(item)
         }
         val bounded = !hasUsableCursor(since, now, retention)
@@ -134,6 +137,7 @@ object NoticeBacklog {
             nextSince = now.ifBlank { since },
             retentionHours = retention,
             bounded = bounded,
+            alreadySeen = dropped,
         )
     }
 
