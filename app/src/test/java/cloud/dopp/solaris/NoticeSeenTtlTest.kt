@@ -36,6 +36,17 @@ class NoticeSeenTtlTest {
         assertTrue(NoticeSeen.keys(ctx, t0 + ttl / 2).contains("fp:123"))
     }
 
+    /**
+     * The window has to be short enough for a human repeating themselves (#162):
+     * five test notices seven minutes apart collapsed into one under the original
+     * fifteen, and the bug they were meant to prove looked unfixed.
+     */
+    @Test
+    fun `the window is short enough for a repeat minutes later`() {
+        NoticeSeen.mark(ctx, listOf("fp:123"), t0)
+        assertFalse(NoticeSeen.keys(ctx, t0 + 2L * 60_000).contains("fp:123"))
+    }
+
     /** The regression: the same wording later is a NEW event, not a duplicate. */
     @Test
     fun `a fingerprint stops suppressing once the window passes`() {
