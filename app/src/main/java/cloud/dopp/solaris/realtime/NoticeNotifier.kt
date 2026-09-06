@@ -83,6 +83,11 @@ object NoticeNotifier {
         // the notice IS handled, and un-marking it would make the catch-up
         // re-offer it on every drain.
         if (suppress(ev.kind, ev.versionName, installedVersion(ctx))) return
+        // Keep what was said (#158). A swiped notification takes its text with it,
+        // and there was nowhere to look it up — which is also why a tap had no
+        // sensible destination. After the suppression check, so a swallowed offer
+        // does not turn up in the list either.
+        runCatching { NoticeHistory.record(ctx, ev) }
         ensureChannel(ctx, ev.category)
         val id = NOTIF_ID_BASE + ev.category.ordinal * SLOTS + (seq.getAndIncrement() % SLOTS)
         val body = ev.body.ifBlank { ctx.getString(R.string.notice_generic) }
@@ -100,7 +105,7 @@ object NoticeNotifier {
             // The one exception is an app-update notice (#143), which opens the
             // download on the paired server instead — the notice is the TRIGGER,
             // never the source of the address (see NoticeEvent.kind).
-            .setContentIntent(PwaLauncher.tapPending(ctx, id, tapRoute(ev)))
+            .setContentIntent(contentIntent(ctx, id, ev))
         NoticeActions.runnable(ev.actions).forEachIndexed { i, action ->
             b.addAction(button(ctx, id, i, action))
         }
@@ -163,6 +168,30 @@ object NoticeNotifier {
     private fun installedVersion(ctx: Context): String = runCatching {
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName
     }.getOrNull().orEmpty()
+
+    /**
+     * Where a tap lands (#158).
+     *
+     * An ordinary notice opens the list of what Solaris said — until now it opened
+     * the PWA root, which for a household that never chats is an empty screen and
+     * tells the reader nothing. An `app-update` offer keeps its own destination
+     * (#143): there the download IS the point.
+     */
+    private fun contentIntent(ctx: Context, id: Int, ev: RealtimeProtocol.NoticeEvent): PendingIntent {
+        // [tapRoute] stays the single decision: a route other than ROOT means the
+        // notice HAS a web destination worth opening. ROOT was only ever "we have
+        // nowhere to send you" — that case is what the list now answers.
+        val route = tapRoute(ev)
+        if (route != PwaLauncher.Routes.ROOT) {
+            return PwaLauncher.tapPending(ctx, id, route)
+        }
+        val i = Intent(ctx, cloud.dopp.solaris.ui.NoticesActivity::class.java)
+            .addFlags(ActionDialog.TASK_FLAGS)
+        return PendingIntent.getActivity(
+            ctx, id, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
 
     /**
      * Where a tap goes (#143). Only the closed value
