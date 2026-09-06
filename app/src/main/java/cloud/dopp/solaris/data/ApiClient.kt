@@ -319,6 +319,32 @@ class ApiClient(private val ctx: Context) {
      * [since] is the cursor the last response's `now` handed us — passed through
      * unchanged. Nothing here fabricates one from the device clock.
      */
+    /**
+     * The catch-up fetch **with its HTTP status** (#153).
+     *
+     * [notifications] maps every failure onto `null`, which made 404, 401, a
+     * timeout and "nothing pending" indistinguishable — and the catch-up then
+     * fell silent in all four cases. The caller logs the reason, so it needs to
+     * tell them apart. `code` is 0 when the call never reached a response.
+     */
+    data class Fetch(val code: Int, val body: String?)
+
+    fun notificationsFetch(since: String?): Fetch {
+        val path = cloud.dopp.solaris.realtime.NoticeBacklog.PATH
+        val query = if (since.isNullOrBlank()) {
+            ""
+        } else {
+            "?since=" + URLEncoder.encode(since, "UTF-8")
+        }
+        return try {
+            http.newCall(authed(path + query).get().build()).execute().use { resp ->
+                Fetch(resp.code, if (resp.isSuccessful) resp.body?.string() else null)
+            }
+        } catch (e: Exception) {
+            Fetch(0, null)
+        }
+    }
+
     fun notifications(since: String?): String? {
         val path = cloud.dopp.solaris.realtime.NoticeBacklog.PATH
         val query = if (since.isNullOrBlank()) {
