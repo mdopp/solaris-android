@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
 import cloud.dopp.solaris.R
 import cloud.dopp.solaris.SolarisApp
+import cloud.dopp.solaris.data.ApiClient
 import cloud.dopp.solaris.data.SbApiClient
 import cloud.dopp.solaris.data.SbHome
 import cloud.dopp.solaris.data.ServerStore
@@ -34,10 +35,17 @@ class DiagnosticsActivity : AppCompatActivity() {
     /** Result of the last "Meldungen prüfen" run (#110), shown above the log. */
     private var lastCheck: String? = null
 
+    /**
+     * Which resident the server thinks this phone is (#160), or a reason it could
+     * not be asked. Fetched once per open, off the main thread.
+     */
+    private var whoami: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_diagnostics)
         render()
+        loadWhoami()
         findViewById<Button>(R.id.diag_copy).setOnClickListener {
             val text = findViewById<TextView>(R.id.diag_text).text.toString()
             runCatching {
@@ -97,12 +105,30 @@ class DiagnosticsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.diag_text).text = buildText()
     }
 
+    /**
+     * Ask the server who it thinks we are (#160). Off-thread, best effort: an
+     * unreachable server is itself a finding and is written into the line rather
+     * than left blank.
+     */
+    private fun loadWhoami() {
+        thread {
+            val uid = runCatching { ApiClient(applicationContext).whoamiUid() }.getOrNull()
+            runOnUiThread {
+                whoami = uid ?: "unbekannt (Server nicht erreichbar oder nicht gekoppelt)"
+                runCatching { render() }
+            }
+        }
+    }
+
     private fun buildText(): String {
         val sb = StringBuilder()
         sb.append("Version ").append(appVersion())
             .append("  ·  ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
             .append("  ·  Android ").append(Build.VERSION.RELEASE)
             .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n\n")
+        sb.append("Server sieht dieses Telefon als: ")
+            .append(whoami ?: "wird abgefragt …").append('\n')
+            .append("(Eine Meldung an einen anderen Bewohner erreicht dieses Telefon nicht.)\n\n")
         lastCheck?.let { sb.append(it).append("\n\n") }
         readCrash()?.let { sb.append("── Letzter Absturz ──\n").append(it.trim()).append("\n\n") }
         sb.append("── Verbindungs-Log ──\n")

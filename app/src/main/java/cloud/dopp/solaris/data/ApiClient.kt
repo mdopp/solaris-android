@@ -355,6 +355,23 @@ class ApiClient(private val ctx: Context) {
         return getBody(path + query)
     }
 
+    /**
+     * Which resident the SERVER thinks this phone is (#160) — `GET /napi/whoami`.
+     *
+     * The one fact nothing on the phone could show. A notice is published on a
+     * resident's own stream, and the app subscribes to the streams of the uid its
+     * device token resolves to. If that uid is not the one a notification was
+     * addressed to, the phone is listening on the wrong channel — live AND on the
+     * catch-up — while the same notice reaches the browser, which authenticates
+     * through Authelia instead. That is invisible from here without asking.
+     *
+     * Blocking; null when unreachable or unparseable.
+     */
+    fun whoamiUid(): String? = runCatching {
+        val body = getBody("/whoami") ?: return null
+        JSONObject(body).optString("uid").trim().takeIf { it.isNotEmpty() }
+    }.getOrNull()
+
     /** GET [path] under `/napi`, returning the body, or null on any failure. */
     private fun getBody(path: String): String? {
         return try {
