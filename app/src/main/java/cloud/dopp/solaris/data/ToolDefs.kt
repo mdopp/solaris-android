@@ -25,6 +25,18 @@ data class ToolDef(
     val searchPath: String?,
     /** `tool-actions` — the declared action ids (plain strings, ADR 0011). */
     val actions: List<String>,
+    /**
+     * `tool-actions-titled` (#169, solarisbay ADR 0014) — `id → title`, where the
+     * title may be null ("no title"). Empty against a server before Solaris 0.62.0,
+     * which sends the key not at all.
+     *
+     * The titles travel in their **own** key rather than inside [actions] for a
+     * reason worth keeping: [stringList] takes only `String` entries out of a
+     * JSONArray, so a list of objects there would parse to an empty list, then
+     * `schema.actions.filter { it in actions }` would empty too — and **every**
+     * button of **every** tool would vanish in already-installed apps. Silently.
+     */
+    val actionTitles: Map<String, String?> = emptyMap(),
     /** `tool-cell-schema` — the role→field mapping the row renderer reads. */
     val schema: ToolCellSchema,
     /**
@@ -176,6 +188,7 @@ object ToolDefs {
             schema = schema.copy(actions = schema.actions.filter { it in actions }),
             composePath = composePath(o.optString("tool-compose-path")),
             actionParams = parseActionParams(o.optJSONObject("tool-action-params")),
+            actionTitles = parseActionTitles(o.optJSONArray("tool-actions-titled")),
             itemIdField = itemIdField(o.optString("tool-item-id-field")),
         )
     }
@@ -233,6 +246,25 @@ object ToolDefs {
                 params[param] = source
             }
             if (usable && params.isNotEmpty()) out[id] = params
+        }
+        return out
+    }
+
+    /**
+     * Read `tool-actions-titled` into `id → title` (#169). Always a list of
+     * objects by contract — never "sometimes a string" — so there is one shape to
+     * parse. A blank or absent title is stored as null, which the sheet reads as
+     * "use the fixed label"; an entry without a usable id is skipped rather than
+     * guessed at.
+     */
+    private fun parseActionTitles(arr: org.json.JSONArray?): Map<String, String?> {
+        if (arr == null) return emptyMap()
+        val out = LinkedHashMap<String, String?>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("id").trim()
+            if (id.isEmpty()) continue
+            out[id] = o.optString("title").trim().ifBlank { null }
         }
         return out
     }

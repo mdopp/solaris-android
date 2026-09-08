@@ -71,8 +71,8 @@ android {
         // needs the AndroidKeyStore-backed master key from API 23.
         minSdkVersion 23
         targetSdkVersion 35
-        versionCode 105
-        versionName "2.46.0"
+        versionCode 106
+        versionName "2.47.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

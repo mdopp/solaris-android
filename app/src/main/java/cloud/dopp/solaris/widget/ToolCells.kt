@@ -31,8 +31,9 @@ data class ToolCell(
     /** Action ids the schema declares for this row. */
     val actions: List<String> = emptyList(),
     /**
-     * The one action this row offers as a sheet entry (#90), or null when the tool
-     * declares none — or when the row lacks a field the action's params need.
+     * The FIRST action this row offers (#90) — kept because an app without the
+     * multi-entry sheet runs exactly this one, and solarisbay orders the harmless
+     * choice first for precisely that reason (ADR 0014 §5).
      */
     val actionId: String? = null,
     /**
@@ -41,7 +42,19 @@ data class ToolCell(
      * carries everything it needs and the tap does no catalog lookup.
      */
     val actionParams: String? = null,
+    /**
+     * **Every** action this row can fill (#169), in the order the tool declared
+     * them: `id`, resolved `params` JSON, and the server's title or null.
+     *
+     * Until ADR 0014 only the first was reachable, which quietly made five lease
+     * buttons into one — the trap caught in solarisbay#1381 before it shipped.
+     * The first entry is always the same one [actionId] names.
+     */
+    val offers: List<ToolOffer> = emptyList(),
 )
+
+/** One entry of a tool row's sheet (#169). */
+data class ToolOffer(val id: String, val params: String, val title: String?)
 
 /**
  * The **schema→cell mapper** (#70, ADR 0011): turns a tool's raw item JSON into
@@ -72,7 +85,9 @@ object ToolCells {
 
     /** Map every item through [map], dropping the ones that yield no title. */
     fun mapAll(def: ToolDef, rows: List<JSONObject>): List<ToolCell> =
-        rows.mapNotNull { map(def.schema, it, def.actions, def.actionParams, def.itemIdField) }
+        rows.mapNotNull {
+            map(def.schema, it, def.actions, def.actionParams, def.itemIdField, def.actionTitles)
+        }
 
     /**
      * One item → one cell, or null when the schema's `title` field is missing on
@@ -84,6 +99,7 @@ object ToolCells {
         declaredActions: List<String> = emptyList(),
         actionParams: Map<String, Map<String, String>> = emptyMap(),
         itemIdField: String? = null,
+        actionTitles: Map<String, String?> = emptyMap(),
     ): ToolCell? {
         val title = value(row, schema.title) ?: return null
         val meta = schema.meta
@@ -92,7 +108,8 @@ object ToolCells {
             .joinToString(META_SEP)
             .ifBlank { null }
         val actions = schema.actions.filter { it in declaredActions }
-        val action = resolveAction(actions, row, actionParams)
+        val offers = resolveOffers(actions, row, actionParams, actionTitles)
+        val action = offers.firstOrNull()?.let { it.id to it.params }
         return ToolCell(
             itemId = itemId(row, itemIdField),
             title = title,
@@ -101,7 +118,8 @@ object ToolCells {
             badge = value(row, schema.badge),
             actions = actions,
             actionId = action?.first,
-            actionParams = action?.second?.toString(),
+            actionParams = action?.second,
+            offers = offers,
         )
     }
 
@@ -112,6 +130,25 @@ object ToolCells {
      * that declares no `tool-action-params` (today: all but `.task`) therefore
      * offers nothing but the row's own card.
      */
+    /**
+     * **Every** declared action this row can fill (#169, ADR 0014 §4), in
+     * declaration order — not just the first.
+     *
+     * The old single-answer form was the whole bug: with `$id` on every row, every
+     * row could fill every action, so all of them resolved to whichever id stood
+     * first. Five lease durations became five buttons that all leased one hour.
+     */
+    fun resolveOffers(
+        actions: List<String>,
+        row: JSONObject,
+        actionParams: Map<String, Map<String, String>>,
+        actionTitles: Map<String, String?> = emptyMap(),
+    ): List<ToolOffer> = actions.mapNotNull { id ->
+        val mapping = actionParams[id] ?: return@mapNotNull null
+        val params = resolveParams(mapping, row) ?: return@mapNotNull null
+        ToolOffer(id, params.toString(), actionTitles[id])
+    }
+
     fun resolveAction(
         actions: List<String>,
         row: JSONObject,
@@ -240,12 +277,40 @@ object ToolCells {
             // must assemble off a cold redraw, without re-reading the catalog.
             c.actionId?.let { o.put("a", it) }
             c.actionParams?.let { o.put("p", it) }
+            // Every offer rides along too (#169). Without this a cold redraw --
+            // the widget's normal state after a reboot -- would fall back to the
+            // single action and quietly lose the other choices, which is exactly
+            // the failure this feature exists to end.
+            if (c.offers.size > 1) {
+                val offers = JSONArray()
+                c.offers.forEach { off ->
+                    offers.put(
+                        JSONObject().put("a", off.id).put("p", off.params)
+                            .apply { off.title?.let { put("l", it) } },
+                    )
+                }
+                o.put("o", offers)
+            }
             arr.put(o)
         }
         return arr.toString()
     }
 
     /** Inverse of [encode]. Malformed / absent → empty list. */
+    /** The cached offers (#169). Absent in a cache written before ADR 0014. */
+    private fun decodeOffers(arr: JSONArray?): List<ToolOffer> {
+        if (arr == null) return emptyList()
+        val out = ArrayList<ToolOffer>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("a").trim()
+            val params = o.optString("p").trim()
+            if (id.isEmpty() || params.isEmpty()) continue
+            out.add(ToolOffer(id, params, o.optString("l").ifBlank { null }))
+        }
+        return out
+    }
+
     fun decode(json: String?): List<ToolCell> {
         if (json.isNullOrBlank()) return emptyList()
         return try {
@@ -263,6 +328,7 @@ object ToolCells {
                         badge = o.optString("b").ifBlank { null },
                         actionId = o.optString("a").ifBlank { null },
                         actionParams = o.optString("p").ifBlank { null },
+                        offers = decodeOffers(o.optJSONArray("o")),
                     ),
                 )
             }

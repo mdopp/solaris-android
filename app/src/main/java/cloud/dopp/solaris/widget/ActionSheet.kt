@@ -27,6 +27,17 @@ data class ActionItem(
     val tone: ActionTone = ActionTone.NORMAL,
     val service: String? = null,
     val swatchRgb: Int? = null,
+    /**
+     * A label the **server** supplied (`tool-actions-titled`, solarisbay ADR 0014).
+     * When present it wins over [labelRes]; the titles arrive ready to read and
+     * are not shortened or translated here — the same rule as `status_text`: the
+     * server says, the client shows.
+     *
+     * [labelRes] stays required so every item has a fallback: a tool that declares
+     * no title (or an older server that sends no titles at all) still reads
+     * "Ausführen" rather than an empty row.
+     */
+    val label: String? = null,
 )
 
 /** A rendered line of the dialog, in the order it is drawn. */
@@ -163,6 +174,32 @@ object ActionSheets {
      */
     fun toolRow(choices: List<ToolRowChoice>): ActionSheet =
         ActionSheet(choices.map { ActionItem(labelRes = it.labelRes, tone = it.tone) })
+
+    /**
+     * The tool row's sheet when the row offers **several** actions (#169, contract
+     * solarisbay ADR 0014): one entry per fillable action, in the order the tool
+     * declared them, each under its own title — then "Öffnen" if the row has a
+     * card, then the "Abbrechen" footer [ActionSheet] appends.
+     *
+     * A title of null falls back to "Ausführen": one unlabelled entry reads the
+     * way it always did, and several would at least not be blank.
+     *
+     * Nothing here is dangerous. A catalog action is whatever the plugin declared,
+     * and the SERVER decides which need confirming (the `confirm_required` 403,
+     * answered by [toolConfirm]) — the widget does not promote an action to
+     * dangerous on its own.
+     */
+    fun toolActions(titles: List<String?>, canOpen: Boolean): ActionSheet =
+        ActionSheet(
+            buildList {
+                titles.forEach {
+                    add(ActionItem(labelRes = R.string.tool_action_do, tone = ActionTone.PRIMARY, label = it))
+                }
+                if (canOpen) {
+                    add(ActionItem(labelRes = ToolRowChoice.OPEN.labelRes, tone = ToolRowChoice.OPEN.tone))
+                }
+            },
+        )
 
     /**
      * The 1×1 lock tile's chooser (#92). What is offered still comes from

@@ -65,6 +65,17 @@ object ToolRow {
             .putExtra(ToolActionActivity.EXTRA_TITLE, cell.title)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
         itemPath(toolId, cell.itemId)?.let { i.putExtra(ToolActionActivity.EXTRA_PATH, it) }
+        if (cell.offers.size > 1) {
+            // Several fillable actions (#169): the sheet offers each under its own
+            // title. The single-action extras stay filled too, so nothing regresses
+            // if the sheet path is ever skipped.
+            i.putExtra(ToolActionActivity.EXTRA_ACTION_IDS, cell.offers.map { it.id }.toTypedArray())
+            i.putExtra(ToolActionActivity.EXTRA_ACTION_BODIES, cell.offers.map { it.params }.toTypedArray())
+            i.putExtra(
+                ToolActionActivity.EXTRA_ACTION_TITLES,
+                cell.offers.map { it.title.orEmpty() }.toTypedArray(),
+            )
+        }
         if (!cell.actionId.isNullOrBlank()) {
             i.putExtra(ToolActionActivity.EXTRA_ACTION_ID, cell.actionId)
             i.putExtra(ToolActionActivity.EXTRA_PARAMS, cell.actionParams.orEmpty())
