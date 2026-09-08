@@ -11,7 +11,6 @@ import android.net.Uri
 object ServerStore {
     private const val PREFS = "solaris_server"
     private const val KEY = "base_url"
-    private const val KEY_PWA_HINT_DISMISSED = "pwa_hint_dismissed"
     private const val KEY_REALTIME = "realtime_enabled"
     private const val KEY_POLL_SEC = "realtime_poll_seconds"
 
@@ -38,11 +37,7 @@ object ServerStore {
      * detect an installed WebAPK, so the user dismisses the card manually and we
      * remember it so future launches don't show it again.
      */
-    fun isPwaHintDismissed(ctx: Context): Boolean =
-        p(ctx).getBoolean(KEY_PWA_HINT_DISMISSED, false)
 
-    fun dismissPwaHint(ctx: Context) =
-        p(ctx).edit().putBoolean(KEY_PWA_HINT_DISMISSED, true).apply()
 
     /**
      * Live-Updates opt-in (#48): keep an embedded SSE foreground service running

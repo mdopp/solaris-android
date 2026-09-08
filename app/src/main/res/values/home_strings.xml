@@ -68,10 +68,6 @@
     <string name="widget_type_voice">Sprache</string>
 
     <!-- Step 2 (#11): install the PWA for chat & notifications. -->
-    <string name="home_install_pwa_title">Solaris-App installieren</string>
-    <string name="home_install_pwa_hint">Für Web-Benachrichtigungen: im Browser öffnen und „Zum Startbildschirm hinzufügen".</string>
-    <string name="home_install_pwa">Installieren</string>
-    <string name="home_install_pwa_dismiss">Ausblenden</string>
 
     <!-- Seit #115 öffnet die Oberfläche IN dieser App — „öffnen" versprach einen
          Sprung nach draußen, den es nicht mehr gibt (#127). -->
