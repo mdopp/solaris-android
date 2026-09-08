@@ -32,6 +32,16 @@ object PwaLauncher {
         const val ROOT = "/"
 
         /**
+         * The household start page (#167) — the resident's pinned devices with
+         * live state and controls, refreshing itself while open (solarisbay#711).
+         *
+         * This is where anything ABOUT DEVICES belongs. [ROOT] is the chat, and a
+         * device widget that lands there answers nothing — the same empty
+         * destination a notice tap used to have (#158).
+         */
+        const val START = "/#/p/start"
+
+        /**
          * The signed APK the paired server publishes (#143, contract
          * solarisbay#1326). Base-relative on purpose: the address never comes
          * from a notification's payload, only from the server we are paired with.
@@ -137,7 +147,7 @@ object PwaLauncher {
          * outlives the `.tool` it points at (uninstalled, renamed). The PWA does
          * this fallback itself; the constant exists so the app can too.
          */
-        const val TOOL_START = "/#/p/start"
+        const val TOOL_START = START
     }
 
     /**

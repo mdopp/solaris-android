@@ -98,6 +98,9 @@ class OnboardingHomeActivity : AppCompatActivity() {
             findViewById<View>(R.id.tile_voice).setOnClickListener {
                 pinTile(cloud.dopp.solaris.widget.VoiceWidgetProvider::class.java)
             }
+            findViewById<View>(R.id.tile_devices).setOnClickListener {
+                pinTile(cloud.dopp.solaris.widget.DevicesWidgetProvider::class.java)
+            }
             // ServiceBay group (#42/#44) — offer the infra widgets in-app too.
             findViewById<View>(R.id.tile_sb_overview).setOnClickListener {
                 pinTile(cloud.dopp.solaris.widget.SbOverviewWidgetProvider::class.java)

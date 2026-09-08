@@ -549,6 +549,59 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
+                    <!-- All devices at once (#167): a household type, but the row
+                         of five above is full, so it opens this section. -->
+                    <TextView
+                        style="@style/Text.Solaris.Title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/home_widgets_group_household"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:layout_marginBottom="6dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:baselineAligned="false">
+
+                        <LinearLayout
+                            android:id="@+id/tile_devices"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="@dimen/space_xs"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:minHeight="@dimen/tile_min_height"
+                            android:paddingTop="@dimen/space_sm"
+                            android:paddingBottom="@dimen/space_sm"
+                            android:background="@drawable/tile_solaris"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:contentDescription="@string/devices_widget_label">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_icon"
+                                android:layout_height="@dimen/tile_icon"
+                                android:src="@drawable/ic_device"
+                                app:tint="@color/solaris_accent"
+                                android:contentDescription="@null" />
+
+                            <TextView
+                                style="@style/Text.Solaris.Tile"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/devices_widget_cta" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2" />
+                    </LinearLayout>
+
                     <TextView
                         style="@style/Text.Solaris.Title"
                         android:layout_width="wrap_content"
