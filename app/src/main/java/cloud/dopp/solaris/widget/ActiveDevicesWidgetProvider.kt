@@ -19,8 +19,8 @@ import kotlin.concurrent.thread
  * a compact count ("3 an"); large = a bounded list of the currently on/open
  * devices (icon + name + state), styled like the picker rows. Not bound to a
  * single entity — it reads the whole roster and filters to the active ones via
- * [ApiClient.listActive]. Tap → PWA overview ([PwaLauncher]); a discreet refresh
- * icon re-fetches.
+ * [ApiClient.listActive]. Tap → the household start page with every pinned device
+ * ([PwaLauncher.Routes.START], #167); a discreet refresh icon re-fetches.
  */
 class ActiveDevicesWidgetProvider : AppWidgetProvider() {
 
@@ -114,7 +114,9 @@ class ActiveDevicesWidgetProvider : AppWidgetProvider() {
             ActiveDevicesRender.Tier.SMALL -> ActiveDevicesRender.small(context, active)
         }
         v.setOnClickPendingIntent(
-            R_av_root, PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.ROOT),
+            // The device page, not the chat (#167). This tile is about devices;
+            // landing in an empty conversation answered nothing.
+            R_av_root, PwaLauncher.tapPending(context, appWidgetId, PwaLauncher.Routes.START),
         )
         v.setOnClickPendingIntent(R_av_refresh, refreshPending(context, appWidgetId))
         return v
