@@ -104,7 +104,8 @@ object ActionDialog {
         val ctx = parent.context
         val v = LayoutInflater.from(ctx).inflate(R.layout.item_action_row, parent, false)
         val label = v.findViewById<TextView>(R.id.ar_label)
-        label.setText(item.labelRes)
+        // A server-supplied title wins; the resource is the fallback (#169).
+        item.label?.takeIf { it.isNotBlank() }?.let { label.text = it } ?: label.setText(item.labelRes)
         when (item.tone) {
             ActionTone.PRIMARY -> {
                 v.setBackgroundResource(R.drawable.btn_solaris)

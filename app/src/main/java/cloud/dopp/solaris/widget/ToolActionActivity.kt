@@ -42,6 +42,16 @@ class ToolActionActivity : Activity() {
         super.onCreate(savedInstanceState)
         val actionId = intent.getStringExtra(EXTRA_ACTION_ID)?.trim()?.ifBlank { null }
         val itemPath = intent.getStringExtra(EXTRA_PATH)?.trim()?.ifBlank { null }
+        // Every action this row can fill (#169). Empty against a tool that
+        // declares none, and one-long against a server before ADR 0014 — then
+        // this behaves exactly as it did.
+        val ids = intent.getStringArrayExtra(EXTRA_ACTION_IDS)?.toList().orEmpty()
+        val bodies = intent.getStringArrayExtra(EXTRA_ACTION_BODIES)?.toList().orEmpty()
+        val titles = intent.getStringArrayExtra(EXTRA_ACTION_TITLES)?.toList().orEmpty()
+        if (ids.size > 1 && ids.size == bodies.size) {
+            offerMany(ids, bodies, titles, itemPath)
+            return
+        }
         val choices = ToolRow.choices(actionId != null, itemPath)
         if (!ToolRow.asksFirst(choices)) {
             // Nothing to decide: open the item's card, or the root for a row whose
@@ -51,6 +61,40 @@ class ToolActionActivity : Activity() {
             return
         }
         offer(choices, actionId!!, itemPath)
+    }
+
+    /**
+     * The sheet for a row with **several** actions (#169, ADR 0014 §4): one entry
+     * per fillable action under the server's own title, in declaration order, then
+     * "Öffnen" when the row has a card.
+     *
+     * Order matters beyond looks: an app without this sheet runs the FIRST entry,
+     * and solarisbay orders the harmless choice first for exactly that reason
+     * (§5). Keeping their order means the two behave alike.
+     */
+    private fun offerMany(
+        ids: List<String>,
+        bodies: List<String>,
+        titles: List<String>,
+        itemPath: String?,
+    ) {
+        val canOpen = !itemPath.isNullOrBlank()
+        val labels = ids.indices.map { titles.getOrNull(it)?.ifBlank { null } }
+        ActionDialog.show(
+            activity = this,
+            title = rowTitle(),
+            message = null,
+            sheet = ActionSheets.toolActions(labels, canOpen),
+            onPick = { i ->
+                if (i < ids.size) {
+                    run(ids[i], org.json.JSONObject(bodies[i]), confirmed = false)
+                } else {
+                    PwaLauncher.open(this, itemPath ?: PwaLauncher.Routes.ROOT)
+                    finish()
+                }
+            },
+            onCancel = { finish() },
+        )
     }
 
     /**
@@ -151,5 +195,14 @@ class ToolActionActivity : Activity() {
 
         /** The row's title — the wording of both the sheet and the confirm. */
         const val EXTRA_TITLE = "title"
+
+        /** Every fillable action of this row (#169), in declaration order. */
+        const val EXTRA_ACTION_IDS = "action_ids"
+
+        /** Their resolved `params` bodies, index-aligned with [EXTRA_ACTION_IDS]. */
+        const val EXTRA_ACTION_BODIES = "action_bodies"
+
+        /** Their server titles, index-aligned; an empty entry means "no title". */
+        const val EXTRA_ACTION_TITLES = "action_titles"
     }
 }
