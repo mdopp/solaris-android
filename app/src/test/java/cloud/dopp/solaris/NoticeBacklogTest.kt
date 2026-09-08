@@ -130,13 +130,23 @@ class NoticeBacklogTest {
     }
 
     /**
-     * The harder half: a notice the **live stream** already showed carries no id
-     * at all, and its `ts` is newer than the stored cursor — so only the content
-     * fingerprint keeps the backlog from showing it a second time minutes later.
+     * The harder half, rewritten for #157: a notice the live stream already showed
+     * is recognised by **its id**, which the server now puts on the frame and on
+     * the backlog entry alike (solarisbay#1346, verified live on the box).
+     *
+     * This test used to assert the same thing via the content fingerprint, because
+     * a stream frame carried no id — the sentence its old doc-comment opened with.
+     * That fingerprint was the cause of #124: two notices with the same wording
+     * were one, and #155 only shortened the window it was wrong in.
+     *
+     * **The accepted price:** against a server older than #1346 the frame has no
+     * id while the backlog entry does, so the two no longer match and the
+     * catch-up may show such a notice a second time. A duplicate is the far
+     * cheaper failure — the alternative cost two days and a real swallowed notice.
      */
     @Test fun aNoticeTheStreamAlreadyShowedIsNotRepeated() {
         val live = RealtimeProtocol.parseHa(
-            """{"title":"Post da","body":"im Kasten","category":"house","urgency":"normal"}""",
+            """{"id":"21","title":"Post da","body":"im Kasten","category":"house","urgency":"normal"}""",
         )!!
         NoticeNotifier.post(ctx, live)
         val out = NoticeBacklog.parse(
@@ -145,13 +155,14 @@ class NoticeBacklogTest {
             seen = NoticeSeen.keys(ctx),
         )!!
         assertTrue("the stream already showed it", out.show.isEmpty())
-        // A different notice is of course still delivered.
+        // A SECOND notice with exactly the same wording is a second event and must
+        // arrive — the property the fingerprint could never hold.
         val other = NoticeBacklog.parse(
-            response(notice(22, "2026-08-31T10:01:00.000Z", "Post da", body = "zwei Pakete")),
+            response(notice(22, "2026-08-31T10:01:00.000Z", "Post da", body = "im Kasten")),
             since = "2026-08-31T09:00:00.000Z",
             seen = NoticeSeen.keys(ctx),
         )!!
-        assertEquals(1, other.show.size)
+        assertEquals("same words, different occurrence", 1, other.show.size)
         assertNotEquals(
             NoticeBacklog.keysOf(live).last(),
             NoticeBacklog.keysOf(other.show.single().event).last(),

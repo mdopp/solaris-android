@@ -138,6 +138,16 @@ object RealtimeProtocol {
          * whether the announcement applies to it.
          */
         val versionName: String = "",
+        /**
+         * The server's identity for **this one notice** (#157, contract
+         * solarisbay#1346) — minted once in `event_data`, before the event is
+         * published and before it is appended to the backlog, so the live frame
+         * and the catch-up entry carry the same value.
+         *
+         * With it, recognising a notice needs no guessing from its content. Empty
+         * against a server older than that, where the fingerprint still stands in.
+         */
+        val id: String = "",
     )
 
     /**
@@ -174,6 +184,7 @@ object RealtimeProtocol {
             actions = parseNoticeActions(o.optJSONArray("actions")),
             kind = o.optString("kind").trim().lowercase(),
             versionName = o.optString("versionName").trim(),
+            id = o.optString("id").trim(),
         )
     }
 

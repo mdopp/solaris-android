@@ -86,6 +86,17 @@ object NoticeBacklog {
      * a doubled notice is a bug the resident sees every single time.
      */
     fun keysOf(ev: RealtimeProtocol.NoticeEvent, id: String? = null): List<String> {
+        // An identity beats a guess (#157). The server mints one id per notice and
+        // puts it on BOTH the live frame and the catch-up entry (solarisbay#1346),
+        // so it recognises exactly one occurrence — where the content fingerprint
+        // could only ask "did something with these words come by recently?" and
+        // answered yes for a genuine repeat. That was the cause of #124; #155 only
+        // shortened the window it was wrong in.
+        val identity = id?.trim().orEmpty().ifBlank { ev.id }
+        if (identity.isNotBlank()) return listOf("id:$identity")
+        // Older server, no id: the fingerprint stands in, bounded by
+        // NoticeSeen.FINGERPRINT_TTL_MS. It cannot tell two identical notices
+        // apart — which is exactly why it is the fallback and not the rule.
         val print = buildString {
             append(ev.category.wire).append('|')
             append(ev.urgency).append('|')
@@ -93,10 +104,7 @@ object NoticeBacklog {
             append(ev.body).append('|')
             ev.actions.forEach { append(it.entityId).append('>').append(it.service).append(',') }
         }
-        val keys = ArrayList<String>(2)
-        if (!id.isNullOrBlank()) keys.add("id:$id")
-        keys.add("fp:${print.hashCode()}")
-        return keys
+        return listOf("fp:${print.hashCode()}")
     }
 
     /**
