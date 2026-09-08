@@ -108,8 +108,6 @@ class OnboardingHomeActivity : AppCompatActivity() {
             // Everything past the five household types (#42/#44 ServiceBay, #72
             // tools) lives behind one disclosure so the first screen is short (#126).
             findViewById<View>(R.id.more_widgets_toggle).setOnClickListener { toggleMoreWidgets() }
-            findViewById<Button>(R.id.install_pwa_btn).setOnClickListener { installPwa() }
-            findViewById<TextView>(R.id.install_pwa_dismiss).setOnClickListener { dismissPwaHint() }
             findViewById<Button>(R.id.open_btn).setOnClickListener { openSolaris() }
             findViewById<View>(R.id.logout_btn).setOnClickListener { logout() }
             findViewById<Switch>(R.id.realtime_switch)
@@ -298,8 +296,6 @@ class OnboardingHomeActivity : AppCompatActivity() {
 
         // #11: the install-PWA hint card is dismissible — once dismissed it stays
         // hidden on future launches (we can't detect an installed WebAPK).
-        findViewById<View>(R.id.install_pwa_card).visibility =
-            if (ServerStore.isPwaHintDismissed(this)) View.GONE else View.VISIBLE
 
         renderToolSection()
     }
@@ -419,10 +415,6 @@ class OnboardingHomeActivity : AppCompatActivity() {
     }
 
     /** Persist the dismiss flag (#11) and hide the install-PWA hint card. */
-    private fun dismissPwaHint() {
-        ServerStore.dismissPwaHint(this)
-        findViewById<View>(R.id.install_pwa_card).visibility = View.GONE
-    }
 
     private fun onConnect() {
         val url = findViewById<EditText>(R.id.server_url).text.toString().trim()
@@ -603,10 +595,6 @@ class OnboardingHomeActivity : AppCompatActivity() {
      * delivers timer/reminder Web Push until the app takes those over natively
      * (#116). Nothing here tells the user to remove it yet.
      */
-    private fun installPwa() {
-        val base = ServerStore.baseUrl(this) ?: return
-        PwaLauncher.customTab(this, PwaLauncher.url(base, PwaLauncher.Routes.ROOT))
-    }
 
     /**
      * "Zu Solaris" (#127) — and since #129 **the** way into the surface, not just
